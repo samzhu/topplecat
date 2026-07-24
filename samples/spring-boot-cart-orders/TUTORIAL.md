@@ -37,6 +37,10 @@ complete static contract without executing the Spring tests:
 ./gradlew -p samples/spring-boot-cart-orders toppleCatReview
 ```
 
+These commands intentionally publish the source checkout so the sample tests
+the code in this repository. A normal consumer should install `0.0.1` from
+Maven Central using the root [README](../../README.md#install-001).
+
 Open `samples/spring-boot-cart-orders/build/topplecat/reports/review/index.html` through
 its `file://` path. It shows direct Given/When/Then Stage sentences, public plus
 reviewer rows, then collapsed canonical source. It contains hidden data and must

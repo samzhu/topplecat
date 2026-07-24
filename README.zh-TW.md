@@ -97,25 +97,22 @@ PASS / FAIL / INCOMPLETE 證據與人類報表
 5. **驗證完成宣稱。** `toppleCatVerify` 暫時還原 reviewer source、
    執行所有已啟用 gate、寫出證據，再把來源隱藏回去。
 
-## 試用目前的 Snapshot
+## 安裝 0.0.1
 
-ToppleCat 目前將 `0.0.1` 發佈到 Maven Local。先在這份 checkout
-中建置：
-
-```bash
-./gradlew clean check
-./gradlew publishToMavenLocal
-```
-
-設定 consumer 專案：
+ToppleCat `0.0.1` 是第一個發佈到 Maven Central 的版本。Consumer 專案需要
+Java 25 與支援它的 Gradle 版本。Plugin 與 library resolution 都加入 Maven
+Central 即可；使用正式版的 consumer 不需要 `mavenLocal()`。
 
 ```kotlin
 // settings.gradle.kts
 pluginManagement {
-    repositories { mavenLocal(); gradlePluginPortal(); mavenCentral() }
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
 }
 dependencyResolutionManagement {
-    repositories { mavenLocal(); gradlePluginPortal(); mavenCentral() }
+    repositories { mavenCentral() }
 }
 ```
 
@@ -138,7 +135,9 @@ tasks.test { useJUnitPlatform() }
 ```
 
 空白 consumer 專案可用 `./gradlew toppleCatInit` 建立不覆寫現有檔案的
-起始合約。它是選用 bootstrap，不是一般工作流程。
+起始合約。它是選用 bootstrap，不是一般工作流程。Repository 內的 demo
+刻意使用 `publishToMavenLocal`，以便測試目前 checkout 的原始碼而不是
+release artifact；那是 contributor／demo workflow，不是上面的安裝方式。
 
 ## 撰寫可執行合約
 

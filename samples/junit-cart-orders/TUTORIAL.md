@@ -6,13 +6,18 @@ you finish so the next reader sees the same failure.
 
 ## 1. Check and Review the Contract
 
-From the repository root, publish the local snapshot and validate the sample:
+From the repository root, publish the local source snapshot and validate the
+sample:
 
 ```bash
 ./gradlew publishToMavenLocal
 ./gradlew -p samples/junit-cart-orders toppleCatCheck
 ./gradlew -p samples/junit-cart-orders toppleCatReview
 ```
+
+This is deliberately a source-checkout workflow. A normal consumer installs
+the released artifact from Maven Central using the root
+[README](../../README.md#install-001).
 
 After a successful check, `toppleCatReview` writes
 `samples/junit-cart-orders/build/topplecat/reports/review/index.html`. Open it through

@@ -1,28 +1,37 @@
 # Getting Started
 
-This source checkout builds with Java 25 and its Gradle 9.1.0 wrapper. The
-current consumer example uses JUnit Jupiter 6.1.1 and the
-`io.github.samzhu.topplecat` Gradle plugin. ToppleCat brings its Jackson
-dependencies transitively and adds no natural-language scenario runtime.
+ToppleCat `0.0.1` is available from Maven Central. A consumer project needs
+Java 25 and a Gradle version that supports it. The current consumer example uses
+JUnit Jupiter 6.1.1 and the `io.github.samzhu.topplecat` Gradle plugin.
+ToppleCat brings its Jackson dependencies transitively and adds no
+natural-language scenario runtime.
 
-## Build the Local Snapshot
+## Add the Released Distribution
 
-From a ToppleCat source checkout, run:
+Use Maven Central for both plugin and library resolution. Do not add
+`mavenLocal()` to a release consumer: it can silently select an unrelated stale
+development build.
 
-```bash
-./gradlew clean check
-./gradlew publishToMavenLocal
+```kotlin
+// settings.gradle.kts
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+}
 ```
 
-The first command validates ToppleCat itself. The second publishes
-`0.0.1` to the local Maven repository for a consumer project.
+Then apply the plugin and add the JUnit integration shown in the root
+[README](../../README.md#install-001). The consumer needs its own Gradle wrapper,
+as a normal Gradle project does.
 
 ## Configure the Consumer
 
-Add local Maven resolution and the plugin/dependencies shown in the root
-[README](../../README.md#try-the-current-snapshot). The consumer needs its
-own Gradle wrapper, as a normal Gradle project does. Then, from the consumer
-project root, author the contract and inspect it:
+From the consumer project root, author the contract and inspect it:
 
 ```bash
 ./gradlew toppleCatCheck
@@ -40,6 +49,10 @@ not a core workflow task. It does not overwrite existing files or edit
 It creates public examples and a reviewer-only example. Replace them with your
 domain DTOs, production call, and independent reviewer boundary before using the
 workflow for a real handoff.
+
+`publishToMavenLocal` remains useful when developing ToppleCat from a source
+checkout or running this repository's checked-out demos. It is not part of
+installing the released distribution.
 
 Author each canonical `@ToppleTest` as direct calls on `@ToppleStageField`
 fields. Put production calls and assertions in the Stage methods, where
