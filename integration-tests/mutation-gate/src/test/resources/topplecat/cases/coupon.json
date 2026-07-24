@@ -1,0 +1,8 @@
+[
+  {
+    "caseId": "coupon-public",
+    "acId": "AC-MUTATION-GATE",
+    "inputs": {"discount": 100},
+    "expected": {"discount": 100}
+  }
+]

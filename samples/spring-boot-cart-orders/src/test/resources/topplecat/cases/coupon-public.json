@@ -1,0 +1,32 @@
+[
+  {
+    "caseId": "coupon-public-500",
+    "acId": "AC-CART-COUPON",
+    "inputs": {
+      "cart": {
+        "customerId": "customer-1",
+        "lines": [{"sku": "BOOK", "quantity": 2, "unitPrice": 250}],
+        "subtotal": 500,
+        "coupon": "SAVE100"
+      }
+    },
+    "expected": {
+      "receipt": {"discount": 100, "discountedSubtotal": 400}
+    }
+  },
+  {
+    "caseId": "order-public-no-coupon",
+    "acId": "AC-CART-NO-COUPON",
+    "inputs": {
+      "cart": {
+        "customerId": "customer-3",
+        "lines": [{"sku": "PEN", "quantity": 3, "unitPrice": 20}],
+        "subtotal": 60,
+        "coupon": null
+      }
+    },
+    "expected": {
+      "receipt": {"discount": 0, "discountedSubtotal": 60}
+    }
+  }
+]

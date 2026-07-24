@@ -1,0 +1,71 @@
+# Operating system metadata
+.DS_Store
+Thumbs.db
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+*.swp
+*.swo
+*~
+*.ctxt
+.mtj.tmp/
+
+# Gradle and Java build output
+.gradle/
+**/build/
+out/
+bin/
+*.class
+
+# JVM crash diagnostics
+hs_err_pid*
+replay_pid*
+
+# Logs, coverage, and temporary files
+*.log
+coverage/
+tmp/
+temp/
+outputs/
+*.tmp
+.venv*/
+
+# Packaged artifacts
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+**/application-secrets.properties
+
+# ToppleCat generated state
+.topplecat/
+**/.topplecat/
+.worktrees/
+
+# Local agent tooling. The ToppleCat product skill remains versioned.
+.claude/
+.agents/skills/*
+!.agents/skills/topplecat-verification/
+!.agents/skills/topplecat-verification/**

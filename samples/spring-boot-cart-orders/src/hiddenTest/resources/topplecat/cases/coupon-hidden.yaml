@@ -1,0 +1,15 @@
+- caseId: coupon-hidden-800
+  acId: AC-CART-COUPON
+  inputs:
+    cart:
+      customerId: customer-2
+      lines:
+        - sku: GAME
+          quantity: 2
+          unitPrice: 400
+      subtotal: 800
+      coupon: SAVE100
+  expected:
+    receipt:
+      discount: 100
+      discountedSubtotal: 700

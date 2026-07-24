@@ -1,0 +1,58 @@
+name: Bug report
+description: Report reproducible behavior that differs from ToppleCat's documented contract.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include reviewer-only case data, hidden source, credentials, or raw private reports.
+  - type: input
+    id: version
+    attributes:
+      label: ToppleCat version
+      placeholder: 0.1.0-SNAPSHOT or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: task
+    attributes:
+      label: Affected surface
+      options:
+        - toppleCatCheck
+        - toppleCatReview
+        - toppleCatHide
+        - toppleCatRestore
+        - toppleCatVerify
+        - JUnit runtime
+        - Reports
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest public-only project or steps that reproduce the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, JDK, and Gradle version
+    validations:
+      required: true

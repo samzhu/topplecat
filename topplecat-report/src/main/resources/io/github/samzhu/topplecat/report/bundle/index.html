@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; connect-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <title>ToppleCat report</title>
+  <link rel="stylesheet" href="assets/report.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead"><p class="eyebrow">ToppleCat</p><h1 id="title">Report</h1><p id="notice" class="notice"></p></header>
+    <section class="controls" id="controls"><label>Search <input id="query" type="search" autocomplete="off"></label><div id="filters"></div></section>
+    <section id="summary" class="summary"></section>
+    <section id="report" class="report"></section>
+  </main>
+  <script id="topplecat-report-data" type="application/json">__TOPPLECAT_DATA__</script>
+  <script src="assets/report.js"></script>
+</body>
+</html>
