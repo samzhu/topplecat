@@ -565,6 +565,32 @@ class ToppleCatPluginFunctionalTest {
     }
 
     @Test
+    void failsToppleCatVerifyWhenAggregateVerdictIsIncompleteEvenWithoutAnyFailingGate() throws Exception {
+        verificationProject("");
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenReviewAsset();
+
+        var result = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatReport").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
+        assertEquals(EvidenceVerdict.INCOMPLETE, evidenceVerdict(project));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "JUNIT"));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "MUTATION"));
+        assertTrue(Files.isRegularFile(project.resolve("build/topplecat/evidence.json")));
+        assertTrue(Files.isRegularFile(project.resolve("build/topplecat/agent-feedback.json")));
+        assertTrue(Files.isRegularFile(project.resolve("build/topplecat/reports/spec/index.html")));
+        assertTrue(Files.isRegularFile(project.resolve("build/topplecat/reports/verification/index.html")));
+        assertTrue(Files.readString(project.resolve("build/topplecat/agent-feedback.json")).contains("INCOMPLETE"));
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
     void recordsMutationIncompleteWithoutSchedulingPitWhenProductionPackagesCannotBeFound() throws Exception {
         verificationProject("""
                 toppleCat {
@@ -579,7 +605,7 @@ class ToppleCatPluginFunctionalTest {
                   "inputs":{},"expected":{"discount":100}}]
                 """);
 
-        var noSources = runner("toppleCatVerify", "--stacktrace").build();
+        var noSources = runner("toppleCatVerify", "--stacktrace").buildAndFail();
 
         assertMutationIncompleteWithoutPit(noSources,
                 "no production sources found under src/main/java; the mutation gate cannot run.");
@@ -588,7 +614,7 @@ class ToppleCatPluginFunctionalTest {
         Files.createDirectories(unpackagedProduction.getParent());
         Files.writeString(unpackagedProduction, "public final class Unpackaged {}\n");
 
-        var noPackages = runner("toppleCatVerify", "--stacktrace").build();
+        var noPackages = runner("toppleCatVerify", "--stacktrace").buildAndFail();
 
         assertMutationIncompleteWithoutPit(noPackages,
                 "no production packages found under src/main/java; the mutation gate cannot run.");
@@ -1145,7 +1171,7 @@ class ToppleCatPluginFunctionalTest {
         var result = runner("toppleCatVerify", "--stacktrace").buildAndFail();
 
         assertTrue(result.task(":toppleCatReport") != null, result.getOutput());
-        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatReport").getOutcome());
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatReport").getOutcome());
         assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
         assertTrue(result.task(":toppleCatVerificationTest") != null, result.getOutput());
         assertFalse(Files.exists(project.resolve("src/hiddenTest")));
@@ -1275,7 +1301,7 @@ class ToppleCatPluginFunctionalTest {
         Files.writeString(test, couponSource("99"));
         var failed = runner("toppleCatVerify", "--stacktrace").buildAndFail();
 
-        assertEquals(TaskOutcome.SUCCESS, failed.task(":toppleCatReport").getOutcome());
+        assertEquals(TaskOutcome.FAILED, failed.task(":toppleCatReport").getOutcome());
         assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "JUNIT"));
         assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "REVIEWER_JUNIT"));
         assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "MUTATION"));
@@ -1372,7 +1398,7 @@ class ToppleCatPluginFunctionalTest {
 
         assertTrue(result.task(":toppleCatMutationGate") != null, result.getOutput());
         assertEquals(TaskOutcome.FAILED, result.task(":toppleCatMutationGate").getOutcome());
-        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatReport").getOutcome());
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatReport").getOutcome());
         String mutation = Files.readString(project.resolve("build/topplecat/mutation-results.json"));
         String evidence = Files.readString(project.resolve("build/topplecat/evidence.json"));
         String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
@@ -1495,7 +1521,7 @@ class ToppleCatPluginFunctionalTest {
     }
 
     private void assertMutationIncompleteWithoutPit(org.gradle.testkit.runner.BuildResult result, String reason) throws Exception {
-        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatReport").getOutcome());
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatReport").getOutcome());
         assertTrue(result.task(":pitest") == null, result.getOutput());
         assertTrue(result.task(":toppleCatMutationGate") == null, result.getOutput());
         assertEquals(EvidenceVerdict.INCOMPLETE, evidenceVerdict(project));

@@ -26,6 +26,7 @@ import io.github.samzhu.topplecat.report.SpecView;
 import io.github.samzhu.topplecat.report.HtmlBundleWriter;
 import io.github.samzhu.topplecat.report.VerificationView;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
@@ -194,6 +195,10 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         publishStableArtifacts(root, reports, evidencePath, feedbackPath, getMutationResultsFile().get().getAsFile().toPath());
         VerificationRunWorkspace.archive(runDirectory, runId);
         getLogger().lifecycle("ToppleCat verification report written: {}", verdict);
+        if (verdict != EvidenceVerdict.PASS) {
+            throw new GradleException("ToppleCat verification verdict is " + verdict
+                    + "; see " + evidencePath + " for gate-level detail.");
+        }
     }
 
     private ContractDefinition reviewerDefinition() {

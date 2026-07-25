@@ -191,6 +191,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             configureCaseProperties(task, extension, false, true);
             configureVerificationArtifacts(task, runDirectory, VerificationRunArtifacts.JUNIT);
             configureNarrativeEvents(task, runDirectory, true);
+            requireFreshVerificationExecution(task);
             task.systemProperty(ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
                     project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json").get().getAsFile()
                             .getAbsolutePath());
@@ -209,6 +210,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             configureCaseProperties(task, extension, true, true);
             configureVerificationArtifacts(task, runDirectory, VerificationRunArtifacts.REVIEWER_JUNIT);
             configureNarrativeEvents(task, runDirectory, false);
+            requireFreshVerificationExecution(task);
             task.systemProperty(ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
                     project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json").get().getAsFile()
                             .getAbsolutePath());
@@ -301,6 +303,11 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             public void afterTest(TestDescriptor testDescriptor, TestResult result) {
             }
         });
+    }
+
+    private static void requireFreshVerificationExecution(Test task) {
+        task.getOutputs().upToDateWhen(ignored -> false);
+        task.getOutputs().doNotCacheIf("ToppleCat verification evidence is run-scoped.", ignored -> true);
     }
 
     private static void configureNarrativeEvents(Test task, Directory runDirectory, boolean clearBeforeTask) {
