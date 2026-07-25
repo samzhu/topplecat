@@ -65,6 +65,13 @@ slower because PIT has to analyse the project. ToppleCat matches PIT's JUnit
 Unique IDs to the compiled canonical method signature, so two `@ToppleTest`
 methods in one Java class keep independent mutation sets and scores.
 
+The default producer measures **public executable contract mutation strength**:
+it runs `sourceSets.test` with public test classes and public case rows only.
+Hidden rows and reviewer-only JUnit tests answer the separate hidden-retest
+question and never help default PIT kill a mutant. A boundary that must kill a
+mutant belongs in the public contract. ToppleCat adds no per-case mutation score
+and does not infer the test scope of a custom third-party producer.
+
 ## Verdicts
 
 The aggregate `evidence.json` verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Each

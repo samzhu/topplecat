@@ -217,7 +217,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         TaskProvider<ToppleCatMutationGateTask> mutationGate = project.getTasks().register("toppleCatMutationGate",
                 ToppleCatMutationGateTask.class, task -> {
                     task.setGroup("verification");
-                    task.setDescription("Evaluates PIT full-matrix results for each @ToppleTest acceptance condition.");
+                    task.setDescription("Evaluates public executable contract mutation strength for each @ToppleTest acceptance condition.");
                     task.getPublicTestSourceRoot().set(project.getLayout().getProjectDirectory().dir("src/test/java"));
                     task.getDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
                     task.getPitReportFile().set(extension.getAdversarial().getMutation().getReportFile());
@@ -425,12 +425,15 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         setPitProperty(pitest, "getPitestVersion", "1.25.5");
         setPitProperty(pitest, "getJunit5PluginVersion", "1.2.3");
         setPitProperty(pitest, "getTargetClasses", targetClasses);
+        SourceSet publicTests = project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets()
+                .getByName(SourceSet.TEST_SOURCE_SET_NAME);
+        setPitProperty(pitest, "getTestSourceSets", Set.of(publicTests));
         setPitProperty(pitest, "getFullMutationMatrix", true);
         setPitProperty(pitest, "getOutputFormats", Set.of("XML"));
         setPitProperty(pitest, "getTimestampedReports", false);
         setPitProperty(pitest, "getMutationThreshold", 0);
         setPitProperty(pitest, "getFailWhenNoMutations", false);
-        project.getLogger().lifecycle("ToppleCat configured the default PIT producer with a full mutation matrix.");
+        project.getLogger().lifecycle("ToppleCat configured the default PIT producer with a full mutation matrix against sourceSets.test.");
     }
 
     private static void configureFullMutationMatrix(Project project, Task producer) {

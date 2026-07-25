@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Turns a full PIT mutation matrix into automatic, reviewer-visible AC results. */
+/** Turns a public-contract PIT full mutation matrix into automatic, reviewer-visible AC results. */
 public abstract class ToppleCatMutationGateTask extends DefaultTask {
     @Internal
     public abstract DirectoryProperty getPublicTestSourceRoot();

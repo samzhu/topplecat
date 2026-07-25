@@ -64,16 +64,21 @@ The report and review projection is intentionally split:
   never reviewer data, source names, or internal task names.
 
 PIT mutation is one of three adversarial safeguards enabled by default alongside
-hidden retest and expected-consumption enforcement. Without consumer PIT setup,
-ToppleCat applies its default producer, discovers production package targets,
-enables the full mutation matrix, and requires a 100% score for each acceptance
-condition. Attribution matches the compiled canonical method identity against
-PIT's JUnit Unique ID rather than assigning every mutant covered by the same
-test class; multiple AC methods may therefore share a class without sharing a
-score. Existing PIT settings remain in place except that the full matrix is
+hidden retest and expected-consumption enforcement. Hidden retest asks whether
+the implementation generalized beyond visible examples; mutation asks whether
+the public executable contract detects broken production behavior. Without
+consumer PIT setup, ToppleCat applies its default producer to `sourceSets.test`
+only, discovers production package targets, enables the full mutation matrix,
+and requires a 100% score for each acceptance condition. Reviewer rows and
+reviewer-only JUnit tests are excluded from that producer. Attribution matches
+the compiled canonical method identity against PIT's JUnit Unique ID rather than
+assigning every mutant covered by the same test class; multiple AC methods may
+therefore share a class without sharing a score. No per-case mutation score is
+produced. Existing PIT settings remain in place except that the full matrix is
 required for attribution. A reviewer can explicitly disable any safeguard
 through `toppleCat.adversarial`; evidence then records `DISABLED` with the
-configuration reason instead of treating it as a pass.
+configuration reason instead of treating it as a pass. Custom producer scope is
+the reviewer's responsibility and is not inferred by ToppleCat.
 
 ## External Spec and Delivery Boundaries
 

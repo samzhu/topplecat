@@ -54,6 +54,14 @@ second authoring language beside the executable Java contract.
 | Expected data was read but never compared with reality. | Enforced **expected consumption**. |
 | Old or partial output is mistaken for current proof. | Run-scoped gates, digests, and an explicit **evidence verdict**. |
 
+Hidden retest and mutation answer different questions. Hidden retest asks whether
+an implementation generalizes beyond visible examples. The default PIT producer
+measures **public executable contract mutation strength**: it uses
+`sourceSets.test`, public test classes, and public case rows only. Reviewer rows
+and reviewer-only JUnit tests never help that producer kill a mutant. If a
+boundary must kill a mutant, it belongs in the public contract; ToppleCat does
+not add per-case mutation scores or infer the scope of a custom producer.
+
 ## Watch a Fake Completion Fall
 
 The JUnit sample starts with a deliberate defect that passes the public case.

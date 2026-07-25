@@ -52,6 +52,13 @@ language。
 | expected 已讀取，卻沒有和實際結果比較。 | 強制執行的 **expected consumption**。 |
 | 舊的或不完整的輸出被誤認為本次證明。 | Run-scoped gates、digests 與明確的 **evidence verdict**。 |
 
+Hidden retest 與 mutation 回答的是不同問題。Hidden retest 檢查實作是否能超越
+看得見的範例而泛化；預設 PIT producer 衡量的是**公開可執行合約的 mutation
+strength**，只使用 `sourceSets.test`、public test classes 與 public case rows。
+Reviewer rows 與 reviewer-only JUnit tests 永遠不會協助這個 producer 殺死 mutant。
+若某個 boundary 必須殺死 mutant，它就應屬於 public contract；ToppleCat 不會增加
+per-case mutation score，也不會推斷 custom producer 的範圍。
+
 ## 看 ToppleCat 推倒一次假完成
 
 JUnit sample 一開始刻意保留一個能通過公開 case 的缺陷。可重複執行的

@@ -417,6 +417,74 @@ class ToppleCatPluginFunctionalTest {
     }
 
     @Test
+    void defaultMutationProducerDoesNotUseReviewerCasesOrTests() throws Exception {
+        verificationProject("");
+        Path production = project.resolve("src/main/java/example/CouponService.java");
+        Files.createDirectories(production.getParent());
+        Files.writeString(production, """
+                package example;
+                public final class CouponService {
+                    public int discountFor(int subtotal) { return subtotal >= 500 ? 100 : 0; }
+                }
+                """);
+        writeTestSource("""
+                package example;
+                class CouponTest {
+                    @ToppleStageField CouponThen then;
+                    @ToppleTest("AC-CART-COUPON")
+                    void appliesCoupon(ToppleCase testCase) {
+                        then.matches_contract(testCase);
+                    }
+                    static final class CouponThen extends ToppleStage<CouponThen> {
+                        private final CouponService service = new CouponService();
+                        CouponThen matches_contract(ToppleCase testCase) {
+                            recorded();
+                            testCase.verify("discount", service.discountFor(testCase.input("subtotal", Integer.class)));
+                            return self();
+                        }
+                    }
+                }
+                """);
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public-non-boundary","acId":"AC-CART-COUPON",
+                  "inputs":{"subtotal":600},"expected":{"discount":100}}]
+                """);
+        Path reviewerCase = project.resolve("src/hiddenTest/resources/topplecat/cases/coupon-reviewer-boundary.yaml");
+        Files.createDirectories(reviewerCase.getParent());
+        Files.writeString(reviewerCase, """
+                - caseId: coupon-reviewer-boundary
+                  acId: AC-CART-COUPON
+                  inputs: {subtotal: 500}
+                  expected: {discount: 100}
+                """);
+        Path reviewerTest = project.resolve("src/hiddenTest/java/example/ReviewerBoundaryTest.java");
+        Files.createDirectories(reviewerTest.getParent());
+        Files.writeString(reviewerTest, """
+                package example;
+                import static org.junit.jupiter.api.Assertions.assertEquals;
+                import org.junit.jupiter.api.Test;
+                class ReviewerBoundaryTest {
+                    @Test void detectsTheReviewerOnlyBoundary() {
+                        assertEquals(100, new CouponService().discountFor(500));
+                    }
+                }
+                """);
+
+        var result = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":pitest").getOutcome());
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatMutationGate").getOutcome());
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "JUNIT"));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "MUTATION"));
+        String pitReport = Files.readString(project.resolve("build/reports/pitest/mutations.xml"));
+        assertFalse(pitReport.contains("ReviewerBoundaryTest"), pitReport);
+        assertFalse(pitReport.contains("coupon-reviewer-boundary"), pitReport);
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
     void livePitKeepsAcceptanceConditionsSeparateWhenTheyShareATestClass() throws Exception {
         verificationProject("""
                 toppleCat {
