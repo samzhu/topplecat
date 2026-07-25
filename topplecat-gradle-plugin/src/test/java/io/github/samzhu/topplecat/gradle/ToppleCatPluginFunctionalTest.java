@@ -498,6 +498,112 @@ class ToppleCatPluginFunctionalTest {
     }
 
     @Test
+    void rejectsTheProductionPlusPublicAnswerAttackAfterReviewerHidesTheContract() throws Exception {
+        verificationProject("");
+        Path production = project.resolve("src/main/java/example/AmountService.java");
+        Files.createDirectories(production.getParent());
+        Files.writeString(production, """
+                package example;
+                public final class AmountService {
+                    public int amountFor(String customer) { return 250; }
+                }
+                """);
+        Path contract = project.resolve("src/test/java/example/AmountContractTest.java");
+        Files.createDirectories(contract.getParent());
+        Files.writeString(contract, """
+                package example;
+                import io.github.samzhu.topplecat.junit.ToppleCase;
+                import io.github.samzhu.topplecat.junit.ToppleStage;
+                import io.github.samzhu.topplecat.junit.ToppleStageField;
+                import io.github.samzhu.topplecat.junit.ToppleTest;
+                class AmountContractTest {
+                    @ToppleStageField AmountThen then;
+                    @ToppleTest("AC-CONTRACT-INTEGRITY")
+                    void returns_the_approved_amount(ToppleCase testCase) {
+                        then.matches_contract(testCase);
+                    }
+                    static final class AmountThen extends ToppleStage<AmountThen> {
+                        AmountThen matches_contract(ToppleCase testCase) {
+                            recorded();
+                            testCase.verify("amount", new AmountService().amountFor(testCase.input("customer", String.class)));
+                            return self();
+                        }
+                    }
+                }
+                """);
+        Path publicCases = project.resolve("src/test/resources/topplecat/cases/amount.json");
+        Files.createDirectories(publicCases.getParent());
+        Files.writeString(publicCases, """
+                [
+                  {"caseId":"approved-visible-customer","acId":"AC-CONTRACT-INTEGRITY",
+                   "inputs":{"customer":"visible-customer"},"expected":{"amount":250}},
+                  {"caseId":"visible-control-customer","acId":"AC-CONTRACT-INTEGRITY",
+                   "inputs":{"customer":"visible-control"},"expected":{"amount":250}}
+                ]
+                """);
+        Path reviewerTest = project.resolve("src/hiddenTest/java/example/ReviewerAmountTest.java");
+        Files.createDirectories(reviewerTest.getParent());
+        Files.writeString(reviewerTest, """
+                package example;
+                import static org.junit.jupiter.api.Assertions.assertEquals;
+                import org.junit.jupiter.api.Test;
+                class ReviewerAmountTest {
+                    @Test void keeps_the_reviewer_boundary() {
+                        assertEquals(250, new AmountService().amountFor("reviewer-boundary"));
+                    }
+                }
+                """);
+        Path reviewerCases = project.resolve("src/hiddenTest/resources/topplecat/cases/amount-reviewer.yaml");
+        Files.createDirectories(reviewerCases.getParent());
+        Files.writeString(reviewerCases, """
+                - caseId: reviewer-boundary-customer
+                  acId: AC-CONTRACT-INTEGRITY
+                  inputs: {customer: reviewer-boundary}
+                  expected: {amount: 250}
+                """);
+
+        assertEquals(TaskOutcome.SUCCESS, runner("toppleCatReview", "--stacktrace").build()
+                .task(":toppleCatReview").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, runner("toppleCatHide", "--stacktrace").build()
+                .task(":toppleCatHide").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+
+        Files.writeString(publicCases, """
+                [
+                  {"caseId":"approved-visible-customer","acId":"AC-CONTRACT-INTEGRITY",
+                   "inputs":{"customer":"visible-customer"},"expected":{"amount":251}},
+                  {"caseId":"visible-control-customer","acId":"AC-CONTRACT-INTEGRITY",
+                   "inputs":{"customer":"visible-control"},"expected":{"amount":250}}
+                ]
+                """);
+        Files.writeString(production, """
+                package example;
+                public final class AmountService {
+                    public int amountFor(String customer) {
+                        return "visible-customer".equals(customer) ? 251 : 250;
+                    }
+                }
+                """);
+
+        var rejected = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+
+        assertEquals(TaskOutcome.FAILED, rejected.task(":toppleCatReport").getOutcome());
+        assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "CONTRACT_INTEGRITY"));
+        assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "JUNIT"));
+        assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "EXPECTED_CONSUMPTION"));
+        assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "MUTATION"));
+        assertEquals(EvidenceVerdict.FAIL, evidenceVerdict(project));
+        assertEquals(TaskOutcome.SUCCESS, rejected.task(":toppleCatRehide").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        for (String forbidden : List.of("250", "251", "visible-customer", "reviewer-boundary", "amount.json",
+                "AC-CONTRACT-INTEGRITY")) {
+            assertFalse(feedback.contains(forbidden), feedback);
+        }
+    }
+
+    @Test
     void livePitKeepsAcceptanceConditionsSeparateWhenTheyShareATestClass() throws Exception {
         verificationProject("""
                 toppleCat {
