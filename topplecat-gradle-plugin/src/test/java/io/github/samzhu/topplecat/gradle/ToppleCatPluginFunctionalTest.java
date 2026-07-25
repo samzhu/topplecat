@@ -264,6 +264,11 @@ class ToppleCatPluginFunctionalTest {
 
         assertEquals(TaskOutcome.SUCCESS, verified.task(":toppleCatRehide").getOutcome());
         assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+        Path reviewerJunitXml = Files.list(currentRun(project).resolve("junit/JUNIT"))
+                .filter(path -> path.toString().endsWith(".xml")).findFirst().orElseThrow();
+        String reviewerResults = Files.readString(reviewerJunitXml);
+        assertTrue(reviewerResults.contains("coupon-reviewer-updated"), reviewerResults);
+        assertFalse(reviewerResults.contains("coupon-reviewer\""), reviewerResults);
         String publicSpec = Files.readString(project.resolve("build/topplecat/reports/spec/data.json"));
         String evidence = Files.readString(project.resolve("build/topplecat/evidence.json"));
         String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
