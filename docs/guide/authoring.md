@@ -82,6 +82,9 @@ If a business contract needs to require displayed formatting or decimal scale,
 express it as a string or a separate explicit output field. A JSON number and a
 text value that looks numeric remain different values.
 
+See the [0.0.2 release notes](../releases/0.0.2.md) for the version-specific
+expected-consumption and numeric-equality corrections.
+
 Run this authoring check before a handoff:
 
 ```bash

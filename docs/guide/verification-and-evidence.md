@@ -27,7 +27,7 @@
 | `toppleCatReview` | Authorized reviewer, before hiding. | Renders the complete reviewer-only static contract review without executing tests. |
 | `toppleCatHide` | Before implementation begins. | Moves the entire reviewer source set into plaintext local custody storage. |
 | `toppleCatRestore` | Authorized reviewer, only when source must be inspected or changed. | Restores the exact reviewer source set from local custody storage. |
-| `toppleCatUpdateEscrow` | Authorized reviewer, after restoring, editing, checking, and accepting a new review. | Validates, stages, audits locally, and atomically activates the complete revised reviewer source set. |
+| `toppleCatUpdateEscrow` | Authorized reviewer, after restoring, editing, checking, and accepting a new review. | Validates, stages, audits locally, and activates the complete revised reviewer source set with safe recovery. |
 | `test` | During implementation. | Runs public tests and public case rows only. |
 | `toppleCatVerify` | Reviewer or CI final gate. | Runs enabled safeguards, writes evidence, and re-hides source after a hidden retest. |
 
@@ -51,8 +51,10 @@ toppleCatRestore
 The update task requires a readable `RESTORED` local escrow manifest and a
 complete inventory of the current reviewer source. It preserves the prior active
 escrow until the revised source, manifest, and reviewer-local audit have all
-validated. Ordinary `toppleCatHide` still rejects changed restored source; a
-public export has no reviewer source or custody state, so update fails safely.
+validated. Activation requests an atomic filesystem move where supported and
+uses the same validation and recovery path otherwise. Ordinary `toppleCatHide`
+still rejects changed restored source; a public export has no reviewer source
+or custody state, so update fails safely.
 
 The verify task enables three safeguards by default: it restores reviewer source
 and reruns public tests with reviewer rows, runs reviewer JUnit tests, configures
@@ -72,6 +74,9 @@ question and never help default PIT kill a mutant. A boundary that must kill a
 mutant belongs in the public contract. ToppleCat adds no per-case mutation score
 and does not infer the test scope of a custom third-party producer.
 
+The [0.0.2 release notes](../releases/0.0.2.md) summarize the reviewer-custody
+evolution and the public-only default PIT boundary.
+
 ## Verdicts
 
 The aggregate `evidence.json` verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Each
@@ -84,6 +89,13 @@ run always records `JUNIT`, `REVIEWER_JUNIT`, `EXPECTED_CONSUMPTION`, and
   proved complete for this run.
 - `DISABLED` means the reviewer explicitly chose not to run that safeguard. It
   does not prevent an aggregate `PASS`, but it is never presented as a pass.
+
+`toppleCatVerify` and `toppleCatReport` fail the Gradle build when the aggregate
+verdict is `FAIL` or `INCOMPLETE`. The report task first writes evidence,
+reports, safe feedback, stable copies, and the archived run; reviewer source is
+still rehidden by its finalizer. A green final task therefore means aggregate
+`PASS`, while `evidence.json` remains the gate-level diagnostic for every
+outcome.
 
 Use the `toppleCat.adversarial` tree only when that trade-off is deliberate:
 
@@ -116,7 +128,9 @@ ToppleCat never uses a previous run to fill a gap. Each verification execution
 uses a transient workspace under `build/topplecat/runs/current/`, then archives
 it under a fresh execution-time UUID after reporting. The latest three
 archives are retained. The stable files in `build/topplecat/` are copies
-published after the current run is evaluated.
+published after the current run is evaluated. Public and reviewer verification
+test tasks execute on every run rather than reusing up-to-date or cached test
+outputs as current evidence.
 
 The public `reports/spec/index.html` is therefore a post-verify artifact, not a
 pre-handoff review. `reports/review/index.html` is the only pre-handoff HTML and

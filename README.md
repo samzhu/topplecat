@@ -228,9 +228,11 @@ toppleCatRestore
 ```
 
 `toppleCatUpdateEscrow` validates and stages the complete revised reviewer
-source before atomically activating it. Ordinary `toppleCatHide` still rejects a
-changed restored suite. A public implementation export has neither reviewer
-source nor local escrow, so this reviewer-only task fails safely there.
+source before activating it. It requests an atomic filesystem move where
+supported and retains the same validation and recovery path otherwise.
+Ordinary `toppleCatHide` still rejects a changed restored suite. A public
+implementation export has neither reviewer source nor local escrow, so this
+reviewer-only task fails safely there.
 
 ## Read the Result
 
@@ -250,6 +252,11 @@ The final verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Hidden retest, mutation,
 and expected-consumption safeguards are enabled by default. If a reviewer
 deliberately disables one, evidence records `DISABLED` instead of pretending it
 passed.
+
+`toppleCatVerify` and `toppleCatReport` fail the Gradle build when the aggregate
+verdict is `FAIL` or `INCOMPLETE`, after evidence, reports, safe feedback, and
+the run archive are complete. A green final gate therefore means aggregate
+`PASS`. Read `evidence.json` for gate-level detail after either outcome.
 
 ## Keep Reviewer Data Private
 
@@ -276,6 +283,7 @@ commands.
 ## Documentation
 
 - [Getting started](docs/guide/getting-started.md)
+- [0.0.2 release notes](docs/releases/0.0.2.md)
 - [Authoring contracts](docs/guide/authoring.md)
 - [Verification and evidence](docs/guide/verification-and-evidence.md)
 - [Troubleshooting](docs/guide/troubleshooting.md)

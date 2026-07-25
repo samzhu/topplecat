@@ -219,10 +219,11 @@ toppleCatRestore
     -> toppleCatUpdateEscrow
 ```
 
-`toppleCatUpdateEscrow` 會先驗證並暫存完整的新版 reviewer source，再以原子方式
-啟用。一般 `toppleCatHide` 仍會拒絕已修改的 restored suite。公開 implementation
-export 不含 reviewer source 或本機 escrow，因此這個僅供 reviewer 使用的 task 會安全地
-失敗。
+`toppleCatUpdateEscrow` 會先驗證並暫存完整的新版 reviewer source，再進行
+啟用。Filesystem 支援時會要求 atomic move；不支援時仍保留相同的驗證與
+復原路徑。一般 `toppleCatHide` 仍會拒絕已修改的 restored suite。公開
+implementation export 不含 reviewer source 或本機 escrow，因此這個僅供
+reviewer 使用的 task 會安全地失敗。
 
 ## 閱讀結果
 
@@ -241,6 +242,11 @@ failures。
 最終 verdict 是 `PASS`、`FAIL` 或 `INCOMPLETE`。Hidden retest、mutation
 與 expected-consumption safeguards 預設啟用；若 reviewer 明確停用其中
 一項，evidence 會記錄 `DISABLED`，不會假裝已通過。
+
+Aggregate verdict 為 `FAIL` 或 `INCOMPLETE` 時，`toppleCatVerify` 與
+`toppleCatReport` 會在 evidence、reports、安全 feedback 與 run archive
+完整產生後讓 Gradle build 失敗。因此最終綠燈代表 aggregate `PASS`；
+無論成功或失敗，都可從 `evidence.json` 讀取 gate-level 細節。
 
 ## 保護 Reviewer 資料
 
@@ -264,6 +270,7 @@ commit 到 implementation agent 可讀的 history。交付時應使用不含 `.g
 ## 文件
 
 - [開始使用](docs/guide/getting-started.md)
+- [0.0.2 發佈說明](docs/releases/0.0.2.zh-TW.md)
 - [撰寫合約](docs/guide/authoring.md)
 - [驗證與證據](docs/guide/verification-and-evidence.md)
 - [疑難排解](docs/guide/troubleshooting.md)

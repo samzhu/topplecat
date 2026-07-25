@@ -104,8 +104,11 @@ the reviewer retest did not complete in this verification run.
 ```
 
 Rerun the complete `toppleCatVerify` task; do not use an older stable report to
-fill a missing current-run gate. When expected consumption is deliberately
-disabled, the Verification report still records consumption and displays:
+fill a missing current-run gate. A `FAIL` or `INCOMPLETE` aggregate verdict
+makes `toppleCatVerify` and `toppleCatReport` fail after evidence, reports, safe
+feedback, and the run archive are complete. Read `evidence.json` for the named
+gate and safe reason. When expected consumption is deliberately disabled, the
+Verification report still records consumption and displays:
 
 ```text
 Expected consumption enforcement disabled

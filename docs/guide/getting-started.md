@@ -27,7 +27,9 @@ dependencyResolutionManagement {
 
 Then apply the plugin and add the JUnit integration shown in the root
 [README](../../README.md#install-002). The consumer needs its own Gradle wrapper,
-as a normal Gradle project does.
+as a normal Gradle project does. See the
+[0.0.2 release notes](../releases/0.0.2.md) for the correctness changes in this
+version.
 
 ## Configure the Consumer
 
@@ -73,8 +75,10 @@ Once public and reviewer contracts exist, run:
 is the public development loop. `toppleCatVerify` runs hidden retests, PIT
 mutation, and expected-consumption enforcement by default, writes evidence and
 reports, and re-hides restored reviewer source. Its first mutation run can take
-longer. Inspect `build/topplecat/evidence.json` for the final verdict and any
-explicit `DISABLED` safeguard.
+longer. Aggregate `FAIL` or `INCOMPLETE` makes the command exit non-zero after
+those artifacts are complete; a green final task means aggregate `PASS`.
+Inspect `build/topplecat/evidence.json` for gate-level detail and any explicit
+`DISABLED` safeguard.
 
 When an authorized reviewer needs to inspect or change reviewer-only source,
 run `./gradlew toppleCatRestore`. It restores only an existing hidden source set

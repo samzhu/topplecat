@@ -47,6 +47,11 @@ configuration reason and does not block an aggregate `PASS`.
 
 After a run, stable copies are published below `build/topplecat/` for a user to
 inspect. Those copies are convenience outputs, not inputs to a later verdict.
+Public and reviewer verification tests execute freshly for each run rather
+than treating Gradle up-to-date or cached output as current proof. After all
+artifacts are published and the run is archived, aggregate `FAIL` or
+`INCOMPLETE` fails the Gradle task; the reviewer-source rehide finalizer still
+runs.
 
 ## Information Boundary
 
