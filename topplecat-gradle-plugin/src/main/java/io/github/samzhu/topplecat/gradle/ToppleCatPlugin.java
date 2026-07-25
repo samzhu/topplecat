@@ -144,10 +144,13 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                     task.setGroup("verification");
                     task.setDescription("Restores the complete reviewer-only source set from validated local hidden storage.");
                     task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                    task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
                 });
         restore.configure(task -> {
             task.mustRunAfter(acquireCustody, hide);
             task.usesService(custodyService);
+            task.getOutputs().upToDateWhen(ignored -> false);
+            task.getOutputs().doNotCacheIf("Reviewer source restore is custody-state dependent.", ignored -> true);
         });
         TaskProvider<ToppleCatUpdateEscrowTask> updateEscrow = project.getTasks().register(
                 "toppleCatUpdateEscrow", ToppleCatUpdateEscrowTask.class, task -> {

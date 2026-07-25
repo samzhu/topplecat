@@ -4,12 +4,16 @@ import io.github.samzhu.topplecat.core.EscrowService;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.TaskAction;
 
 /** Restores reviewer source from validated local hidden storage. */
 public abstract class ToppleCatRestoreTask extends DefaultTask {
     @Internal
     public abstract DirectoryProperty getProjectRoot();
+
+    @OutputDirectory
+    public abstract DirectoryProperty getHiddenSourceRoot();
 
     @TaskAction
     public void restore() {
