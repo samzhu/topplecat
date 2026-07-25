@@ -8,6 +8,8 @@ import io.github.samzhu.topplecat.core.CaseRun;
 import io.github.samzhu.topplecat.core.CaseVisibility;
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
+import io.github.samzhu.topplecat.core.ContractIntegrityResult;
+import io.github.samzhu.topplecat.core.ContractIntegrityResultJson;
 import io.github.samzhu.topplecat.core.EvidenceGate;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ExpectedConsumptionExecution;
@@ -66,6 +68,12 @@ import java.util.stream.Stream;
 public abstract class ToppleCatReportTask extends DefaultTask {
     private static final Pattern CASE_DISPLAY_NAME = Pattern.compile("\\[case:([^]]+)]");
     private static final JsonMapper JSON = JsonMapper.builder().build();
+    private static final String CONTRACT_CHANGED =
+            "The public executable contract or verification policy changed after reviewer approval.";
+    private static final String APPROVAL_MISSING =
+            "Reviewer approval evidence is missing; an authorized reviewer must review and reseal the contract.";
+    private static final String INTEGRITY_PRECONDITION =
+            "The contract-integrity gate did not permit downstream verification in this run.";
 
     @Internal
     public abstract DirectoryProperty getProjectRoot();
@@ -80,12 +88,14 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     public abstract RegularFileProperty getDefinitionFile();
 
     /** Reviewer-only definition built after hidden source has been restored for this exact run. */
-    @org.gradle.api.tasks.InputFile
-    @Optional
+    @Internal
     public abstract RegularFileProperty getReviewerDefinitionFile();
 
     @Internal
     public abstract DirectoryProperty getRunDirectory();
+
+    @Internal
+    public abstract RegularFileProperty getContractIntegrityResultFile();
 
     @Internal
     public abstract RegularFileProperty getMutationResultsFile();
@@ -124,7 +134,10 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         ExternalSpecDocumentReader.ParsedSpecs specDocs = ExternalSpecDocumentReader.read(root,
                 getSpecDocs().getFiles().stream().map(file -> file.toPath()).toList());
         ContractDefinition publicDefinition = definition(getDefinitionFile(), "public");
-        ContractDefinition reviewerDefinition = getHiddenRetestEnabled().get() ? reviewerDefinition() : publicDefinition;
+        GateOutcome integrity = contractIntegrityVerdict();
+        boolean integrityPassed = integrity.verdict() == EvidenceVerdict.PASS;
+        ContractDefinition reviewerDefinition = integrityPassed && getHiddenRetestEnabled().get()
+                ? reviewerDefinition() : publicDefinition;
         List<ToppleCaseData> publicCases = publicDefinition.acceptanceConditions().stream()
                 .flatMap(contract -> contract.cases().stream()).map(ToppleCatReportTask::caseData)
                 .filter(testCase -> testCase.visibility() == CaseVisibility.PUBLIC).toList();
@@ -146,20 +159,23 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         ExecutionSummary executionSummary = executions(runDirectory, reviewerDefinition.digest(), definedCaseIds);
         Map<String, ReportViews.CaseExecution> executions = executionSummary.executions();
         Instant generatedAt = Instant.now();
-        GateOutcome junit = testVerdict(runDirectory, "the public verification", VerificationRunArtifacts.JUNIT,
-                executionSummary.junit());
-        GateOutcome reviewer = getHiddenRetestEnabled().get()
+        GateOutcome junit = integrityPassed ? testVerdict(runDirectory, "the public verification", VerificationRunArtifacts.JUNIT,
+                executionSummary.junit()) : GateOutcome.incomplete(INTEGRITY_PRECONDITION);
+        GateOutcome reviewer = !integrityPassed ? GateOutcome.incomplete(INTEGRITY_PRECONDITION)
+                : getHiddenRetestEnabled().get()
                 ? testVerdict(runDirectory, "the reviewer retest", VerificationRunArtifacts.REVIEWER_JUNIT,
                         executionSummary.reviewerJUnit())
                 : GateOutcome.disabled(getHiddenRetestDisabledReason().get());
-        GateOutcome expectedConsumption = getExpectedConsumptionEnabled().get()
-                ? expectedConsumptionVerdict(junit, reviewer,
-                verificationCases, executions)
+        GateOutcome expectedConsumption = !integrityPassed ? GateOutcome.incomplete(INTEGRITY_PRECONDITION)
+                : getExpectedConsumptionEnabled().get()
+                ? expectedConsumptionVerdict(junit, reviewer, verificationCases, executions)
                 : GateOutcome.disabled(getExpectedConsumptionDisabledReason().get());
-        GateOutcome mutation = getMutationEnabled().get()
+        GateOutcome mutation = !integrityPassed ? GateOutcome.incomplete(INTEGRITY_PRECONDITION)
+                : getMutationEnabled().get()
                 ? mutationVerdict(runDirectory)
                 : GateOutcome.disabled(getMutationDisabledReason().get());
         List<EvidenceGate> reviewerGates = List.of(
+                integrity.asEvidenceGate(VerificationRunArtifacts.CONTRACT_INTEGRITY),
                 junit.asEvidenceGate(VerificationRunArtifacts.JUNIT),
                 reviewer.asEvidenceGate(VerificationRunArtifacts.REVIEWER_JUNIT),
                 expectedConsumption.asEvidenceGate(VerificationRunArtifacts.EXPECTED_CONSUMPTION),
@@ -170,7 +186,9 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 specDocs.narratives(), reviewerScenarioTemplates,
                 getExpectedConsumptionEnabled().get(), reviewerGates, generatedAt);
         Path reports = runDirectory.resolve("reports");
-        HtmlBundleWriter.spec(reports.resolve("spec"), spec);
+        if (integrityPassed) {
+            HtmlBundleWriter.spec(reports.resolve("spec"), spec);
+        }
         HtmlBundleWriter.verification(reports.resolve("verification"), verification);
         copyAttachments(verification, runDirectory, reports.resolve("verification"));
 
@@ -184,7 +202,8 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 runStartedAt(runDirectory), generatedAt, verdict,
                 verificationCases.stream().map(testCase -> caseRun(testCase, executions)).toList());
         write(runDirectory.resolve("verification-run.json"), VerificationRunJson.write(executionRun));
-        Map<String, String> digests = artifactDigests(root, reports, getMutationResultsFile().get().getAsFile().toPath());
+        Map<String, String> digests = artifactDigests(root, reports, getMutationResultsFile().get().getAsFile().toPath(),
+                getContractIntegrityResultFile().get().getAsFile().toPath());
         ToppleEvidence evidence = ToppleEvidenceJson.create(runId, generatedAt.toString(), verdict,
                 reviewerGates, digests);
         Path evidencePath = runDirectory.resolve("evidence.json");
@@ -192,7 +211,8 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         Path feedbackPath = runDirectory.resolve("agent-feedback.json");
         write(feedbackPath, AgentFeedbackJson.write(new AgentFeedback(
                 AgentFeedback.SCHEMA_VERSION, verdict, reviewerGates)));
-        publishStableArtifacts(root, reports, evidencePath, feedbackPath, getMutationResultsFile().get().getAsFile().toPath());
+        publishStableArtifacts(root, reports, evidencePath, feedbackPath, getMutationResultsFile().get().getAsFile().toPath(),
+                integrityPassed);
         VerificationRunWorkspace.archive(runDirectory, runId);
         getLogger().lifecycle("ToppleCat verification report written: {}", verdict);
         if (verdict != EvidenceVerdict.PASS) {
@@ -206,6 +226,24 @@ public abstract class ToppleCatReportTask extends DefaultTask {
             throw new IllegalStateException("ToppleCat hidden verification requires a run-scoped reviewer definition.");
         }
         return definition(getReviewerDefinitionFile(), "reviewer");
+    }
+
+    private GateOutcome contractIntegrityVerdict() {
+        Path resultFile = getContractIntegrityResultFile().get().getAsFile().toPath();
+        if (!Files.isRegularFile(resultFile)) {
+            return GateOutcome.incomplete(APPROVAL_MISSING);
+        }
+        try {
+            ContractIntegrityResult result = ContractIntegrityResultJson.read(Files.readString(resultFile));
+            return switch (result.verdict()) {
+                case PASS -> GateOutcome.pass();
+                case FAIL -> GateOutcome.fail(CONTRACT_CHANGED);
+                case INCOMPLETE -> GateOutcome.incomplete(APPROVAL_MISSING);
+                case DISABLED -> GateOutcome.incomplete(APPROVAL_MISSING);
+            };
+        } catch (IOException | RuntimeException exception) {
+            return GateOutcome.incomplete(APPROVAL_MISSING);
+        }
     }
 
     private static ContractDefinition definition(RegularFileProperty definitionFile, String projection) {
@@ -444,10 +482,13 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 : GateOutcome.pass();
     }
 
-    private static Map<String, String> artifactDigests(Path root, Path reports, Path mutationResults) {
+    private static Map<String, String> artifactDigests(Path root, Path reports, Path mutationResults, Path integrityResult) {
         Map<String, String> digests = new LinkedHashMap<>();
-        digest(digests, "spec-data.json", reports.resolve("spec/data.json"));
+        if (Files.isRegularFile(reports.resolve("spec/data.json"))) {
+            digest(digests, "spec-data.json", reports.resolve("spec/data.json"));
+        }
         digest(digests, "verification-data.json", reports.resolve("verification/data.json"));
+        digest(digests, "contract-integrity.json", integrityResult);
         Path manifest = root.resolve(".topplecat/escrow/manifest.json");
         if (Files.exists(manifest)) {
             digest(digests, "escrow-manifest.json", manifest);
@@ -480,10 +521,15 @@ public abstract class ToppleCatReportTask extends DefaultTask {
             Path reports,
             Path evidence,
             Path feedback,
-            Path mutationResults
+            Path mutationResults,
+            boolean publishPublicSpec
     ) {
         Path stable = root.resolve("build/topplecat");
-        replaceTree(reports.resolve("spec"), stable.resolve("reports/spec"));
+        if (publishPublicSpec) {
+            replaceTree(reports.resolve("spec"), stable.resolve("reports/spec"));
+        } else {
+            deleteTree(stable.resolve("reports/spec"));
+        }
         replaceTree(reports.resolve("verification"), stable.resolve("reports/verification"));
         copy(evidence, stable.resolve("evidence.json"));
         copy(feedback, stable.resolve("agent-feedback.json"));
@@ -570,6 +616,10 @@ public abstract class ToppleCatReportTask extends DefaultTask {
 
         private static GateOutcome fail() {
             return new GateOutcome(EvidenceVerdict.FAIL, null);
+        }
+
+        private static GateOutcome fail(String reason) {
+            return new GateOutcome(EvidenceVerdict.FAIL, reason);
         }
 
         private static GateOutcome incomplete(String reason) {

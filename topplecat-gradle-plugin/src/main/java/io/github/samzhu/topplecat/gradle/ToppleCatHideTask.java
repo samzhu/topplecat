@@ -8,7 +8,7 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 
 /** Moves reviewer-only source to local hidden storage before implementation work. */
-public abstract class ToppleCatHideTask extends DefaultTask {
+public abstract class ToppleCatHideTask extends DefaultTask implements ToppleCatApprovalInputs {
     @Internal
     public abstract DirectoryProperty getProjectRoot();
 
@@ -18,7 +18,7 @@ public abstract class ToppleCatHideTask extends DefaultTask {
     @TaskAction
     public void hide() {
         EscrowManifest manifest = new EscrowService().hide(getProjectRoot().get().getAsFile().toPath(),
-                getHiddenSourceRoot().get().getAsFile().toPath());
+                getHiddenSourceRoot().get().getAsFile().toPath(), currentApproval());
         getLogger().lifecycle("ToppleCat hide complete: {} reviewer files moved to local hidden storage.",
                 manifest.entries().size());
         getLogger().lifecycle("Local hidden storage is plaintext custody state, not a secrecy boundary.");

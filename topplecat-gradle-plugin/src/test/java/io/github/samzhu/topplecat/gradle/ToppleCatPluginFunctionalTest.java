@@ -596,6 +596,7 @@ class ToppleCatPluginFunctionalTest {
         assertEquals(EvidenceVerdict.FAIL, evidenceVerdict(project));
         assertEquals(TaskOutcome.SUCCESS, rejected.task(":toppleCatRehide").getOutcome());
         assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+        assertFalse(Files.exists(project.resolve("build/topplecat/reports/spec")));
         String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
         for (String forbidden : List.of("250", "251", "visible-customer", "reviewer-boundary", "amount.json",
                 "AC-CONTRACT-INTEGRITY")) {
@@ -1416,12 +1417,13 @@ class ToppleCatPluginFunctionalTest {
         var failed = runner("toppleCatVerify", "--stacktrace").buildAndFail();
 
         assertEquals(TaskOutcome.FAILED, failed.task(":toppleCatReport").getOutcome());
-        assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "JUNIT"));
+        assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "CONTRACT_INTEGRITY"));
+        assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "JUNIT"));
         assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "REVIEWER_JUNIT"));
         assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "MUTATION"));
         String failedEvidence = Files.readString(project.resolve("build/topplecat/evidence.json"));
-        assertTrue(failedEvidence.contains("the reviewer retest did not complete in this verification run."), failedEvidence);
-        assertTrue(failedEvidence.contains("the mutation gate did not complete in this verification run."), failedEvidence);
+        assertTrue(failedEvidence.contains("The contract-integrity gate did not permit downstream verification in this run."),
+                failedEvidence);
         assertFalse(failedEvidence.contains("hiddenTest"), failedEvidence);
         assertFalse(failedEvidence.contains("toppleCatVerificationTest"), failedEvidence);
         assertFalse(failedEvidence.contains("toppleCatMutationGate"), failedEvidence);
