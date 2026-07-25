@@ -34,13 +34,22 @@ public final class EscrowService {
     }
 
     public EscrowManifest hide(Path projectRoot, Path hiddenSourceRoot) {
+        return hide(projectRoot, hiddenSourceRoot, null);
+    }
+
+    /** Creates a reviewer-approved v2 epoch only when this is the initial hide. */
+    public EscrowManifest hide(
+            Path projectRoot,
+            Path hiddenSourceRoot,
+            ReviewerContractApproval initialApproval
+    ) {
         Path root = normalizedRoot(projectRoot);
         Path hidden = hiddenSourceRoot.toAbsolutePath().normalize();
         requireInside(root, hidden);
         try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root)) {
             Path manifestPath = manifestPath(root);
             if (!Files.exists(manifestPath)) {
-                return hideInitialSource(root, hidden, manifestPath);
+                return hideInitialSource(root, hidden, manifestPath, initialApproval);
             }
 
             EscrowManifest manifest = readManifest(manifestPath);
@@ -113,11 +122,20 @@ public final class EscrowService {
 
     /** Explicitly replaces restored reviewer custody after the reviewer has checked and reviewed it. */
     public EscrowManifest update(Path projectRoot, Path hiddenSourceRoot) {
+        return update(projectRoot, hiddenSourceRoot, null);
+    }
+
+    /** Explicitly activates a reviewed reviewer-source and approval epoch together. */
+    public EscrowManifest update(
+            Path projectRoot,
+            Path hiddenSourceRoot,
+            ReviewerContractApproval approval
+    ) {
         Path root = normalizedRoot(projectRoot);
         Path hidden = hiddenSourceRoot.toAbsolutePath().normalize();
         requireInside(root, hidden);
         try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root)) {
-            return updateRestoredSource(root, hidden);
+            return updateRestoredSource(root, hidden, approval);
         }
     }
 
@@ -128,7 +146,7 @@ public final class EscrowService {
         }
     }
 
-    private EscrowManifest updateRestoredSource(Path root, Path hidden) {
+    private EscrowManifest updateRestoredSource(Path root, Path hidden, ReviewerContractApproval approval) {
         Path manifestPath = manifestPath(root);
         if (!Files.isRegularFile(manifestPath)) {
             throw new ToppleCatException("No ToppleCat escrow manifest exists. Run toppleCatHide before updating reviewer custody.");
@@ -140,8 +158,11 @@ public final class EscrowService {
         }
         validateStoredFiles(root, previous);
 
+        if (!previous.isLegacyVersionOne() && approval == null) {
+            throw new ToppleCatException("Escrow update requires the reviewer-approved public contract and verification policy.");
+        }
         List<EscrowEntry> entries = inventory(root, hidden);
-        EscrowManifest updated = new EscrowManifest(EscrowManifest.SCHEMA_VERSION, EscrowState.HIDDEN, entries);
+        EscrowManifest updated = updatedManifest(previous, entries, approval);
         storeEntries(root, entries);
         validateStoredFiles(root, updated);
 
@@ -238,11 +259,18 @@ public final class EscrowService {
                 + "reviewer source remains at " + retained + "; no update was activated.", cause);
     }
 
-    private static EscrowManifest hideInitialSource(Path root, Path hidden, Path manifestPath) {
+    private static EscrowManifest hideInitialSource(
+            Path root,
+            Path hidden,
+            Path manifestPath,
+            ReviewerContractApproval initialApproval
+    ) {
         List<EscrowEntry> entries = inventory(root, hidden);
         storeEntries(root, entries);
 
-        EscrowManifest hiddenManifest = new EscrowManifest(EscrowManifest.SCHEMA_VERSION, EscrowState.HIDDEN, entries);
+        EscrowManifest hiddenManifest = initialApproval == null
+                ? new EscrowManifest(EscrowManifest.SCHEMA_VERSION_V1, EscrowState.HIDDEN, entries)
+                : new EscrowManifest(EscrowManifest.SCHEMA_VERSION_V2, EscrowState.HIDDEN, entries, initialApproval);
         writeManifest(manifestPath, hiddenManifest);
         deleteTree(hidden);
         return hiddenManifest;
@@ -269,9 +297,20 @@ public final class EscrowService {
     }
 
     private static EscrowManifest writeState(Path manifestPath, EscrowManifest manifest, EscrowState state) {
-        EscrowManifest updated = new EscrowManifest(EscrowManifest.SCHEMA_VERSION, state, manifest.entries());
+        EscrowManifest updated = new EscrowManifest(manifest.schemaVersion(), state, manifest.entries(), manifest.approval());
         writeManifest(manifestPath, updated);
         return updated;
+    }
+
+    private static EscrowManifest updatedManifest(
+            EscrowManifest previous,
+            List<EscrowEntry> entries,
+            ReviewerContractApproval approval
+    ) {
+        if (approval == null) {
+            return new EscrowManifest(EscrowManifest.SCHEMA_VERSION_V1, EscrowState.HIDDEN, entries);
+        }
+        return new EscrowManifest(EscrowManifest.SCHEMA_VERSION_V2, EscrowState.HIDDEN, entries, approval);
     }
 
     private static Path normalizedRoot(Path projectRoot) {
@@ -335,7 +374,11 @@ public final class EscrowService {
                 .filter(entry -> !entry.getValue().equals(previousEntries.get(entry.getKey())))
                 .count();
         return new EscrowUpdateAudit(EscrowUpdateAudit.SCHEMA_VERSION, Instant.now(), previousDigest, updatedDigest,
-                added, changed, removed);
+                approvalDigest(previous), approvalDigest(updated), added, changed, removed);
+    }
+
+    private static String approvalDigest(EscrowManifest manifest) {
+        return manifest.approval() == null ? null : manifest.approval().approvalDigest();
     }
 
     private static Map<String, String> entriesByPath(List<EscrowEntry> entries) {

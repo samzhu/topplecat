@@ -7,6 +7,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
@@ -48,6 +49,69 @@ class EscrowServiceTest {
         assertEquals(EscrowState.HIDDEN, rehidden.state());
         assertFalse(Files.exists(hidden));
         assertEquals(hiddenManifest.entries(), rehidden.entries());
+    }
+
+    @Test
+    void preservesV2ReviewerApprovalAcrossRestoreRehideAndOrdinaryHide() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        EscrowService escrow = new EscrowService();
+        ReviewerContractApproval approved = approval("a");
+
+        EscrowManifest hiddenManifest = escrow.hide(project, hidden, approved);
+        EscrowManifest restored = escrow.restore(project);
+        EscrowManifest rehidden = escrow.rehide(project);
+        EscrowManifest ordinaryHide = escrow.hide(project, hidden, approval("b"));
+
+        assertEquals(EscrowManifest.SCHEMA_VERSION_V2, hiddenManifest.schemaVersion());
+        assertEquals(approved, hiddenManifest.approval());
+        assertEquals(approved, restored.approval());
+        assertEquals(approved, rehidden.approval());
+        assertEquals(approved, ordinaryHide.approval());
+    }
+
+    @Test
+    void migratesAVersionOneEscrowOnlyThroughExplicitUpdateWithApproval() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        EscrowService escrow = new EscrowService();
+
+        EscrowManifest legacy = escrow.hide(project, hidden);
+        escrow.restore(project);
+        ReviewerContractApproval approved = approval("a");
+        EscrowManifest migrated = escrow.update(project, hidden, approved);
+
+        assertEquals(EscrowManifest.SCHEMA_VERSION_V1, legacy.schemaVersion());
+        assertEquals(null, legacy.approval());
+        assertEquals(EscrowManifest.SCHEMA_VERSION_V2, migrated.schemaVersion());
+        assertEquals(approved, migrated.approval());
+        assertFalse(Files.exists(hidden));
+    }
+
+    @Test
+    void retainsThePreviousApprovalWhenAVersionTwoUpdateFails() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        ReviewerContractApproval originalApproval = approval("a");
+        EscrowService original = new EscrowService();
+        original.hide(project, hidden, originalApproval);
+        original.restore(project);
+        Files.writeString(source, "class HiddenOrderTest { int revision = 2; }\n");
+        EscrowService failing = new EscrowService(() -> {
+            throw new IllegalStateException("injected activation failure");
+        });
+
+        assertThrows(ToppleCatException.class, () -> failing.update(project, hidden, approval("b")));
+
+        assertEquals(EscrowState.RESTORED, original.manifest(project).state());
+        assertEquals(originalApproval, original.manifest(project).approval());
+        assertEquals("class HiddenOrderTest {}\n", Files.readString(source));
     }
 
     @Test
@@ -341,5 +405,12 @@ class EscrowServiceTest {
                     .filter(path -> path.getFileName().toString().equals("audit.json"))
                     .findFirst().orElseThrow();
         }
+    }
+
+    private static ReviewerContractApproval approval(String marker) {
+        return ReviewerContractApproval.create(List.of(
+                new PublicContractEntry("src/test/java/example/ContractTest.java", marker.repeat(64))
+        ), "c".repeat(64), new VerificationPolicy("0.0.3", true, true, true, 100,
+                MutationProducerKind.DEFAULT, null));
     }
 }

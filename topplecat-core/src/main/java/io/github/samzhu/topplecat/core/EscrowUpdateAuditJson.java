@@ -13,14 +13,16 @@ final class EscrowUpdateAuditJson {
 
     static String write(EscrowUpdateAudit audit) {
         Payload payload = new Payload(audit.schemaVersion(), audit.updatedAt().toString(), audit.previousManifestSha256(),
-                audit.newManifestSha256(), audit.added(), audit.changed(), audit.removed());
+                audit.newManifestSha256(), audit.previousApprovalDigest(), audit.newApprovalDigest(), audit.added(), audit.changed(),
+                audit.removed());
         return JSON.writerWithDefaultPrettyPrinter().writeValueAsString(payload) + "\n";
     }
 
     static EscrowUpdateAudit read(String source) {
         Payload payload = JSON.readValue(source, Payload.class);
         return new EscrowUpdateAudit(payload.schemaVersion(), Instant.parse(payload.updatedAt()),
-                payload.previousManifestSha256(), payload.newManifestSha256(), payload.added(), payload.changed(),
+                payload.previousManifestSha256(), payload.newManifestSha256(), payload.previousApprovalDigest(),
+                payload.newApprovalDigest(), payload.added(), payload.changed(),
                 payload.removed());
     }
 
@@ -29,6 +31,8 @@ final class EscrowUpdateAuditJson {
             String updatedAt,
             String previousManifestSha256,
             String newManifestSha256,
+            String previousApprovalDigest,
+            String newApprovalDigest,
             int added,
             int changed,
             int removed
