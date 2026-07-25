@@ -110,9 +110,9 @@ PASS / FAIL / INCOMPLETE evidence and human reports
 5. **Verify the claim.** `toppleCatVerify` restores reviewer source for the run,
    executes all enabled gates, writes evidence, and hides the source again.
 
-## Install 0.0.1
+## Install 0.0.2
 
-ToppleCat `0.0.1` is the first Maven Central release. A consumer project needs
+ToppleCat `0.0.2` is the current Maven Central release. A consumer project needs
 Java 25 and a Gradle version that supports it. Add Maven Central for both plugin
 and library resolution; a released consumer does not need `mavenLocal()`.
 
@@ -133,12 +133,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.1"
+    id("io.github.samzhu.topplecat") version "0.0.2"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.1"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.2"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")

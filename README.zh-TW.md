@@ -105,9 +105,9 @@ PASS / FAIL / INCOMPLETE 證據與人類報表
 5. **驗證完成宣稱。** `toppleCatVerify` 暫時還原 reviewer source、
    執行所有已啟用 gate、寫出證據，再把來源隱藏回去。
 
-## 安裝 0.0.1
+## 安裝 0.0.2
 
-ToppleCat `0.0.1` 是第一個發佈到 Maven Central 的版本。Consumer 專案需要
+ToppleCat `0.0.2` 是目前發佈到 Maven Central 的版本。Consumer 專案需要
 Java 25 與支援它的 Gradle 版本。Plugin 與 library resolution 都加入 Maven
 Central 即可；使用正式版的 consumer 不需要 `mavenLocal()`。
 
@@ -128,12 +128,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.1"
+    id("io.github.samzhu.topplecat") version "0.0.2"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.1"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.2"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")

@@ -1,6 +1,6 @@
 # Getting Started
 
-ToppleCat `0.0.1` is available from Maven Central. A consumer project needs
+ToppleCat `0.0.2` is available from Maven Central. A consumer project needs
 Java 25 and a Gradle version that supports it. The current consumer example uses
 JUnit Jupiter 6.1.1 and the `io.github.samzhu.topplecat` Gradle plugin.
 ToppleCat brings its Jackson dependencies transitively and adds no
@@ -26,7 +26,7 @@ dependencyResolutionManagement {
 ```
 
 Then apply the plugin and add the JUnit integration shown in the root
-[README](../../README.md#install-001). The consumer needs its own Gradle wrapper,
+[README](../../README.md#install-002). The consumer needs its own Gradle wrapper,
 as a normal Gradle project does.
 
 ## Configure the Consumer

@@ -17,7 +17,7 @@ sample:
 
 This is deliberately a source-checkout workflow. A normal consumer installs
 the released artifact from Maven Central using the root
-[README](../../README.md#install-001).
+[README](../../README.md#install-002).
 
 After a successful check, `toppleCatReview` writes
 `samples/junit-cart-orders/build/topplecat/reports/review/index.html`. Open it through
