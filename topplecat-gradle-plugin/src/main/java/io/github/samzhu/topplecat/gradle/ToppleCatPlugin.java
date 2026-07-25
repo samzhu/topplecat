@@ -100,6 +100,8 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                     task.getSpecDocs().from(extension.getSpecDocs());
                     task.getReviewRoot().set(project.getLayout().getBuildDirectory().dir("topplecat/reports/review"));
                     task.getDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
+                    task.getOutputs().upToDateWhen(ignored -> false);
+                    task.getOutputs().doNotCacheIf("ToppleCat contract inputs include reviewer custody state.", ignored -> true);
                 });
         check.configure(task -> task.dependsOn(compileContracts));
         project.getTasks().named("test", Test.class).configure(task -> {

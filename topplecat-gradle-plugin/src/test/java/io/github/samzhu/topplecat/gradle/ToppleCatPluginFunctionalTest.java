@@ -170,12 +170,20 @@ class ToppleCatPluginFunctionalTest {
         assertTrue(hidden.getOutput().contains("Local hidden storage is plaintext"), hidden.getOutput());
         assertFalse(Files.exists(project.resolve("src/hiddenTest")));
         assertTrue(Files.isRegularFile(project.resolve(".topplecat/escrow/manifest.json")));
+        var publicOnlyCheck = runner("toppleCatCheck", "--stacktrace").build();
+        assertEquals(TaskOutcome.SUCCESS, publicOnlyCheck.task(":toppleCatCheck").getOutcome());
+        assertFalse(Files.readString(project.resolve("build/topplecat/contract-definition.json"))
+                .contains("coupon-reviewer"));
 
         var restored = runner("toppleCatRestore", "--stacktrace").build();
 
         assertEquals(TaskOutcome.SUCCESS, restored.task(":toppleCatRestore").getOutcome());
         assertEquals(originalReviewerSource, Files.readString(reviewerSource));
         assertTrue(restored.getOutput().contains("reviewer files are available to the reviewer"), restored.getOutput());
+        var reviewerCheck = runner("toppleCatCheck", "--stacktrace").build();
+        assertEquals(TaskOutcome.SUCCESS, reviewerCheck.task(":toppleCatCheck").getOutcome());
+        assertTrue(Files.readString(project.resolve("build/topplecat/contract-definition.json"))
+                .contains("coupon-reviewer"));
     }
 
     @Test
