@@ -63,11 +63,24 @@ Each top-level key in `expected` begins as `UNTOUCHED`.
 | --- | --- |
 | `c.verify("response", actual)` | Deep-compares the value and marks it `ASSERTED`. |
 | `c.expected("response", Response.class)` | Reads and deserializes the value, then marks it `READ`. |
-| No access to the key | It remains `UNTOUCHED`; a successful test invocation fails after it returns. |
+| No access to the key | It remains `UNTOUCHED`. |
 
-The evidence/report collector uses `UNKNOWN` only when a completed invocation
-did not provide expected-consumption sidecar data. `UNKNOWN` is not a substitute
-for an assertion.
+Only `ASSERTED` fulfils the declared expected-value obligation. When
+enforcement is enabled, a successful test invocation fails after it returns if
+any key is `READ` or `UNTOUCHED`. The evidence/report collector uses `UNKNOWN`
+only when a completed invocation did not provide expected-consumption sidecar
+data; `UNKNOWN` is not a substitute for an assertion.
+
+## Numeric Contract Equality
+
+`c.verify(...)` compares JSON numbers recursively by exact mathematical value,
+not by JSON numeric node representation or decimal scale. Consequently `200`,
+`200.0`, and `200.00` are equal, including inside objects and arrays. This is
+not a floating-point tolerance: numerically different values still fail.
+
+If a business contract needs to require displayed formatting or decimal scale,
+express it as a string or a separate explicit output field. A JSON number and a
+text value that looks numeric remain different values.
 
 Run this authoring check before a handoff:
 

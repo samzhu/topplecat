@@ -74,11 +74,17 @@ toppleCat {
 ```
 
 When expected consumption is disabled, `READ`, `ASSERTED`, and `UNTOUCHED` are
-still collected in the Verification report; `UNTOUCHED` simply no longer fails
-the test. When hidden retest is disabled, verify does not restore or run
+still collected in the Verification report; neither `READ` nor `UNTOUCHED`
+independently fails the test. When enabled, only `ASSERTED` satisfies a declared
+expected value. When hidden retest is disabled, verify does not restore or run
 `src/hiddenTest`. When mutation is disabled, PIT is not added to the task graph.
 The Verification report visibly states
 `Expected consumption enforcement disabled` when that category is disabled.
+
+`c.verify(...)` compares JSON numbers recursively by exact mathematical value,
+so `200`, `200.0`, and `200.00` are equal without any floating-point tolerance.
+Formatting or decimal-scale requirements must be represented as a string or a
+separate explicit field.
 
 ToppleCat never uses a previous run to fill a gap. Each verification execution
 uses a transient workspace under `build/topplecat/runs/current/`, then archives

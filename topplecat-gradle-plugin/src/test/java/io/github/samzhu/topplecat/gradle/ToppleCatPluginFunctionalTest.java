@@ -490,6 +490,50 @@ class ToppleCatPluginFunctionalTest {
     }
 
     @Test
+    void failsExpectedConsumptionWhenExpectedValueWasOnlyRead() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial {
+                        hiddenRetest { enabled.set(false) }
+                        mutation { enabled.set(false) }
+                    }
+                }
+                """);
+        writeTestSource("""
+                package example;
+                class CouponTest {
+                    @ToppleStageField CouponThen then;
+                    @ToppleTest("AC-CART-COUPON")
+                    void readsExpectedButNeverVerifiesIt(ToppleCase testCase) {
+                        then.reads_expected_only(testCase);
+                    }
+                    static final class CouponThen extends ToppleStage<CouponThen> {
+                        CouponThen reads_expected_only(ToppleCase testCase) {
+                            recorded();
+                            testCase.expected("discount", Integer.class);
+                            return self();
+                        }
+                    }
+                }
+                """);
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+
+        runner("toppleCatVerify", "--stacktrace").buildAndFail();
+
+        assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "JUNIT"));
+        assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "EXPECTED_CONSUMPTION"));
+        String reviewerData = Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
+        assertTrue(reviewerData.contains("\"READ\""), reviewerData);
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        assertFalse(feedback.contains("coupon-public"), feedback);
+        assertFalse(feedback.contains("discount"), feedback);
+        assertFalse(feedback.contains("100"), feedback);
+    }
+
+    @Test
     void recordsDisabledExpectedConsumptionWhileKeepingUntouchedValuesInReviewerEvidence() throws Exception {
         verificationProject("""
                 toppleCat {
@@ -509,15 +553,21 @@ class ToppleCatPluginFunctionalTest {
                 class CouponTest {
                     @ToppleStageField CouponThen then;
                     @ToppleTest("AC-CART-COUPON")
-                    void leavesExpectedUntouched(ToppleCase ignored) { then.leaves_it_untouched(); }
+                    void readsOneExpectedValueAndLeavesAnotherUntouched(ToppleCase testCase) {
+                        then.reads_one_expected_value(testCase);
+                    }
                     static final class CouponThen extends ToppleStage<CouponThen> {
-                        CouponThen leaves_it_untouched() { recorded(); return self(); }
+                        CouponThen reads_one_expected_value(ToppleCase testCase) {
+                            recorded();
+                            testCase.expected("discount", Integer.class);
+                            return self();
+                        }
                     }
                 }
                 """);
         writePublicCase("coupon.json", """
                 [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
-                  "inputs":{},"expected":{"discount":100}}]
+                  "inputs":{},"expected":{"discount":100,"total":400}}]
                 """);
 
         runner("toppleCatVerify", "--stacktrace").build();
@@ -527,6 +577,7 @@ class ToppleCatPluginFunctionalTest {
                 "disabled by toppleCat.adversarial.expectedConsumption.enabled=false");
         String view = Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
         String html = Files.readString(project.resolve("build/topplecat/reports/verification/index.html"));
+        assertTrue(view.contains("\"READ\""), view);
         assertTrue(view.contains("\"UNTOUCHED\""), view);
         assertTrue(view.contains("\"expectedConsumptionEnforced\" : false"), view);
         assertTrue(html.contains("disabled by toppleCat.adversarial.expectedConsumption.enabled=false"), html);

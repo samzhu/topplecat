@@ -418,18 +418,21 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         if (reviewer.verdict() == EvidenceVerdict.INCOMPLETE) {
             return GateOutcome.incomplete("the reviewer retest did not complete expected-consumption tracking.");
         }
-        boolean untouched = false;
+        boolean unasserted = false;
         boolean unknown = false;
         for (ToppleCaseData testCase : cases) {
             ReportViews.CaseExecution execution = executions.getOrDefault(testCase.caseId(),
                     ReportViews.CaseExecution.notReported());
             for (String key : testCase.expected().propertyNames()) {
                 String state = execution.expectedConsumption().getOrDefault(key, "UNKNOWN");
-                untouched |= state.equals("UNTOUCHED");
-                unknown |= state.equals("UNKNOWN");
+                if (state.equals("UNKNOWN")) {
+                    unknown = true;
+                } else if (!state.equals("ASSERTED")) {
+                    unasserted = true;
+                }
             }
         }
-        if (untouched) {
+        if (unasserted) {
             return GateOutcome.fail();
         }
         return unknown ? GateOutcome.incomplete("Expected-consumption sidecar data was missing for one or more declared values.")

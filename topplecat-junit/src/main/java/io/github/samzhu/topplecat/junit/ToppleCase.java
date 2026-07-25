@@ -78,7 +78,7 @@ public final class ToppleCase {
         } catch (RuntimeException exception) {
             throw new ToppleCatException("Topple case " + caseId() + " cannot serialize actual for expected." + key, exception);
         }
-        if (!expected.equals(actualNode)) {
+        if (!JsonContractEquality.equivalent(expected, actualNode)) {
             if (narrative != null) {
                 narrative.markCurrentStepFailed();
             }
@@ -91,9 +91,9 @@ public final class ToppleCase {
         return Map.copyOf(consumption);
     }
 
-    String firstUntouchedExpectedKey() {
+    String firstUnassertedExpectedKey() {
         return consumption.entrySet().stream()
-                .filter(entry -> entry.getValue() == ExpectedConsumption.UNTOUCHED)
+                .filter(entry -> entry.getValue() != ExpectedConsumption.ASSERTED)
                 .map(Map.Entry::getKey)
                 .findFirst()
                 .orElse(null);

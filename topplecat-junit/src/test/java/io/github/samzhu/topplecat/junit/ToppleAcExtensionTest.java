@@ -58,6 +58,37 @@ class ToppleAcExtensionTest {
     }
 
     @Test
+    void failsAReadOnlyExpectedValueWhenEnforcementIsEnabled() throws Exception {
+        Path cases = tempDir.resolve("cases.json");
+        Files.writeString(cases, """
+                [{"caseId":"coupon-public-500","acId":"AC-CART-COUPON",
+                  "inputs":{"subtotal":500},"expected":{"discount":100}}]
+                """);
+        String previous = System.getProperty(ToppleJunit.PUBLIC_CASE_SOURCES_PROPERTY);
+        try {
+            System.setProperty(ToppleJunit.PUBLIC_CASE_SOURCES_PROPERTY, cases.toString());
+            SummaryGeneratingListener summary = new SummaryGeneratingListener();
+            LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
+                    .selectors(DiscoverySelectors.selectClass(ReadOnlyFixture.class))
+                    .configurationParameter(FIXTURE_RUN, "true")
+                    .build();
+            Launcher launcher = LauncherFactory.create();
+            launcher.execute(request, summary);
+
+            assertEquals(1, summary.getSummary().getTestsFailedCount());
+            String message = summary.getSummary().getFailures().getFirst().getException().getMessage();
+            assertEquals(true, message.contains("expected.discount"));
+            assertEquals(true, message.contains("Call c.verify(\"discount\", actual)."));
+        } finally {
+            if (previous == null) {
+                System.clearProperty(ToppleJunit.PUBLIC_CASE_SOURCES_PROPERTY);
+            } else {
+                System.setProperty(ToppleJunit.PUBLIC_CASE_SOURCES_PROPERTY, previous);
+            }
+        }
+    }
+
+    @Test
     void resolvesHumanTitlesInDeclaredOrder() throws Exception {
         Method display = TitleFixture.class.getDeclaredMethod("displayTitle");
         Method ac = TitleFixture.class.getDeclaredMethod("acTitle");
@@ -81,6 +112,14 @@ class ToppleAcExtensionTest {
     static final class HollowFixture {
         @ToppleTest("AC-CART-COUPON")
         void acceptsTheCaseButNeverVerifiesIt(ToppleCase ignored) {
+        }
+    }
+
+    @ExtendWith(FixtureOnlyCondition.class)
+    static final class ReadOnlyFixture {
+        @ToppleTest("AC-CART-COUPON")
+        void readsExpectedButNeverVerifiesIt(ToppleCase c) {
+            c.expected("discount", Integer.class);
         }
     }
 

@@ -37,7 +37,7 @@ public final class ToppleAcExtension implements BeforeTestExecutionCallback, Aft
         }
         Throwable failure = context.getExecutionException().orElse(null);
         if (failure == null && expectedConsumptionEnforced()) {
-            String key = testCase.firstUntouchedExpectedKey();
+            String key = testCase.firstUnassertedExpectedKey();
             if (key != null) {
                 failure = new AssertionError("Topple case " + testCase.caseId() + " expected." + key
                         + " was declared by " + testCase.acId() + " but never verified. "
