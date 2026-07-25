@@ -31,8 +31,10 @@ Inspect `build/topplecat/reports/review/index.html` before Hide. It contains pub
 reviewer cases and remains reviewer-only.
 
 `toppleCatHide` validates and moves the complete `src/hiddenTest` source set into
-local plaintext storage. It is safe to rerun in an already hidden state, but it
-refuses mismatched source rather than deleting it.
+local plaintext storage. On its first hide it also seals the reviewed public
+contract and effective verification policy into the active escrow epoch. It is
+safe to rerun in an already hidden state, but it refuses mismatched source rather
+than deleting it and never refreshes an existing approval.
 
 ## Delivery
 
@@ -57,7 +59,14 @@ Run `./gradlew toppleCatRestore` only as an authorized reviewer who needs to
 inspect or edit hidden source. Restore requires an existing valid manifest,
 verifies stored hashes, and does not call Hide first.
 
-After editing reviewer source, repeat Check and Review before the next Hide.
+After editing reviewer source, or when intentionally changing public contract
+material or verification policy, repeat Check and Review and then run
+`toppleCatUpdateEscrow`. That task is the explicit, atomic approval update path;
+ordinary Hide, Restore, Rehide, and Verify must preserve the existing approval.
+
+Legacy version-1 escrow is readable for Restore and Rehide, but cannot yield a
+verification PASS. An authorized reviewer migrates it through Restore → Check →
+Review → UpdateEscrow.
 
 ## Multiple Specs
 

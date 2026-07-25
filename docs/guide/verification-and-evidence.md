@@ -25,11 +25,11 @@
 | --- | --- | --- |
 | `toppleCatCheck` | Before review, hiding, and after contract edits. | Validates Java bindings, the canonical Stage DSL, and JSON/YAML case data without executing tests or writing HTML. |
 | `toppleCatReview` | Authorized reviewer, before hiding. | Renders the complete reviewer-only static contract review without executing tests. |
-| `toppleCatHide` | Before implementation begins. | Moves the entire reviewer source set into plaintext local custody storage. |
+| `toppleCatHide` | Before implementation begins. | Moves the entire reviewer source set into plaintext local custody storage and seals the reviewed public contract and effective verification policy. |
 | `toppleCatRestore` | Authorized reviewer, only when source must be inspected or changed. | Restores the exact reviewer source set from local custody storage. |
-| `toppleCatUpdateEscrow` | Authorized reviewer, after restoring, editing, checking, and accepting a new review. | Validates, stages, audits locally, and activates the complete revised reviewer source set with safe recovery. |
+| `toppleCatUpdateEscrow` | Authorized reviewer, after restoring, editing, checking, and accepting a new review. | Validates, stages, audits locally, and atomically activates the complete revised reviewer source set and approval epoch. |
 | `test` | During implementation. | Runs public tests and public case rows only. |
-| `toppleCatVerify` | Reviewer or CI final gate. | Runs enabled safeguards, writes evidence, and re-hides source after a hidden retest. |
+| `toppleCatVerify` | Reviewer or CI final gate. | Freshly checks approval integrity, runs enabled safeguards only after a pass, writes evidence, and re-hides source. |
 
 `toppleCatInit` is an optional, non-destructive bootstrap for an otherwise empty
 consumer project. `toppleCatRestore` is deliberately outside the normal
@@ -54,7 +54,9 @@ escrow until the revised source, manifest, and reviewer-local audit have all
 validated. Activation requests an atomic filesystem move where supported and
 uses the same validation and recovery path otherwise. Ordinary `toppleCatHide`
 still rejects changed restored source; a public export has no reviewer source
-or custody state, so update fails safely.
+or custody state, so update fails safely. This is also the only path that
+reseals a public-contract or verification-policy change. Ordinary Hide, Restore,
+Rehide, and Verify preserve the existing approval rather than refreshing it.
 
 The verify task enables three safeguards by default: it restores reviewer source
 and reruns public tests with reviewer rows, runs reviewer JUnit tests, configures
@@ -74,14 +76,16 @@ question and never help default PIT kill a mutant. A boundary that must kill a
 mutant belongs in the public contract. ToppleCat adds no per-case mutation score
 and does not infer the test scope of a custom third-party producer.
 
-The [0.0.2 release notes](../releases/0.0.2.md) summarize the reviewer-custody
-evolution and the public-only default PIT boundary.
+The [0.0.3 release notes](../releases/0.0.3.md) describe the reviewer approval
+epoch and the mandatory integrity gate.
 
 ## Verdicts
 
 The aggregate `evidence.json` verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Each
-run always records `JUNIT`, `REVIEWER_JUNIT`, `EXPECTED_CONSUMPTION`, and
-`MUTATION`; each gate is `PASS`, `FAIL`, `INCOMPLETE`, or `DISABLED`.
+run always records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
+`EXPECTED_CONSUMPTION`, and `MUTATION` in that order; each gate is `PASS`,
+`FAIL`, `INCOMPLETE`, or `DISABLED`. `CONTRACT_INTEGRITY` is mandatory and can
+never be `DISABLED`.
 
 - `PASS` means every required stage in the current run passed.
 - `FAIL` means a completed required stage reported a failure.
@@ -96,6 +100,13 @@ reports, safe feedback, stable copies, and the archived run; reviewer source is
 still rehidden by its finalizer. A green final task therefore means aggregate
 `PASS`, while `evidence.json` remains the gate-level diagnostic for every
 outcome.
+
+`CONTRACT_INTEGRITY` seals exact bytes of the configured public test source set
+and public case root, project-local Gradle build logic, the public semantic
+definition, and resolved verification policy. A mismatch is a completed `FAIL`;
+a legacy v1 escrow or missing approval is `INCOMPLETE`. In either case the four
+downstream gates do not run and are recorded as `INCOMPLETE` with a safe
+precondition reason. No previous JUnit or mutation artifact is borrowed.
 
 Use the `toppleCat.adversarial` tree only when that trade-off is deliberate:
 
@@ -156,6 +167,10 @@ show public ACs, public rows, public Stage sentences, and any configured
 external context. The context is labelled non-authoritative; Java tests and
 typed rows remain the executable contract.
 
+ToppleCat does not publish this public bundle when contract integrity is not
+`PASS`; any previous stable Spec bundle is removed rather than presented as
+current evidence.
+
 ### Reviewer Verification Report
 
 `build/topplecat/reports/verification/index.html` and `data.json` include public
@@ -174,6 +189,13 @@ results, including safe `DISABLED` reasons, without reviewer case identifiers,
 inputs, expected values, source paths, private test names, internal task names,
 attachments, or raw assertion failures. Generated HTML is evidence for humans,
 not input to a later verdict.
+
+For `CONTRACT_INTEGRITY`, safe feedback contains only one of two constant
+reasons: that the public executable contract or verification policy changed
+after reviewer approval, or that reviewer approval evidence is missing. It does
+not reveal paths, digests, policy values, AC IDs, case data, assertions, or raw
+failures. The detailed run-scoped `contract-integrity.json` remains
+reviewer-only.
 
 ## Delivery Hygiene
 

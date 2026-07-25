@@ -38,8 +38,8 @@ complete static contract without executing the Spring tests:
 ```
 
 These commands intentionally publish the source checkout so the sample tests
-the code in this repository. A normal consumer should install `0.0.2` from
-Maven Central using the root [README](../../README.md#install-002).
+the code in this repository. A normal consumer should install `0.0.3` from
+Maven Central using the root [README](../../README.md#install-003).
 
 Open `samples/spring-boot-cart-orders/build/topplecat/reports/review/index.html` through
 its `file://` path. It shows direct Given/When/Then Stage sentences, public plus

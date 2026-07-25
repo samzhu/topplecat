@@ -4,8 +4,8 @@ The samples are independent Gradle consumers. Their checked-out demos
 intentionally publish the current source checkout to Maven Local first, so they
 exercise the repository under development rather than a released artifact. They
 are not project dependencies or an included build. For normal use of the
-released `0.0.2`, use the Maven Central setup in the root
-[README](../README.md#install-002) instead.
+released `0.0.3`, use the Maven Central setup in the root
+[README](../README.md#install-003) instead.
 
 | Sample | Choose it when | Demonstrates |
 | --- | --- | --- |

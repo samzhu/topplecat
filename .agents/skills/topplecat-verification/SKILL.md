@@ -71,7 +71,8 @@ the public examples; Check passes; and the narrow test result is recorded.
    Review until the contract is accepted.
 3. If the current user is not the authorized reviewer, report the review path
    and stop for explicit sign-off.
-4. After sign-off, run `./gradlew toppleCatHide`.
+4. After sign-off, run `./gradlew toppleCatHide`; it seals public contract and
+   policy. Ordinary Hide never refreshes a seal.
 5. Prepare a public export without `.git`, `.topplecat/`, `build/`, or
    `src/hiddenTest`, or an isolated implementation environment whose Git
    history never contained reviewer material.
@@ -94,8 +95,8 @@ and no reviewer-owned file or value entered the implementation context.
 ### Verify
 
 1. Read `references/evidence.md` before running or interpreting final evidence.
-2. Run `./gradlew toppleCatVerify` as reviewer or CI; let the task restore,
-   execute, report, and re-hide reviewer source.
+2. Run `./gradlew toppleCatVerify` as reviewer or CI; it checks
+   `CONTRACT_INTEGRITY` before downstream work, then reports and re-hides source.
 3. Diagnose with reviewer-only Verification artifacts. On failure, give the
    implementation agent only public source changes and
    `build/topplecat/agent-feedback.json`.
@@ -110,8 +111,8 @@ rejected with safe feedback; reviewer source is re-hidden in either outcome.
 1. Read `references/reviewer-custody.md` before touching escrow.
 2. Run `./gradlew toppleCatRestore` as the authorized reviewer.
 3. Inspect only, or make the authorized change and return to **Author**.
-4. Re-hide unchanged source before delivery, or complete Check, Review, and Hide
-   after an edit.
+4. Re-hide unchanged source, or after edits complete Check, Review, and
+   `toppleCatUpdateEscrow`, including public-contract or policy-only reapproval.
 
 **Completion criterion:** restored files match the escrow manifest; every edit
 returns through Check and Review; and reviewer source is hidden again before any
@@ -135,5 +136,8 @@ optional work; and one bounded pilot AC has a concrete conversion plan.
 - A custody lock, hash mismatch, or missing escrow asset stays in **Restore** or
   **Review and hide** with source and escrow preserved.
 - A `toppleCatVerify` `FAIL` returns safe feedback to **Implement**.
+- A `CONTRACT_INTEGRITY` `FAIL` or `INCOMPLETE` returns to the authorized
+  reviewer: use Restore → Check → Review → UpdateEscrow; never reseal via
+  Verify or ordinary Hide.
 - An `INCOMPLETE` verdict stays in **Verify** until its required producer or
   configuration completes; it is never relabelled as `PASS` or `DISABLED`.

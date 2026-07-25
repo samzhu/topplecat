@@ -52,6 +52,7 @@ second authoring language beside the executable Java contract.
 | The implementation was tuned to the visible example. | Reviewer-controlled **hidden retests**. |
 | The test runs but cannot detect broken behavior. | A PIT-backed **mutation gate**. |
 | Expected data was read but never compared with reality. | Enforced **expected consumption**. |
+| The visible contract or verification strength changed after review. | A mandatory, reviewer-sealed **contract-integrity gate**. |
 | Old or partial output is mistaken for current proof. | Run-scoped gates, digests, and an explicit **evidence verdict**. |
 
 Hidden retest and mutation answer different questions. Hidden retest asks whether
@@ -107,14 +108,17 @@ PASS / FAIL / INCOMPLETE evidence and human reports
    review, and update workflow rather than ordinary hide.
 4. **Implement normally.** Give the implementation agent a public-only
    environment and use ordinary `./gradlew test`.
-5. **Verify the claim.** `toppleCatVerify` restores reviewer source for the run,
-   executes all enabled gates, writes evidence, and hides the source again.
+5. **Verify the claim.** `toppleCatVerify` first checks the sealed public
+   contract and verification policy, then restores reviewer source and executes
+   enabled gates only when that approval still matches. It writes evidence and
+   hides the source again in every outcome.
 
-## Install 0.0.2
+## Install 0.0.3
 
-ToppleCat `0.0.2` is the current Maven Central release. A consumer project needs
-Java 25 and a Gradle version that supports it. Add Maven Central for both plugin
-and library resolution; a released consumer does not need `mavenLocal()`.
+ToppleCat `0.0.3` is the release described here. A consumer project needs Java
+25 and a Gradle version that supports it. Once published, add Maven Central for
+both plugin and library resolution; a released consumer does not need
+`mavenLocal()`.
 
 ```kotlin
 // settings.gradle.kts
@@ -133,12 +137,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.2"
+    id("io.github.samzhu.topplecat") version "0.0.3"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.2"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.3"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
@@ -248,10 +252,18 @@ Verification reports are self-contained offline bundles. Public artifacts
 exclude reviewer values, case IDs, source names and paths, attachments, and raw
 private failures.
 
-The final verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Hidden retest, mutation,
-and expected-consumption safeguards are enabled by default. If a reviewer
-deliberately disables one, evidence records `DISABLED` instead of pretending it
-passed.
+The first required gate is `CONTRACT_INTEGRITY`: it compares the current public
+test sources, case data, project-local Gradle logic, semantic definition, and
+effective verification policy with the reviewer approval sealed by Hide or
+UpdateEscrow. The final verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Hidden
+retest, mutation, and expected-consumption safeguards are enabled by default;
+if a reviewer deliberately disables one, evidence records `DISABLED` instead of
+pretending it passed. Contract integrity itself cannot be disabled.
+
+If contract integrity is not `PASS`, ToppleCat records the other four gates as
+`INCOMPLETE`, re-hides reviewer source, and removes any stale public Spec bundle.
+An authorized reviewer must use Restore → Check → Review → UpdateEscrow to
+approve an intentional public-contract or policy change.
 
 `toppleCatVerify` and `toppleCatReport` fail the Gradle build when the aggregate
 verdict is `FAIL` or `INCOMPLETE`, after evidence, reports, safe feedback, and
@@ -283,7 +295,7 @@ commands.
 ## Documentation
 
 - [Getting started](docs/guide/getting-started.md)
-- [0.0.2 release notes](docs/releases/0.0.2.md)
+- [0.0.3 release notes](docs/releases/0.0.3.md)
 - [Authoring contracts](docs/guide/authoring.md)
 - [Verification and evidence](docs/guide/verification-and-evidence.md)
 - [Troubleshooting](docs/guide/troubleshooting.md)

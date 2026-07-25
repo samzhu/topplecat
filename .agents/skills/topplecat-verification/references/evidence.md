@@ -14,8 +14,10 @@ Run:
 By default the task:
 
 1. acquires reviewer-source custody;
-2. hides and restores reviewer source as needed;
-3. runs public and reviewer JUnit verification;
+2. freshly compares the current public contract and effective policy with the
+   reviewer approval (`CONTRACT_INTEGRITY`);
+3. hides and restores reviewer source as needed, then runs public and reviewer
+   JUnit verification only when integrity passed;
 4. enforces expected-value consumption;
 5. runs the configured PIT mutation producer and per-AC gate;
 6. writes current-run reports and evidence;
@@ -27,7 +29,8 @@ test task is a done claim, not the final ToppleCat verdict.
 ## Verdicts
 
 - `PASS`: every enabled required gate completed and passed.
-- `FAIL`: at least one acceptance case or required gate failed.
+- `FAIL`: at least one acceptance case or required gate failed. In particular,
+  a completed approval mismatch is `CONTRACT_INTEGRITY: FAIL`.
 - `INCOMPLETE`: a required producer or evidence stage did not complete.
 - `DISABLED`: a reviewer explicitly disabled one safeguard. It is recorded as a
   decision, not represented as a passing gate.
@@ -35,6 +38,11 @@ test task is a done claim, not the final ToppleCat verdict.
 Read the verdict from `build/topplecat/evidence.json` written by the
 just-completed verification. Archived runs below `build/topplecat/runs/` are
 diagnostic history; never use an older run to fill a gap in current evidence.
+
+The gate order is `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
+`EXPECTED_CONSUMPTION`, then `MUTATION`. Contract integrity cannot be disabled.
+If it is not `PASS`, the four downstream gates must be current-run
+`INCOMPLETE`; their old results and a stale public Spec bundle are never proof.
 
 ## Artifact Boundary
 
@@ -63,6 +71,11 @@ outcomes, and failure details.
 `agent-feedback.json` contains gate-level safe summaries. It must not contain
 hidden case IDs or values, reviewer test names, source paths, internal task
 names, or raw failures.
+
+For integrity failure it may say only that the public executable contract or
+verification policy changed after reviewer approval. For missing approval it may
+say only that an authorized reviewer must review and reseal. Detailed digests,
+changed paths, and policy fields stay in reviewer-only run artifacts.
 
 ## Failure Loop
 

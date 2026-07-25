@@ -84,8 +84,8 @@ participate in this alignment check.
 
 ## A Safeguard Is Disabled or Incomplete
 
-Each evidence run records `JUNIT`, `REVIEWER_JUNIT`, `EXPECTED_CONSUMPTION`, and
-`MUTATION`. `DISABLED` means the reviewer deliberately selected not to run one
+Each evidence run records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
+`EXPECTED_CONSUMPTION`, and `MUTATION`. `DISABLED` means the reviewer deliberately selected not to run one
 safeguard; it does not block aggregate `PASS`. These are the exact configuration
 reasons for disabled adversarial safeguards:
 
@@ -113,6 +113,20 @@ Verification report still records consumption and displays:
 ```text
 Expected consumption enforcement disabled
 ```
+
+## Contract Integrity Is FAIL or INCOMPLETE
+
+`CONTRACT_INTEGRITY` is a mandatory precondition. `FAIL` means ToppleCat
+successfully found that the public executable contract or resolved verification
+policy no longer matches the reviewer-approved epoch. `INCOMPLETE` normally
+means the escrow predates approval sealing or its approval cannot be read.
+
+Do not rerun Hide to accept the change: ordinary Hide deliberately preserves the
+existing approval. An authorized reviewer must run Restore, inspect the intended
+change, run Check and Review, then run `toppleCatUpdateEscrow`. For a legacy v1
+escrow this explicit sequence performs the migration to v2. Until then, JUnit,
+reviewer JUnit, expected consumption, and mutation are deliberately recorded as
+`INCOMPLETE`; no stale public Spec bundle is retained.
 
 ## PIT Is Not Producing Mutation Results
 

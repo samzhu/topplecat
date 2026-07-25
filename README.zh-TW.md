@@ -50,6 +50,7 @@ language。
 | 實作只針對看得見的範例調整。 | Reviewer 控制的 **hidden retests**。 |
 | 測試有執行，卻無法察覺壞掉的行為。 | PIT 驅動的 **mutation gate**。 |
 | expected 已讀取，卻沒有和實際結果比較。 | 強制執行的 **expected consumption**。 |
+| 審閱後公開合約或驗證強度被改變。 | 強制、由 reviewer 封存的 **contract-integrity gate**。 |
 | 舊的或不完整的輸出被誤認為本次證明。 | Run-scoped gates、digests 與明確的 **evidence verdict**。 |
 
 Hidden retest 與 mutation 回答的是不同問題。Hidden retest 檢查實作是否能超越
@@ -102,14 +103,15 @@ PASS / FAIL / INCOMPLETE 證據與人類報表
    suite，授權 reviewer 必須使用明確的還原、審閱與更新流程，而非一般 hide。
 4. **正常實作。** 只把 public-only environment 交給 implementation
    agent，平常使用 `./gradlew test`。
-5. **驗證完成宣稱。** `toppleCatVerify` 暫時還原 reviewer source、
-   執行所有已啟用 gate、寫出證據，再把來源隱藏回去。
+5. **驗證完成宣稱。** `toppleCatVerify` 先確認封存的公開合約與驗證 policy
+   仍完全相符；只有相符時才暫時還原 reviewer source 並執行已啟用 gate。無論
+   結果都會寫出證據並重新隱藏來源。
 
-## 安裝 0.0.2
+## 安裝 0.0.3
 
-ToppleCat `0.0.2` 是目前發佈到 Maven Central 的版本。Consumer 專案需要
-Java 25 與支援它的 Gradle 版本。Plugin 與 library resolution 都加入 Maven
-Central 即可；使用正式版的 consumer 不需要 `mavenLocal()`。
+ToppleCat `0.0.3` 是本文件所說明的版本。Consumer 專案需要 Java 25 與支援它的
+Gradle 版本。正式發佈後，Plugin 與 library resolution 都加入 Maven Central
+即可；使用正式版的 consumer 不需要 `mavenLocal()`。
 
 ```kotlin
 // settings.gradle.kts
@@ -128,12 +130,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.2"
+    id("io.github.samzhu.topplecat") version "0.0.3"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.2"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.3"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
@@ -239,9 +241,17 @@ Verification report 是可離線開啟的自足 bundle。公開產物不包含 r
 values、case IDs、source names/paths、attachments 或 raw private
 failures。
 
-最終 verdict 是 `PASS`、`FAIL` 或 `INCOMPLETE`。Hidden retest、mutation
-與 expected-consumption safeguards 預設啟用；若 reviewer 明確停用其中
-一項，evidence 會記錄 `DISABLED`，不會假裝已通過。
+第一個必要 gate 是 `CONTRACT_INTEGRITY`：它會把目前的公開 test source、case
+data、專案內 Gradle build logic、語意 definition 與有效 verification policy，
+和 Hide 或 UpdateEscrow 時由 reviewer 封存的核准內容比較。最終 verdict 是
+`PASS`、`FAIL` 或 `INCOMPLETE`。Hidden retest、mutation 與
+expected-consumption safeguards 預設啟用；若 reviewer 明確停用其中一項，evidence
+會記錄 `DISABLED`，不會假裝已通過。Contract integrity 本身無法停用。
+
+若 contract integrity 不是 `PASS`，ToppleCat 會把其餘四個 gate 記錄為
+`INCOMPLETE`、重新隱藏 reviewer source，並移除任何過期的公開 Spec bundle。
+授權 reviewer 必須依 Restore → Check → Review → UpdateEscrow 的流程，才能
+核准刻意變更的公開合約或 policy。
 
 Aggregate verdict 為 `FAIL` 或 `INCOMPLETE` 時，`toppleCatVerify` 與
 `toppleCatReport` 會在 evidence、reports、安全 feedback 與 run archive
@@ -270,7 +280,7 @@ commit 到 implementation agent 可讀的 history。交付時應使用不含 `.g
 ## 文件
 
 - [開始使用](docs/guide/getting-started.md)
-- [0.0.2 發佈說明](docs/releases/0.0.2.zh-TW.md)
+- [0.0.3 發佈說明](docs/releases/0.0.3.zh-TW.md)
 - [撰寫合約](docs/guide/authoring.md)
 - [驗證與證據](docs/guide/verification-and-evidence.md)
 - [疑難排解](docs/guide/troubleshooting.md)
