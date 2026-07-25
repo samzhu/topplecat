@@ -108,7 +108,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                     project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json").get().getAsFile()
                             .getAbsolutePath());
         });
-        project.getTasks().register("toppleCatReview", ToppleCatReviewTask.class, task -> {
+        TaskProvider<ToppleCatReviewTask> review = project.getTasks().register("toppleCatReview", ToppleCatReviewTask.class, task -> {
             task.setGroup("verification");
             task.setDescription("Writes a reviewer-only static contract review without executing tests.");
             task.dependsOn(check);
@@ -147,6 +147,18 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                 });
         restore.configure(task -> {
             task.mustRunAfter(acquireCustody, hide);
+            task.usesService(custodyService);
+        });
+        TaskProvider<ToppleCatUpdateEscrowTask> updateEscrow = project.getTasks().register(
+                "toppleCatUpdateEscrow", ToppleCatUpdateEscrowTask.class, task -> {
+                    task.setGroup("verification");
+                    task.setDescription("Validates, reviews, and explicitly updates reviewer-only local escrow custody.");
+                    task.dependsOn(review);
+                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                    task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
+                });
+        updateEscrow.configure(task -> {
+            task.mustRunAfter(acquireCustody, restore);
             task.usesService(custodyService);
         });
         TaskProvider<ToppleCatReviewerDefinitionTask> reviewerDefinition = project.getTasks().register(

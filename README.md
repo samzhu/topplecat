@@ -94,7 +94,9 @@ PASS / FAIL / INCOMPLETE evidence and human reports
 2. **Check and review it.** `toppleCatCheck` validates the contract.
    `toppleCatReview` renders the complete reviewer-only review.
 3. **Transfer reviewer custody.** `toppleCatHide` moves `src/hiddenTest` into
-   local plaintext custody storage. It is not a secrecy boundary.
+   local plaintext custody storage. It is not a secrecy boundary. To evolve an
+   existing reviewer suite, an authorized reviewer uses the explicit restore,
+   review, and update workflow rather than ordinary hide.
 4. **Implement normally.** Give the implementation agent a public-only
    environment and use ordinary `./gradlew test`.
 5. **Verify the claim.** `toppleCatVerify` restores reviewer source for the run,
@@ -205,7 +207,22 @@ Run these commands from the consumer project:
 ```
 
 `toppleCatRestore` is a reviewer-only recovery and editing command. It is not
-part of the implementation loop.
+part of the implementation loop. After an authorized reviewer restores and
+edits an existing suite, the required custody update flow is:
+
+```text
+toppleCatRestore
+    -> edit src/hiddenTest
+    -> toppleCatCheck
+    -> toppleCatReview
+    -> reviewer accepts the review
+    -> toppleCatUpdateEscrow
+```
+
+`toppleCatUpdateEscrow` validates and stages the complete revised reviewer
+source before atomically activating it. Ordinary `toppleCatHide` still rejects a
+changed restored suite. A public implementation export has neither reviewer
+source nor local escrow, so this reviewer-only task fails safely there.
 
 ## Read the Result
 

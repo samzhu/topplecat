@@ -27,6 +27,7 @@
 | `toppleCatReview` | Authorized reviewer, before hiding. | Renders the complete reviewer-only static contract review without executing tests. |
 | `toppleCatHide` | Before implementation begins. | Moves the entire reviewer source set into plaintext local custody storage. |
 | `toppleCatRestore` | Authorized reviewer, only when source must be inspected or changed. | Restores the exact reviewer source set from local custody storage. |
+| `toppleCatUpdateEscrow` | Authorized reviewer, after restoring, editing, checking, and accepting a new review. | Validates, stages, audits locally, and atomically activates the complete revised reviewer source set. |
 | `test` | During implementation. | Runs public tests and public case rows only. |
 | `toppleCatVerify` | Reviewer or CI final gate. | Runs enabled safeguards, writes evidence, and re-hides source after a hidden retest. |
 
@@ -34,6 +35,24 @@
 consumer project. `toppleCatRestore` is deliberately outside the normal
 sequence: it is a reviewer recovery/editing operation, not part of the
 implementation loop. Internal orchestration tasks are not consumer commands.
+
+To evolve an escrowed reviewer suite, an authorized reviewer follows this
+explicit custody workflow:
+
+```text
+toppleCatRestore
+    -> edit src/hiddenTest
+    -> toppleCatCheck
+    -> toppleCatReview
+    -> reviewer accepts the review
+    -> toppleCatUpdateEscrow
+```
+
+The update task requires a readable `RESTORED` local escrow manifest and a
+complete inventory of the current reviewer source. It preserves the prior active
+escrow until the revised source, manifest, and reviewer-local audit have all
+validated. Ordinary `toppleCatHide` still rejects changed restored source; a
+public export has no reviewer source or custody state, so update fails safely.
 
 The verify task enables three safeguards by default: it restores reviewer source
 and reruns public tests with reviewer rows, runs reviewer JUnit tests, configures

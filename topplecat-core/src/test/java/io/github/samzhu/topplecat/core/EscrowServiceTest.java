@@ -163,6 +163,7 @@ class EscrowServiceTest {
         ToppleCatException error = assertThrows(ToppleCatException.class, () -> escrow.rehide(project));
 
         assertTrue(error.getMessage().contains("does not exactly match"), error::getMessage);
+        assertTrue(error.getMessage().contains("toppleCatUpdateEscrow"), error::getMessage);
         assertEquals("class HiddenOrderTest {}\n", Files.readString(escrowed));
         assertEquals("class NewReviewerTest {}\n", Files.readString(unexpected));
         assertEquals(EscrowState.RESTORED, escrow.manifest(project).state());
@@ -185,5 +186,160 @@ class EscrowServiceTest {
 
         assertTrue(Files.exists(test));
         assertFalse(Files.exists(project.resolve(".topplecat/escrow/manifest.json")));
+    }
+
+    @Test
+    void updatesRestoredEscrowAfterAddingReviewerFile() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path original = hidden.resolve("java/example/HiddenOrderTest.java");
+        Path added = hidden.resolve("resources/topplecat/cases/order-reviewer.yaml");
+        Files.createDirectories(original.getParent());
+        Files.writeString(original, "class HiddenOrderTest {}\n");
+        EscrowService escrow = new EscrowService();
+        escrow.hide(project, hidden);
+        escrow.restore(project);
+        Files.createDirectories(added.getParent());
+        Files.writeString(added, "- caseId: reviewer-added\n  acId: AC-ORDER\n  inputs: {}\n  expected: {total: 700}\n");
+
+        EscrowManifest updated = escrow.update(project, hidden);
+
+        assertEquals(EscrowState.HIDDEN, updated.state());
+        assertFalse(Files.exists(hidden));
+        EscrowManifest restored = escrow.restore(project);
+        assertEquals(2, restored.entries().size());
+        assertEquals("class HiddenOrderTest {}\n", Files.readString(original));
+        assertTrue(Files.readString(added).contains("reviewer-added"));
+    }
+
+    @Test
+    void updatesRestoredEscrowAfterModifyingAndRemovingReviewerFiles() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path modified = hidden.resolve("java/example/HiddenOrderTest.java");
+        Path removed = hidden.resolve("java/example/RemovedReviewerTest.java");
+        Files.createDirectories(modified.getParent());
+        Files.writeString(modified, "class HiddenOrderTest {}\n");
+        Files.writeString(removed, "class RemovedReviewerTest {}\n");
+        EscrowService escrow = new EscrowService();
+        escrow.hide(project, hidden);
+        escrow.restore(project);
+        Files.writeString(modified, "class HiddenOrderTest { int revision = 2; }\n");
+        Files.delete(removed);
+
+        EscrowManifest updated = escrow.update(project, hidden);
+
+        assertEquals(EscrowState.HIDDEN, updated.state());
+        escrow.restore(project);
+        assertEquals("class HiddenOrderTest { int revision = 2; }\n", Files.readString(modified));
+        assertFalse(Files.exists(removed));
+        assertEquals(1, escrow.manifest(project).entries().size());
+        EscrowUpdateAudit audit = updateAudit(project);
+        assertEquals(0, audit.added());
+        assertEquals(1, audit.changed());
+        assertEquals(1, audit.removed());
+    }
+
+    @Test
+    void updateRejectsReviewerSourceWhileEscrowIsHidden() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        EscrowService escrow = new EscrowService();
+        escrow.hide(project, hidden);
+
+        ToppleCatException error = assertThrows(ToppleCatException.class, () -> escrow.update(project, hidden));
+
+        assertTrue(error.getMessage().contains("toppleCatRestore"), error::getMessage);
+        assertEquals(EscrowState.HIDDEN, escrow.manifest(project).state());
+        assertFalse(Files.exists(hidden));
+    }
+
+    @Test
+    void updateRejectsCorruptPreviousEscrowBlobBeforeActivation() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        EscrowService escrow = new EscrowService();
+        EscrowManifest original = escrow.hide(project, hidden);
+        escrow.restore(project);
+        EscrowEntry entry = original.entries().getFirst();
+        Path blob = project.resolve(".topplecat/escrow/files").resolve(entry.sha256().substring(0, 2)).resolve(entry.sha256());
+        Files.writeString(blob, "corrupt\n");
+
+        assertThrows(ToppleCatException.class, () -> escrow.update(project, hidden));
+
+        assertEquals(EscrowState.RESTORED, escrow.manifest(project).state());
+        assertEquals("class HiddenOrderTest {}\n", Files.readString(source));
+    }
+
+    @Test
+    void updateRestoresPreviousSourceAndRetainsModifiedRevisionWhenActivationFails() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        EscrowService original = new EscrowService();
+        original.hide(project, hidden);
+        original.restore(project);
+        Files.writeString(source, "class HiddenOrderTest { int revision = 2; }\n");
+        EscrowService escrow = new EscrowService(() -> {
+            throw new IllegalStateException("injected activation failure");
+        });
+
+        ToppleCatException error = assertThrows(ToppleCatException.class, () -> escrow.update(project, hidden));
+
+        assertTrue(error.getMessage().contains("no update was activated"), error::getMessage);
+        assertEquals(EscrowState.RESTORED, original.manifest(project).state());
+        assertEquals("class HiddenOrderTest {}\n", Files.readString(source));
+        Path recovery = project.resolve(".topplecat/escrow/recovery");
+        assertTrue(Files.isDirectory(recovery));
+        try (var paths = Files.walk(recovery)) {
+            Path revisedSource = paths.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().equals("HiddenOrderTest.java"))
+                    .findFirst().orElseThrow();
+            assertEquals("class HiddenOrderTest { int revision = 2; }\n", Files.readString(revisedSource));
+        }
+    }
+
+    @Test
+    void updateWritesAuditWithoutReviewerPathsOrContents() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path original = hidden.resolve("java/example/HiddenOrderTest.java");
+        Path added = hidden.resolve("resources/topplecat/cases/private-reviewer.yaml");
+        Files.createDirectories(original.getParent());
+        Files.writeString(original, "class HiddenOrderTest {}\n");
+        EscrowService escrow = new EscrowService();
+        escrow.hide(project, hidden);
+        escrow.restore(project);
+        Files.createDirectories(added.getParent());
+        Files.writeString(added, "- caseId: reviewer-case-id\n  acId: AC-ORDER\n  inputs: {secret: 9876}\n  expected: {failure: raw failure}\n");
+
+        escrow.update(project, hidden);
+
+        Path auditPath = updateAuditPath(project);
+        String auditJson = Files.readString(auditPath);
+        EscrowUpdateAudit audit = EscrowUpdateAuditJson.read(auditJson);
+        assertEquals(EscrowUpdateAudit.SCHEMA_VERSION, audit.schemaVersion());
+        assertEquals(1, audit.added());
+        assertEquals(0, audit.changed());
+        assertEquals(0, audit.removed());
+        assertFalse(auditJson.contains("private-reviewer.yaml"), auditJson);
+        assertFalse(auditJson.contains("reviewer-case-id"), auditJson);
+        assertFalse(auditJson.contains("9876"), auditJson);
+        assertFalse(auditJson.contains("raw failure"), auditJson);
+    }
+
+    private static EscrowUpdateAudit updateAudit(Path project) throws Exception {
+        return EscrowUpdateAuditJson.read(Files.readString(updateAuditPath(project)));
+    }
+
+    private static Path updateAuditPath(Path project) throws Exception {
+        Path revisions = project.resolve(".topplecat/escrow/revisions");
+        try (var paths = Files.walk(revisions)) {
+            return paths.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().equals("audit.json"))
+                    .findFirst().orElseThrow();
+        }
     }
 }

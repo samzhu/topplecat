@@ -188,6 +188,93 @@ class ToppleCatPluginFunctionalTest {
     }
 
     @Test
+    void toppleCatUpdateEscrowFailsSafelyWithoutExistingCustody() throws Exception {
+        verificationProject("");
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+
+        var result = runner("toppleCatUpdateEscrow", "--stacktrace").buildAndFail();
+
+        assertTrue(result.getOutput().contains("No ToppleCat escrow manifest exists"), result.getOutput());
+        assertFalse(Files.exists(project.resolve(".topplecat/escrow/manifest.json")));
+    }
+
+    @Test
+    void toppleCatUpdateEscrowRejectsHiddenManifest() throws Exception {
+        verificationProject("");
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenReviewAsset();
+        runner("toppleCatHide", "--stacktrace").build();
+
+        var result = runner("toppleCatUpdateEscrow", "--stacktrace").buildAndFail();
+
+        assertTrue(result.getOutput().contains("toppleCatRestore"), result.getOutput());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void toppleCatUpdateEscrowUpdatesReviewedSuiteAndRehidesAfterVerification() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial { mutation { enabled.set(false) } }
+                }
+                """);
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenReviewAsset();
+        runner("toppleCatHide", "--stacktrace").build();
+        runner("toppleCatRestore", "--stacktrace").build();
+        Path reviewerTest = project.resolve("src/hiddenTest/java/example/ReviewerTest.java");
+        Path removedCase = project.resolve("src/hiddenTest/resources/topplecat/cases/coupon-reviewer.yaml");
+        Path addedCase = project.resolve("src/hiddenTest/resources/topplecat/cases/coupon-reviewer-updated.yaml");
+        Files.writeString(reviewerTest, """
+                package example;
+                import org.junit.jupiter.api.Test;
+                class ReviewerTest { @Test void updatedReviewerGuard() {} }
+                """);
+        Files.delete(removedCase);
+        Files.writeString(addedCase, """
+                - caseId: coupon-reviewer-updated
+                  acId: AC-CART-COUPON
+                  inputs: {}
+                  expected: {discount: 100}
+                """);
+
+        var updated = runner("toppleCatUpdateEscrow", "--stacktrace").build();
+
+        assertEquals(TaskOutcome.SUCCESS, updated.task(":toppleCatUpdateEscrow").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, updated.task(":toppleCatReview").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+        runner("toppleCatRestore", "--stacktrace").build();
+        assertTrue(Files.readString(reviewerTest).contains("updatedReviewerGuard"));
+        assertFalse(Files.exists(removedCase));
+        assertTrue(Files.readString(addedCase).contains("coupon-reviewer-updated"));
+
+        var verified = runner("toppleCatVerify", "--stacktrace").build();
+
+        assertEquals(TaskOutcome.SUCCESS, verified.task(":toppleCatRehide").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+        String publicSpec = Files.readString(project.resolve("build/topplecat/reports/spec/data.json"));
+        String evidence = Files.readString(project.resolve("build/topplecat/evidence.json"));
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        for (String publicArtifact : List.of(publicSpec, evidence, feedback)) {
+            assertFalse(publicArtifact.contains("topplecat.escrow-update"), publicArtifact);
+            assertFalse(publicArtifact.contains("previousManifestSha256"), publicArtifact);
+            assertFalse(publicArtifact.contains("coupon-reviewer-updated"), publicArtifact);
+        }
+    }
+
+    @Test
     void verifyAutomaticallyHidesRestoresAndRehidesReviewerSource() throws Exception {
         verificationProject("""
                 toppleCat {

@@ -91,7 +91,8 @@ PASS / FAIL / INCOMPLETE 證據與人類報表
 2. **檢查並審閱。** `toppleCatCheck` 驗證合約；`toppleCatReview`
    產生包含完整 reviewer 資料的審閱頁。
 3. **移交 reviewer custody。** `toppleCatHide` 把 `src/hiddenTest`
-   移入本機明文 custody storage；這不是保密邊界。
+   移入本機明文 custody storage；這不是保密邊界。若要演進既有的 reviewer
+   suite，授權 reviewer 必須使用明確的還原、審閱與更新流程，而非一般 hide。
 4. **正常實作。** 只把 public-only environment 交給 implementation
    agent，平常使用 `./gradlew test`。
 5. **驗證完成宣稱。** `toppleCatVerify` 暫時還原 reviewer source、
@@ -199,7 +200,22 @@ ToppleCat 支援 JSON 與 YAML，不支援 CSV，也不引入自然語言 runtim
 ```
 
 `toppleCatRestore` 是 reviewer 檢查或修改 hidden source 時使用的還原指令，
-不屬於 implementation loop。
+不屬於 implementation loop。授權 reviewer 還原並修改既有 suite 後，必須依下列
+custody 更新流程進行：
+
+```text
+toppleCatRestore
+    -> edit src/hiddenTest
+    -> toppleCatCheck
+    -> toppleCatReview
+    -> reviewer accepts the review
+    -> toppleCatUpdateEscrow
+```
+
+`toppleCatUpdateEscrow` 會先驗證並暫存完整的新版 reviewer source，再以原子方式
+啟用。一般 `toppleCatHide` 仍會拒絕已修改的 restored suite。公開 implementation
+export 不含 reviewer source 或本機 escrow，因此這個僅供 reviewer 使用的 task 會安全地
+失敗。
 
 ## 閱讀結果
 
