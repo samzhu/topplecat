@@ -25,7 +25,7 @@ class EscrowManifestJsonTest {
     void readsAndWritesVersionTwoWithTheExactApproval() {
         ReviewerContractApproval approval = ReviewerContractApproval.create(List.of(
                 new PublicContractEntry("src/test/java/example/ContractTest.java", "b".repeat(64))
-        ), "c".repeat(64), new VerificationPolicy("0.0.3", true, true, true, 100,
+        ), "c".repeat(64), new VerificationPolicy("0.0.4", true, true, true, 100,
                 MutationProducerKind.DEFAULT, null));
         EscrowManifest manifest = new EscrowManifest(EscrowManifest.SCHEMA_VERSION_V2, EscrowState.HIDDEN,
                 List.of(new EscrowEntry("src/hiddenTest/java/example/ReviewerTest.java", "a".repeat(64),

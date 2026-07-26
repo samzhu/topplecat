@@ -15,9 +15,9 @@ sample:
 ./gradlew -p samples/junit-cart-orders toppleCatReview
 ```
 
-This is deliberately a source-checkout workflow. A normal consumer installs
-the released artifact from Maven Central using the root
-[README](../../README.md#install-003).
+This is deliberately a source-checkout workflow. Once `0.0.4` is available in
+Maven Central, a normal consumer installs the artifact using the root
+[README](../../README.md#install-004).
 
 After a successful check, `toppleCatReview` writes
 `samples/junit-cart-orders/build/topplecat/reports/review/index.html`. Open it through

@@ -73,9 +73,9 @@ TOPPLECAT_STATE_ROOT="$junit_state_root" bash "$root/samples/junit-cart-orders/d
 TOPPLECAT_STATE_ROOT="$spring_state_root" bash "$root/samples/spring-boot-cart-orders/demo.sh"
 TOPPLECAT_STATE_ROOT="$release_state_root/mutation-gate" bash "$root/integration-tests/mutation-gate/verify.sh"
 
-assert_artifact_version "$junit_sample/build.gradle.kts" "0.0.3"
-assert_artifact_version "$spring_sample/build.gradle.kts" "0.0.3"
-assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.0.3"
+assert_artifact_version "$junit_sample/build.gradle.kts" "0.0.4"
+assert_artifact_version "$spring_sample/build.gradle.kts" "0.0.4"
+assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.0.4"
 
 JUNIT_SAMPLE="$junit_sample" SPRING_SAMPLE="$spring_sample" python3 - <<'PY'
 import json

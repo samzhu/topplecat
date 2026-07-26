@@ -139,13 +139,24 @@ outcomes.
 
 ## Reviewer Retests
 
-Derive hidden values independently from the public examples. Choose boundaries
-that expose likely shortcuts: mixed carts, threshold transitions, idempotency,
-inventory conflicts, validation errors, or nested response shape.
+Reviewer retests are independently chosen business cases, not secret answer
+keys. They cannot prove that every possible hard-coded shortcut fails. Derive
+them from the approved rule rather than by changing literals in a public row.
+Choose boundaries that expose likely shortcuts: mixed carts, threshold
+transitions, idempotency, inventory conflicts, validation errors, or nested
+response shape.
+
+During review, ask what an implementation that only recognizes the public SKU,
+coupon, threshold, or expected answer would do. Prefer an unseen rule
+combination or behavior path over another example from the same path. A hidden
+row still binds to an existing public AC; it does not add a private requirement.
 
 Reuse the public canonical `@ToppleTest` by adding reviewer rows whenever the
 same contract method can exercise the boundary. Add reviewer-only Java tests
 only for behavior that cannot be expressed through the canonical method.
+Rows-only reviewer custody is valid: the verification task executes those rows
+through the canonical method, so no empty hidden Java class is needed. If hidden
+Java tests are present, they remain an independent reviewer requirement.
 
 Bind every reviewer row to an existing public AC. Keep all reviewer material
 under `src/hiddenTest`.

@@ -33,7 +33,7 @@ class ContractApprovalFactoryTest {
         Files.writeString(project.resolve("build/generated/ignored.txt"), "ignored\n");
 
         ContractDefinition definition = ContractDefinition.withComputedDigest(List.of());
-        VerificationPolicy policy = new VerificationPolicy("0.0.3", true, true, true, 100,
+        VerificationPolicy policy = new VerificationPolicy("0.0.4", true, true, true, 100,
                 MutationProducerKind.DEFAULT, null);
         var approved = ContractApprovalFactory.create(project, List.of(publicSources), cases, definition, policy);
 

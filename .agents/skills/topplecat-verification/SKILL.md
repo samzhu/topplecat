@@ -19,6 +19,11 @@ preserving reviewer custody.
   `src/hiddenTest`.
 - `./gradlew test` is an implementation signal. Only current-run
   `build/topplecat/evidence.json` is the final contract verdict.
+- The managed PIT producer targets every compiled public canonical
+  `@ToppleTest` declaring class through compiler descriptors, not package-name
+  guesses. An explicit consumer PIT `targetTests` or custom mutation producer
+  remains authoritative; a usable report that excludes a canonical test is
+  `MUTATION=FAIL`, while a missing or unusable report is `INCOMPLETE`.
 
 ## Establish The Custody Boundary
 

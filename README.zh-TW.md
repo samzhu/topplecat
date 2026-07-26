@@ -23,11 +23,9 @@
 ToppleCat 是一隻充滿好奇心的貓。
 
 每當 AI coding agent 宣稱某項 Java 工作**已完成**，ToppleCat 都會伸手
-輕輕撥一下。牠會用實作看不到的案例重測、故意破壞 production behavior
-確認測試能否察覺，並證明每一個宣告的結果都真的被驗證。
-
-如果實作只記住公開範例，或測試看似忙碌卻沒有證明行為，這項完成宣稱就會
-倒下。若它站得住，ToppleCat 才會留下證據。
+輕輕撥一下。它會用實作看不到的案例重測、故意破壞 production behavior
+確認公開測試能否察覺，並檢查每一個宣告的結果是否真的被驗證。最後的判定來自
+所有 gate，不是某一個看起來安心的測試結果。
 
 > 用 hidden retests、mutation gates 與可執行的 Java 驗收合約，推倒
 > AI agent 的「已完成」宣稱。空洞的完成，站不住腳。
@@ -47,18 +45,35 @@ language。
 
 | 綠燈仍可能代表…… | ToppleCat 如何檢查 |
 | --- | --- |
-| 實作只針對看得見的範例調整。 | Reviewer 控制的 **hidden retests**。 |
+| 實作可能只針對看得見的範例調整。 | Reviewer 控制、以獨立業務情境設計的 **hidden retests**。 |
 | 測試有執行，卻無法察覺壞掉的行為。 | PIT 驅動的 **mutation gate**。 |
 | expected 已讀取，卻沒有和實際結果比較。 | 強制執行的 **expected consumption**。 |
 | 審閱後公開合約或驗證強度被改變。 | 強制、由 reviewer 封存的 **contract-integrity gate**。 |
 | 舊的或不完整的輸出被誤認為本次證明。 | Run-scoped gates、digests 與明確的 **evidence verdict**。 |
 
-Hidden retest 與 mutation 回答的是不同問題。Hidden retest 檢查實作是否能超越
-看得見的範例而泛化；預設 PIT producer 衡量的是**公開可執行合約的 mutation
-strength**，只使用 `sourceSets.test`、public test classes 與 public case rows。
+Hidden retest 與 mutation 回答的是不同問題。Hidden retest 用實作 agent 沒看過的
+業務案例檢查行為，不能保證抓到每一種硬編碼捷徑；預設 PIT producer 衡量的是
+**公開可執行合約的 mutation strength**，只使用 `sourceSets.test`、public test
+classes 與 public case rows。
 Reviewer rows 與 reviewer-only JUnit tests 永遠不會協助這個 producer 殺死 mutant。
-若某個 boundary 必須殺死 mutant，它就應屬於 public contract；ToppleCat 不會增加
-per-case mutation score，也不會推斷 custom producer 的範圍。
+若某個 boundary 必須殺死 mutant，它就應屬於 public contract。對 ToppleCat
+管理的 PIT producer，compiler descriptor 會把每個 public canonical
+`@ToppleTest` 宣告 class 設成 `targetTests`；consumer 自己的 `targetTests`
+與 custom mutation producer 都會原樣保留。ToppleCat 不會增加 per-case mutation
+score，也不會推斷 custom producer 的範圍。
+
+Reviewer rows 可以重用 public canonical `@ToppleTest`；當 `src/hiddenTest` 只有
+rows、沒有 Java tests 時，這支 canonical test 的結果就會提供 reviewer retest。
+只有 canonical method 無法表達的額外行為，才需要 reviewer-only Java test。若已啟用
+hidden retest，`src/hiddenTest` 裡沒有可執行 JUnit method 的 helper Java source
+只會被編譯，不會被算成 hidden test；若同時沒有 hidden rows 與 hidden Java
+tests，ToppleCat 會維持
+fail-closed，將 `REVIEWER_JUNIT` 記為 `INCOMPLETE`。
+
+單一 gate 的結果只說明那一關的結果，不是對整個實作的保證。Hidden retest 有可能
+通過，而 mutation 拒絕了同一份偷懶實作；反過來也可能發生。請從
+`evidence.json` 看清楚是哪一關拒絕完成宣稱，只有當次 aggregate verdict 為 `PASS`
+才接受它。
 
 ## 看 ToppleCat 推倒一次假完成
 
@@ -109,9 +124,9 @@ PASS / FAIL / INCOMPLETE 證據與人類報表
    仍完全相符；只有相符時才暫時還原 reviewer source 並執行已啟用 gate。無論
    結果都會寫出證據並重新隱藏來源。
 
-## 安裝 0.0.3
+## 安裝 0.0.4
 
-ToppleCat `0.0.3` 是本文件所說明的版本。Consumer 專案需要 Java 25 與支援它的
+ToppleCat `0.0.4` 是本文件所說明的版本。Consumer 專案需要 Java 25 與支援它的
 Gradle 版本。正式發佈後，Plugin 與 library resolution 都加入 Maven Central
 即可；使用正式版的 consumer 不需要 `mavenLocal()`。
 
@@ -132,12 +147,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.3"
+    id("io.github.samzhu.topplecat") version "0.0.4"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.3"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.4"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
@@ -260,6 +275,13 @@ Aggregate verdict 為 `FAIL` 或 `INCOMPLETE` 時，`toppleCatVerify` 與
 完整產生後讓 Gradle build 失敗。因此最終綠燈代表 aggregate `PASS`；
 無論成功或失敗，都可從 `evidence.json` 讀取 gate-level 細節。
 
+預設 PIT producer 會從 compiler 產生的 descriptor，取得每一個已核准的 public
+canonical `@ToppleTest` 宣告 class，並設定 PIT 的 `targetTests`。即使
+production package 與 test package 不同，mutation coverage 仍會對準真正的
+公開合約。若 consumer 明確設定 PIT `targetTests`，ToppleCat 會保留該設定；
+若它排除 canonical test，PIT 報告可用時會得到 `MUTATION=FAIL`。若 PIT 沒有
+產生可用報告，gate 會是 `INCOMPLETE`，不能當成合約通過的證據。
+
 ## 保護 Reviewer 資料
 
 Reviewer custody 位於 `~/.topplecat/projects/<sha256-project-key>/escrow/`，
@@ -289,11 +311,12 @@ code。
 ## 文件
 
 - [開始使用](docs/guide/getting-started.md)
-- [0.0.3 發佈說明](docs/releases/0.0.3.zh-TW.md)
+- [0.0.4 發佈說明](docs/releases/0.0.4.zh-TW.md)
 - [撰寫合約](docs/guide/authoring.md)
 - [驗證與證據](docs/guide/verification-and-evidence.md)
 - [疑難排解](docs/guide/troubleshooting.md)
 - [架構](docs/architecture.md)
+- [外部驗證紀錄](docs/validation/README.md)
 - [貢獻指南](CONTRIBUTING.md)
 - [安全政策](SECURITY.md)
 

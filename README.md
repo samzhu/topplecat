@@ -24,12 +24,9 @@ ToppleCat is a curious cat.
 
 Whenever an AI coding agent says a Java task is **done**, ToppleCat gives the
 claim a small push. It reruns the contract with reviewer-only cases, checks
-whether the tests notice broken production behavior, and proves that every
-declared result was actually asserted.
-
-If the implementation only memorized the public example, or the test merely
-looked busy without proving behavior, the claim tips over. If it stays standing,
-ToppleCat leaves evidence.
+whether public tests notice broken production behavior, and proves that every
+declared result was actually asserted. The final decision comes from the
+combined gates, not from one reassuring test result.
 
 > Hidden retests, mutation gates, and executable acceptance contracts for Java.
 > If it's hollow, it falls.
@@ -49,19 +46,36 @@ second authoring language beside the executable Java contract.
 
 | A green test can still mean... | ToppleCat checks it with... |
 | --- | --- |
-| The implementation was tuned to the visible example. | Reviewer-controlled **hidden retests**. |
+| The implementation may be tuned to the visible example. | Reviewer-controlled **hidden retests** with independently chosen business cases. |
 | The test runs but cannot detect broken behavior. | A PIT-backed **mutation gate**. |
 | Expected data was read but never compared with reality. | Enforced **expected consumption**. |
 | The visible contract or verification strength changed after review. | A mandatory, reviewer-sealed **contract-integrity gate**. |
 | Old or partial output is mistaken for current proof. | Run-scoped gates, digests, and an explicit **evidence verdict**. |
 
-Hidden retest and mutation answer different questions. Hidden retest asks whether
-an implementation generalizes beyond visible examples. The default PIT producer
-measures **public executable contract mutation strength**: it uses
+Hidden retest and mutation answer different questions. A hidden retest exercises
+business cases the implementation agent did not receive; it is not a guarantee
+that every possible hard-coded shortcut will be exposed. The default PIT
+producer measures **public executable contract mutation strength**: it uses
 `sourceSets.test`, public test classes, and public case rows only. Reviewer rows
 and reviewer-only JUnit tests never help that producer kill a mutant. If a
-boundary must kill a mutant, it belongs in the public contract; ToppleCat does
-not add per-case mutation scores or infer the scope of a custom producer.
+boundary must kill a mutant, it belongs in the public contract. For the managed
+PIT producer, compiler descriptors select every public canonical `@ToppleTest`
+declaring class as `targetTests`; consumer-owned `targetTests` and custom
+mutation producers are left untouched. ToppleCat does not add per-case
+mutation scores or infer the scope of a custom producer.
+
+Reviewer rows can reuse the public canonical `@ToppleTest`; when `src/hiddenTest`
+contains rows but no Java tests, that canonical run supplies the reviewer retest
+result. Add reviewer-only Java tests only for behavior the canonical method cannot
+express. Java helper sources under `src/hiddenTest` without an executable JUnit
+method are compiled but do not count as hidden tests. If hidden retest is enabled
+with neither hidden rows nor hidden Java tests,
+ToppleCat stays fail-closed with `REVIEWER_JUNIT=INCOMPLETE`.
+
+A gate result describes that gate, not a universal verdict about the
+implementation. A reviewer retest can pass while mutation rejects a shortcut,
+or the reverse can happen. Read `evidence.json` to see which gate rejected a
+claim; accept it only when the current run's aggregate verdict is `PASS`.
 
 ## Watch a Fake Completion Fall
 
@@ -114,9 +128,9 @@ PASS / FAIL / INCOMPLETE evidence and human reports
    enabled gates only when that approval still matches. It writes evidence and
    hides the source again in every outcome.
 
-## Install 0.0.3
+## Install 0.0.4
 
-ToppleCat `0.0.3` is the release described here. A consumer project needs Java
+ToppleCat `0.0.4` is the release described here. A consumer project needs Java
 25 and a Gradle version that supports it. Once published, add Maven Central for
 both plugin and library resolution; a released consumer does not need
 `mavenLocal()`.
@@ -138,12 +152,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.3"
+    id("io.github.samzhu.topplecat") version "0.0.4"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.3"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.4"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
@@ -271,6 +285,14 @@ verdict is `FAIL` or `INCOMPLETE`, after evidence, reports, safe feedback, and
 the run archive are complete. A green final gate therefore means aggregate
 `PASS`. Read `evidence.json` for gate-level detail after either outcome.
 
+The default PIT producer derives `targetTests` from the compiler-emitted
+descriptors for every approved public canonical `@ToppleTest` declaring class. This keeps
+mutation coverage correct even when production and test packages differ. If a
+consumer explicitly sets PIT `targetTests`, ToppleCat preserves that choice;
+when it excludes a canonical test, the usable PIT report makes `MUTATION=FAIL`.
+If PIT produces no usable report, the gate is `INCOMPLETE` and cannot be treated
+as evidence of a passing contract.
+
 ## Keep Reviewer Data Private
 
 Reviewer custody lives under `~/.topplecat/projects/<sha256-project-key>/escrow/`
@@ -303,11 +325,12 @@ commands.
 ## Documentation
 
 - [Getting started](docs/guide/getting-started.md)
-- [0.0.3 release notes](docs/releases/0.0.3.md)
+- [0.0.4 release notes](docs/releases/0.0.4.md)
 - [Authoring contracts](docs/guide/authoring.md)
 - [Verification and evidence](docs/guide/verification-and-evidence.md)
 - [Troubleshooting](docs/guide/troubleshooting.md)
 - [Architecture](docs/architecture.md)
+- [External validation records](docs/validation/README.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 

@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
@@ -509,6 +510,551 @@ class ToppleCatPluginFunctionalTest {
         assertEquals(TaskOutcome.SUCCESS, result.task(":pitest").getOutcome());
         assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatMutationGate").getOutcome());
         assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "MUTATION"));
+    }
+
+    @Test
+    void defaultPitTargetsCanonicalAcceptanceTestsAcrossDifferentPackages() throws Exception {
+        verificationProject("");
+        Path production = project.resolve("src/main/java/com/example/checkout/CheckoutService.java");
+        Files.createDirectories(production.getParent());
+        Files.writeString(production, """
+                package com.example.checkout;
+                public final class CheckoutService {
+                    public int total(int subtotal) { return subtotal >= 500 ? subtotal - 100 : subtotal; }
+                }
+                """);
+        writeTestSource("""
+                package example;
+                class CheckoutAcceptanceTest {
+                    @ToppleStageField CheckoutThen then;
+                    @ToppleTest("AC-CHECKOUT-TOTAL")
+                    void appliesDiscount(ToppleCase c) { then.matches_contract(c); }
+                    static final class CheckoutThen extends ToppleStage<CheckoutThen> {
+                        private final com.example.checkout.CheckoutService service =
+                                new com.example.checkout.CheckoutService();
+                        CheckoutThen matches_contract(ToppleCase c) {
+                            recorded();
+                            c.verify("total", service.total(c.input("subtotal", Integer.class)));
+                            return self();
+                        }
+                    }
+                }
+                """);
+        writePublicCase("checkout.json", """
+                [{"caseId":"checkout-public","acId":"AC-CHECKOUT-TOTAL",
+                  "inputs":{"subtotal":500},"expected":{"total":400}}]
+                """);
+        writeHiddenReviewAsset();
+        Files.writeString(project.resolve("src/hiddenTest/resources/topplecat/cases/coupon-reviewer.yaml"), """
+                - caseId: checkout-reviewer
+                  acId: AC-CHECKOUT-TOTAL
+                  inputs: {subtotal: 500}
+                  expected: {total: 400}
+                """);
+
+        var result = runner("toppleCatVerify", "--stacktrace").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":pitest").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatMutationGate").getOutcome());
+        assertEquals(EvidenceVerdict.PASS, evidenceVerdict(project),
+                Files.readString(project.resolve("build/topplecat/evidence.json")));
+        for (String gate : List.of("CONTRACT_INTEGRITY", "JUNIT", "REVIEWER_JUNIT",
+                "EXPECTED_CONSUMPTION", "MUTATION")) {
+            assertEquals(EvidenceVerdict.PASS, gateVerdict(project, gate), gate);
+        }
+        String pitReport = Files.readString(project.resolve("build/reports/pitest/mutations.xml"));
+        assertTrue(pitReport.contains("example.CheckoutAcceptanceTest"), pitReport);
+        assertFalse(pitReport.contains("ReviewerTest"), pitReport);
+        MutationGateResults mutation = MutationGateResults.read(
+                Files.readString(project.resolve("build/topplecat/mutation-results.json")));
+        var canonicalAssessment = mutation.assessments().stream()
+                .filter(assessment -> assessment.acId().equals("AC-CHECKOUT-TOTAL"))
+                .findFirst().orElseThrow();
+        assertTrue(canonicalAssessment.totalMutations() > 0, mutation.toString());
+        assertTrue(canonicalAssessment.detectedMutations() > 0, mutation.toString());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void defaultPitTargetsCanonicalAcceptanceTestsForAConsumerFaithfulKotlinDslProject() throws Exception {
+        verificationProjectKotlin("");
+        Path production = project.resolve("src/main/java/cart/service/CartService.java");
+        Files.createDirectories(production.getParent());
+        Files.writeString(production, """
+                package cart.service;
+                public final class CartService {
+                    public int total(int subtotal) { return subtotal >= 500 ? subtotal - 100 : subtotal; }
+                }
+                """);
+        writeTestSource("""
+                package cart.topplecat;
+                class CartAcceptanceTest {
+                    @ToppleStageField CartThen then;
+                    @ToppleTest("AC-CART-TOTAL")
+                    void appliesDiscount(ToppleCase c) { then.matches_contract(c); }
+                    static final class CartThen extends ToppleStage<CartThen> {
+                        private final cart.service.CartService service = new cart.service.CartService();
+                        CartThen matches_contract(ToppleCase c) {
+                            recorded();
+                            c.verify("total", service.total(c.input("subtotal", Integer.class)));
+                            return self();
+                        }
+                    }
+                }
+                """);
+        writePublicCase("cart.json", """
+                [{"caseId":"cart-public-500","acId":"AC-CART-TOTAL",
+                  "inputs":{"subtotal":500},"expected":{"total":400}}]
+                """);
+        writeHiddenRowsOnly("""
+                - caseId: cart-reviewer-800
+                  acId: AC-CART-TOTAL
+                  inputs: {subtotal: 800}
+                  expected: {total: 700}
+                """);
+
+        var result = runner("toppleCatVerify", "--info", "--stacktrace").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":pitest").getOutcome(), result.getOutput());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatMutationGate").getOutcome(), result.getOutput());
+        assertEquals(EvidenceVerdict.PASS, evidenceVerdict(project));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "MUTATION"));
+        MutationGateResults mutation = MutationGateResults.read(
+                Files.readString(project.resolve("build/topplecat/mutation-results.json")));
+        var assessment = mutation.assessments().stream()
+                .filter(candidate -> candidate.acId().equals("AC-CART-TOTAL"))
+                .findFirst().orElseThrow();
+        assertEquals(List.of("cart.topplecat.CartAcceptanceTest"), assessment.testClasses(), mutation.toString());
+        assertTrue(assessment.totalMutations() > 0, mutation.toString());
+        assertTrue(assessment.detectedMutations() > 0, mutation.toString());
+        String pitReport = Files.readString(project.resolve("build/reports/pitest/mutations.xml"));
+        assertTrue(pitReport.contains("cart.topplecat.CartAcceptanceTest"), pitReport);
+        assertFalse(pitReport.contains("NO_COVERAGE"), pitReport);
+        assertTrue(result.getOutput().contains("--targetTests=cart.topplecat.CartAcceptanceTest"),
+                result.getOutput());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void preservesAnExplicitPitTargetThatExcludesTheCanonicalAcceptanceTest() throws Exception {
+        assertExplicitPitTargetRemainsAuthoritative("""
+                apply plugin: 'info.solidsoft.pitest'
+                pitest {
+                    pitestVersion = '1.25.5'
+                    junit5PluginVersion = '1.2.3'
+                    targetClasses = ['com.example.checkout.*']
+                    targetTests = ['other.UnrelatedTest']
+                    outputFormats = ['XML']
+                }
+                """);
+    }
+
+    @Test
+    void preservesAnExplicitTaskLevelPitTargetThatExcludesTheCanonicalAcceptanceTest() throws Exception {
+        assertExplicitPitTargetRemainsAuthoritative("""
+                apply plugin: 'info.solidsoft.pitest'
+                pitest {
+                    pitestVersion = '1.25.5'
+                    junit5PluginVersion = '1.2.3'
+                    targetClasses = ['com.example.checkout.*']
+                    outputFormats = ['XML']
+                }
+                tasks.withType(info.solidsoft.gradle.pitest.PitestTask).configureEach {
+                    targetTests.set(['other.UnrelatedTest'] as Set)
+                }
+                """);
+    }
+
+    @Test
+    void failsClosedWhenConsumerOwnedPitLeavesTargetTestsToItsConvention() throws Exception {
+        assertExplicitPitTargetRemainsAuthoritative("""
+                apply plugin: 'info.solidsoft.pitest'
+                pitest {
+                    pitestVersion = '1.25.5'
+                    junit5PluginVersion = '1.2.3'
+                    targetClasses = ['com.example.checkout.*']
+                    outputFormats = ['XML']
+                }
+                """);
+    }
+
+    @Test
+    void rowsOnlyReviewerRetestPassesThroughThePublicCanonicalAcceptanceTest() throws Exception {
+        verificationProject("");
+        writeMutationCouponFixture();
+        writeHiddenRowsOnly("""
+                - caseId: coupon-reviewer-800
+                  acId: AC-CART-COUPON
+                  inputs: {subtotal: 800}
+                  expected: {discount: 100}
+                """);
+
+        var result = runner("toppleCatVerify", "--stacktrace").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatReport").getOutcome());
+        assertEquals(EvidenceVerdict.PASS, evidenceVerdict(project));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "JUNIT"));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "EXPECTED_CONSUMPTION"));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "MUTATION"));
+        String junit = Files.readString(Files.list(currentRun(project).resolve("junit/JUNIT"))
+                .filter(path -> path.toString().endsWith(".xml")).findFirst().orElseThrow());
+        assertTrue(junit.contains("coupon-reviewer-800"), junit);
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void rowsOnlyReviewerRetestIgnoresAHiddenJavaHelperWithoutJUnitTests() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial { mutation { enabled.set(false) } }
+                }
+                """);
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenRowsOnly("""
+                - caseId: coupon-reviewer-helper
+                  acId: AC-CART-COUPON
+                  inputs: {}
+                  expected: {discount: 100}
+                """);
+        writeHiddenJavaTest("ReviewerSupport", """
+                package example;
+                final class ReviewerSupport {
+                    static int approvedDiscount() { return 100; }
+                }
+                """);
+
+        var result = runner("toppleCatVerify", "--stacktrace").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatReport").getOutcome());
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "JUNIT"));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "EXPECTED_CONSUMPTION"));
+        assertEquals(EvidenceVerdict.PASS, evidenceVerdict(project));
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void rowsOnlyReviewerFailureFailsTheReviewerGateWithoutAHiddenJavaTask() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial { mutation { enabled.set(false) } }
+                }
+                """);
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenRowsOnly("""
+                - caseId: coupon-reviewer-fail
+                  acId: AC-CART-COUPON
+                  inputs: {}
+                  expected: {discount: 99}
+                """);
+
+        var result = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatReport").getOutcome());
+        assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.FAIL, evidenceVerdict(project));
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        assertFalse(feedback.contains("coupon-reviewer-fail"), feedback);
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void hiddenRowsAndAnExecutableHiddenJUnitTestMustBothPass() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial { mutation { enabled.set(false) } }
+                }
+                """);
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenReviewAsset();
+
+        var result = runner("toppleCatVerify", "--stacktrace").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":hiddenTest").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatReport").getOutcome());
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "EXPECTED_CONSUMPTION"));
+        assertEquals(EvidenceVerdict.PASS, evidenceVerdict(project));
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void failsClosedWhenReviewerRetestHasNeitherHiddenRowsNorJavaTests() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial { mutation { enabled.set(false) } }
+                }
+                """);
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        Path reviewerReadme = project.resolve("src/hiddenTest/README.md");
+        Files.createDirectories(reviewerReadme.getParent());
+        Files.writeString(reviewerReadme, "reviewer-only notes\n");
+
+        var result = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatReport").getOutcome());
+        assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.INCOMPLETE, evidenceVerdict(project));
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void hiddenJavaFailureCannotBeMaskedByPassingReviewerRows() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial { mutation { enabled.set(false) } }
+                }
+                """);
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenRowsOnly("""
+                - caseId: coupon-reviewer-pass
+                  acId: AC-CART-COUPON
+                  inputs: {}
+                  expected: {discount: 100}
+                """);
+        writeHiddenJavaTest("ReviewerFailureTest", """
+                package example;
+                import org.junit.jupiter.api.Test;
+                import static org.junit.jupiter.api.Assertions.fail;
+                class ReviewerFailureTest {
+                    @Test void meaningfulReviewerGuard() { fail("reviewer guard failed"); }
+                }
+                """);
+
+        var result = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+
+        assertEquals(TaskOutcome.FAILED, result.task(":hiddenTest").getOutcome());
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatReport").getOutcome());
+        assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.FAIL, evidenceVerdict(project));
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        assertFalse(feedback.contains("ReviewerFailureTest"), feedback);
+        assertFalse(feedback.contains("reviewer guard failed"), feedback);
+        assertFalse(feedback.contains("coupon-reviewer-pass"), feedback);
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void hiddenExpectedConsumptionCannotPassWhenTheCanonicalStageOnlyReadsIt() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial { mutation { enabled.set(false) } }
+                }
+                """);
+        writeTestSource("""
+                package example;
+                class CouponTest {
+                    @ToppleStageField CouponThen then;
+                    @ToppleTest("AC-CART-COUPON")
+                    void appliesCoupon(ToppleCase testCase) { then.matches_contract(testCase); }
+                    static final class CouponThen extends ToppleStage<CouponThen> {
+                        CouponThen matches_contract(ToppleCase testCase) {
+                            recorded();
+                            if (testCase.hidden()) {
+                                testCase.expected("discount", Integer.class);
+                            } else {
+                                testCase.verify("discount", 100);
+                            }
+                            return self();
+                        }
+                    }
+                }
+                """);
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenRowsOnly("""
+                - caseId: coupon-reviewer-unasserted
+                  acId: AC-CART-COUPON
+                  inputs: {}
+                  expected: {discount: 100}
+                """);
+
+        var result = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatReport").getOutcome());
+        assertNotEquals(EvidenceVerdict.PASS, gateVerdict(project, "JUNIT"));
+        assertNotEquals(EvidenceVerdict.PASS, gateVerdict(project, "REVIEWER_JUNIT"));
+        assertEquals(EvidenceVerdict.FAIL, gateVerdict(project, "EXPECTED_CONSUMPTION"));
+        assertEquals(EvidenceVerdict.FAIL, evidenceVerdict(project));
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        assertFalse(feedback.contains("coupon-reviewer-unasserted"), feedback);
+        assertFalse(feedback.contains("100"), feedback);
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    private void assertExplicitPitTargetRemainsAuthoritative(String pitConfiguration) throws Exception {
+        verificationProject(pitConfiguration);
+        Path production = project.resolve("src/main/java/com/example/checkout/CheckoutService.java");
+        Files.createDirectories(production.getParent());
+        Files.writeString(production, """
+                package com.example.checkout;
+                public final class CheckoutService {
+                    public int total(int subtotal) { return subtotal >= 500 ? subtotal - 100 : subtotal; }
+                }
+                """);
+        writeTestSource("""
+                package example;
+                class CheckoutAcceptanceTest {
+                    @ToppleStageField CheckoutThen then;
+                    @ToppleTest("AC-CHECKOUT-TOTAL")
+                    void appliesDiscount(ToppleCase c) { then.matches_contract(c); }
+                    static final class CheckoutThen extends ToppleStage<CheckoutThen> {
+                        private final com.example.checkout.CheckoutService service =
+                                new com.example.checkout.CheckoutService();
+                        CheckoutThen matches_contract(ToppleCase c) {
+                            recorded();
+                            c.verify("total", service.total(c.input("subtotal", Integer.class)));
+                            return self();
+                        }
+                    }
+                }
+                """);
+        Path unrelated = project.resolve("src/test/java/other/UnrelatedTest.java");
+        Files.createDirectories(unrelated.getParent());
+        Files.writeString(unrelated, """
+                package other;
+                import org.junit.jupiter.api.Test;
+                class UnrelatedTest { @Test void doesNotExerciseTheContract() {} }
+                """);
+        writePublicCase("checkout.json", """
+                [{"caseId":"checkout-public","acId":"AC-CHECKOUT-TOTAL",
+                  "inputs":{"subtotal":500},"expected":{"total":400}}]
+                """);
+        writeHiddenReviewAsset();
+        Files.writeString(project.resolve("src/hiddenTest/resources/topplecat/cases/coupon-reviewer.yaml"), """
+                - caseId: checkout-reviewer
+                  acId: AC-CHECKOUT-TOTAL
+                  inputs: {subtotal: 500}
+                  expected: {total: 400}
+                """);
+
+        var result = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+        assertTrue(result.task(":pitest") != null, result.getOutput());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":pitest").getOutcome(), result.getOutput());
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatMutationGate").getOutcome());
+        assertNotEquals(EvidenceVerdict.PASS, gateVerdict(project, "MUTATION"));
+        assertNotEquals(EvidenceVerdict.PASS, evidenceVerdict(project));
+        String pitReport = Files.readString(project.resolve("build/reports/pitest/mutations.xml"));
+        assertFalse(pitReport.contains("example.CheckoutAcceptanceTest"), pitReport);
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        assertTrue(feedback.contains("Mutation verification did not exercise the required public acceptance contract")
+                || feedback.contains("MUTATION"), feedback);
+        assertFalse(feedback.contains("CheckoutAcceptanceTest"), feedback);
+        assertFalse(feedback.contains("src/hiddenTest"), feedback);
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void recordsMutationIncompleteWhenTheProducerDoesNotWriteAUsableReport() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial {
+                        hiddenRetest { enabled.set(false) }
+                        mutation {
+                            enabled.set(true)
+                            producerTask.set('missingPitReport')
+                            reportFile.set(layout.buildDirectory.file('pit/mutations.xml'))
+                        }
+                    }
+                }
+                tasks.register('missingPitReport') {
+                    doLast { layout.buildDirectory.dir('pit').get().asFile.mkdirs() }
+                }
+                """);
+        writeProductionSource();
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenReviewAsset();
+        Path staleEvidence = project.resolve("build/topplecat/evidence.json");
+        Files.createDirectories(staleEvidence.getParent());
+        Files.writeString(staleEvidence, "STALE-EVIDENCE");
+
+        var result = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":missingPitReport").getOutcome());
+        assertEquals(TaskOutcome.FAILED, result.task(":toppleCatReport").getOutcome());
+        assertEquals(EvidenceVerdict.INCOMPLETE, gateVerdict(project, "MUTATION"));
+        assertEquals(EvidenceVerdict.INCOMPLETE, evidenceVerdict(project));
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        assertTrue(feedback.contains("MUTATION") || feedback.contains("mutation"), feedback);
+        assertFalse(feedback.contains("STALE-EVIDENCE"), feedback);
+        assertEquals(TaskOutcome.SUCCESS, result.task(":toppleCatRehide").getOutcome());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void leavesAnUnrelatedPitExtensionUntouchedForACustomMutationProducer() throws Exception {
+        verificationProject("""
+                apply plugin: 'info.solidsoft.pitest'
+                pitest { fullMutationMatrix = false }
+                toppleCat {
+                    adversarial {
+                        hiddenRetest { enabled.set(false) }
+                        mutation {
+                            producerTask.set('writeCustomPit')
+                            reportFile.set(layout.buildDirectory.file('pit/mutations.xml'))
+                        }
+                    }
+                }
+                tasks.register('writeCustomPit') {
+                    doLast {
+                        if (pitest.fullMutationMatrix.get()) {
+                            throw new GradleException('ToppleCat changed an unrelated PIT extension')
+                        }
+                        def output = layout.buildDirectory.file('pit/mutations.xml').get().asFile
+                        output.parentFile.mkdirs()
+                        output.text = '''<mutations>
+                          <mutation detected="true" status="KILLED"><mutatedClass>example.CouponService</mutatedClass>
+                            <coveringTests>example.CouponTest.[engine:junit-jupiter]/[class:example.CouponTest]/[test-template:appliesCoupon(io.github.samzhu.topplecat.junit.ToppleCase)]/[test-template-invocation:#1]</coveringTests></mutation>
+                        </mutations>'''
+                    }
+                }
+                """);
+        writeProductionSource();
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+
+        var result = runner("toppleCatVerify", "--stacktrace").build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":writeCustomPit").getOutcome());
+        assertNull(result.task(":pitest"), result.getOutput());
+        assertEquals(EvidenceVerdict.PASS, gateVerdict(project, "MUTATION"));
+        assertEquals(EvidenceVerdict.PASS, evidenceVerdict(project));
     }
 
     @Test
@@ -1766,6 +2312,38 @@ class ToppleCatPluginFunctionalTest {
                 """.formatted(actualDiscount);
     }
 
+    private void writeMutationCouponFixture() throws Exception {
+        Path production = project.resolve("src/main/java/example/CouponService.java");
+        Files.createDirectories(production.getParent());
+        Files.writeString(production, """
+                package example;
+                public final class CouponService {
+                    public int discountFor(int subtotal) { return subtotal >= 500 ? 100 : 0; }
+                }
+                """);
+        writeTestSource("""
+                package example;
+                class CouponTest {
+                    @ToppleStageField CouponThen then;
+                    @ToppleTest("AC-CART-COUPON")
+                    void appliesCoupon(ToppleCase testCase) { then.matches_contract(testCase); }
+                    static final class CouponThen extends ToppleStage<CouponThen> {
+                        private final CouponService service = new CouponService();
+                        CouponThen matches_contract(ToppleCase testCase) {
+                            recorded();
+                            testCase.verify("discount",
+                                    service.discountFor(testCase.input("subtotal", Integer.class)));
+                            return self();
+                        }
+                    }
+                }
+                """);
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public-500","acId":"AC-CART-COUPON",
+                  "inputs":{"subtotal":500},"expected":{"discount":100}}]
+                """);
+    }
+
     private void basicProject() throws Exception {
         verificationProject("");
     }
@@ -1791,6 +2369,27 @@ class ToppleCatPluginFunctionalTest {
                 """.formatted(junit, core, configuration));
     }
 
+    private void verificationProjectKotlin(String configuration) throws Exception {
+        Files.writeString(project.resolve("settings.gradle.kts"), "rootProject.name = \"verification-consumer-kotlin\"\n");
+        Path junit = moduleJar("topplecat-junit");
+        Path core = moduleJar("topplecat-core");
+        Files.writeString(project.resolve("build.gradle.kts"), """
+                plugins {
+                    java
+                    id("io.github.samzhu.topplecat")
+                }
+                repositories { mavenCentral() }
+                dependencies {
+                    testImplementation(files("%s", "%s"))
+                    testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
+                    testImplementation("tools.jackson.core:jackson-databind:3.2.0")
+                    testImplementation("tools.jackson.dataformat:jackson-dataformat-yaml:3.2.0")
+                    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
+                }
+                %s
+                """.formatted(junit, core, configuration));
+    }
+
     private void writeHiddenReviewAsset() throws Exception {
         Path test = project.resolve("src/hiddenTest/java/example/ReviewerTest.java");
         Files.createDirectories(test.getParent());
@@ -1807,6 +2406,18 @@ class ToppleCatPluginFunctionalTest {
                   inputs: {}
                   expected: {discount: 100}
                 """);
+    }
+
+    private void writeHiddenRowsOnly(String source) throws Exception {
+        Path cases = project.resolve("src/hiddenTest/resources/topplecat/cases/coupon-reviewer.yaml");
+        Files.createDirectories(cases.getParent());
+        Files.writeString(cases, source);
+    }
+
+    private void writeHiddenJavaTest(String className, String source) throws Exception {
+        Path test = project.resolve("src/hiddenTest/java/example").resolve(className + ".java");
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, source);
     }
 
     private void writeProductionSource() throws Exception {

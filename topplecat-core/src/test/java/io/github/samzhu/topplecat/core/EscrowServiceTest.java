@@ -580,7 +580,7 @@ class EscrowServiceTest {
     private static ReviewerContractApproval approval(String marker) {
         return ReviewerContractApproval.create(List.of(
                 new PublicContractEntry("src/test/java/example/ContractTest.java", marker.repeat(64))
-        ), "c".repeat(64), new VerificationPolicy("0.0.3", true, true, true, 100,
+        ), "c".repeat(64), new VerificationPolicy("0.0.4", true, true, true, 100,
                 MutationProducerKind.DEFAULT, null));
     }
 }

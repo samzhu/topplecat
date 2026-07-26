@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ReviewerContractApprovalJsonTest {
     @Test
     void createsADeterministicApprovalDigestAndRoundTripsCanonicalJson() {
-        VerificationPolicy policy = new VerificationPolicy("0.0.3", true, true, true, 100,
+        VerificationPolicy policy = new VerificationPolicy("0.0.4", true, true, true, 100,
                 MutationProducerKind.DEFAULT, null);
         ReviewerContractApproval approval = ReviewerContractApproval.create(List.of(
                 new PublicContractEntry("src/test/java/example/AmountContractTest.java", "a".repeat(64)),
@@ -37,7 +37,7 @@ class ReviewerContractApprovalJsonTest {
 
     @Test
     void rejectsAnUnsortedOrTamperedApproval() {
-        VerificationPolicy policy = new VerificationPolicy("0.0.3", true, true, true, 100,
+        VerificationPolicy policy = new VerificationPolicy("0.0.4", true, true, true, 100,
                 MutationProducerKind.DEFAULT, null);
 
         assertThrows(ToppleCatException.class, () -> new ReviewerContractApproval(
@@ -52,7 +52,7 @@ class ReviewerContractApprovalJsonTest {
     private static ReviewerContractApproval approval(String entryDigest, int threshold) {
         return ReviewerContractApproval.create(List.of(
                 new PublicContractEntry("src/test/java/example/AmountContractTest.java", entryDigest)
-        ), "c".repeat(64), new VerificationPolicy("0.0.3", true, true, true, threshold,
+        ), "c".repeat(64), new VerificationPolicy("0.0.4", true, true, true, threshold,
                 MutationProducerKind.DEFAULT, null));
     }
 }

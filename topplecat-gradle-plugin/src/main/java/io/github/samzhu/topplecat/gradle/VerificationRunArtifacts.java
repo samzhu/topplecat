@@ -11,6 +11,7 @@ final class VerificationRunArtifacts {
     static final String CONTRACT_INTEGRITY = "CONTRACT_INTEGRITY";
     static final String JUNIT = "JUNIT";
     static final String REVIEWER_JUNIT = "REVIEWER_JUNIT";
+    static final String REVIEWER_JAVA_COMPILE = "REVIEWER_JAVA_COMPILE";
     static final String EXPECTED_CONSUMPTION = "EXPECTED_CONSUMPTION";
     static final String MUTATION = "MUTATION";
 

@@ -141,8 +141,14 @@ after migration succeeds.
 
 ## PIT Is Not Producing Mutation Results
 
-With the default `pitest` producer, ToppleCat configures PIT automatically. If a
-custom producer task is unavailable, the mutation gate reports:
+With the default `pitest` producer, ToppleCat configures PIT automatically and
+derives `targetTests` from compiler descriptors for approved public canonical
+`@ToppleTest` declaring classes. This is independent of the production package
+name. If a consumer explicitly sets `targetTests`, ToppleCat preserves it; a
+usable report that excludes a canonical test is a mutation `FAIL`, not a silent
+pass. If PIT cannot produce a usable report, the gate is `INCOMPLETE`.
+
+If a custom producer task is unavailable, the mutation gate reports:
 
 ```text
 ToppleCat mutation is enabled, but producer task '<producer>' was not found. ToppleCat configures PIT automatically for the default 'pitest' task; otherwise set toppleCat.adversarial.mutation.producerTask to a task that writes mutations.xml.
@@ -155,6 +161,29 @@ matches each compiled canonical method signature to those IDs; class names
 alone are intentionally insufficient when one class contains several ACs. A
 surviving or unattributed mutant fails its acceptance condition while evidence
 and safe feedback are still produced.
+
+When a usable report contains no covering test for a canonical AC, the safe
+feedback may say:
+
+```text
+Mutation verification did not exercise the required public acceptance contract. Check PIT test targeting and public acceptance coverage.
+```
+
+This message deliberately omits reviewer test names, source paths, and raw PIT
+details. A missing, malformed, or interrupted report is `INCOMPLETE`, and an
+older report never fills that current-run gap.
+
+## Reviewer Rows Without Hidden Java
+
+Hidden JSON/YAML rows do not require a placeholder Java test. `toppleCatVerificationTest`
+runs those rows through the public canonical `@ToppleTest`, and the report aggregates
+that result as `REVIEWER_JUNIT`. A failing row makes the reviewer gate `FAIL`; an
+unasserted expected key still makes expected consumption `FAIL` or `INCOMPLETE`.
+Java helper sources with no executable JUnit method do not turn a rows-only source
+set into a hidden-test requirement. If hidden Java tests also exist, `hiddenTest`
+must pass independently. If neither
+hidden rows nor hidden Java tests exist while retest is enabled, the gate stays
+`INCOMPLETE` rather than becoming an unconditional pass.
 
 ## Delivery Hygiene
 

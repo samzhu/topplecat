@@ -55,6 +55,21 @@ fields:
 Do not use CSV, string tables, undocumented fields, or dynamic AC identifiers.
 A reviewer row must bind to an existing public acceptance condition.
 
+## Reviewer Retests
+
+Reviewer retests are independently chosen business cases. They are not secret
+answer keys and cannot prove that every possible hard-coded shortcut fails.
+Derive them from the approved rule rather than by changing literals in a public
+row. Choose boundaries that expose likely shortcuts: mixed carts, threshold
+transitions, idempotency, inventory conflicts, validation errors, or nested
+response shape.
+
+During review, ask what an implementation that only recognizes the public SKU,
+coupon, threshold, or expected answer would do. Prefer an unseen rule
+combination or behavior path over another example from the same path. A hidden
+row still targets an existing public AC; it must not silently introduce a new
+requirement.
+
 ## Expected Consumption
 
 Each top-level key in `expected` begins as `UNTOUCHED`.

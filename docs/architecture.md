@@ -75,17 +75,20 @@ hidden retest and expected-consumption enforcement. Hidden retest asks whether
 the implementation generalized beyond visible examples; mutation asks whether
 the public executable contract detects broken production behavior. Without
 consumer PIT setup, ToppleCat applies its default producer to `sourceSets.test`
-only, discovers production package targets, enables the full mutation matrix,
-and requires a 100% score for each acceptance condition. Reviewer rows and
-reviewer-only JUnit tests are excluded from that producer. Attribution matches
-the compiled canonical method identity against PIT's JUnit Unique ID rather than
-assigning every mutant covered by the same test class; multiple AC methods may
-therefore share a class without sharing a score. No per-case mutation score is
-produced. Existing PIT settings remain in place except that the full matrix is
-required for attribution. A reviewer can explicitly disable any safeguard
+only, discovers production package targets, and derives PIT `targetTests` from
+compiler-emitted descriptors for every approved public canonical `@ToppleTest`
+declaring class. This target is configured before PIT executes, enables the full mutation
+matrix, and requires a 100% score for each acceptance condition. Reviewer rows
+and reviewer-only JUnit tests are excluded from that producer. Attribution
+matches the compiled canonical method identity against PIT's JUnit Unique ID
+rather than assigning every mutant covered by the same test class; multiple AC
+methods may therefore share a class without sharing a score. No per-case
+mutation score is produced. An explicit consumer `targetTests` and a custom
+mutation producer remain authoritative and are never overwritten. A usable
+report that excludes a canonical test is `MUTATION=FAIL`; a missing or unusable
+report is `MUTATION=INCOMPLETE`. A reviewer can explicitly disable any safeguard
 through `toppleCat.adversarial`; evidence then records `DISABLED` with the
-configuration reason instead of treating it as a pass. Custom producer scope is
-the reviewer's responsibility and is not inferred by ToppleCat.
+configuration reason instead of treating it as a pass.
 
 ## External Spec and Delivery Boundaries
 

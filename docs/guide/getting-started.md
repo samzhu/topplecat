@@ -1,6 +1,6 @@
 # Getting Started
 
-ToppleCat `0.0.3` is the release described by this guide. A consumer project needs
+ToppleCat `0.0.4` is the release described by this guide. A consumer project needs
 Java 25 and a Gradle version that supports it. The current consumer example uses
 JUnit Jupiter 6.1.1 and the `io.github.samzhu.topplecat` Gradle plugin.
 ToppleCat brings its Jackson dependencies transitively and adds no
@@ -26,9 +26,10 @@ dependencyResolutionManagement {
 ```
 
 Then apply the plugin and add the JUnit integration shown in the root
-[README](../../README.md#install-003). The consumer needs its own Gradle wrapper,
+[README](../../README.md#install-004). The consumer needs its own Gradle wrapper,
 as a normal Gradle project does. See the
-[0.0.3 release notes](../releases/0.0.3.md) for the approved-contract integrity changes in this
+[0.0.4 release notes](../releases/0.0.4.md) for the canonical PIT target and
+mutation-verification changes in this
 version.
 
 ## Configure the Consumer
@@ -80,6 +81,13 @@ longer. Aggregate `FAIL` or `INCOMPLETE` makes the command exit non-zero after
 those artifacts are complete; a green final task means aggregate `PASS`.
 Inspect `build/topplecat/evidence.json` for gate-level detail and any explicit
 `DISABLED` safeguard.
+
+For the managed PIT producer, ToppleCat derives `targetTests` from compiler
+descriptors for all approved public canonical `@ToppleTest` declaring classes. This also
+covers projects whose production and test packages differ. An explicit consumer
+`targetTests` or custom mutation producer remains authoritative; excluding a
+canonical test produces `MUTATION=FAIL` when the PIT report is usable, while a
+missing or unusable report produces `MUTATION=INCOMPLETE`.
 
 When an authorized reviewer needs to inspect or change reviewer-only source,
 run `./gradlew toppleCatRestore`. It restores only an existing hidden source set

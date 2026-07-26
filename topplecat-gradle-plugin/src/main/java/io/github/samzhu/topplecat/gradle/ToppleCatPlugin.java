@@ -1,5 +1,6 @@
 package io.github.samzhu.topplecat.gradle;
 
+import io.github.samzhu.topplecat.core.CompilerScenarioDescriptor;
 import io.github.samzhu.topplecat.junit.ToppleJunit;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
@@ -15,13 +16,16 @@ import org.gradle.api.tasks.testing.Test;
 import org.gradle.api.tasks.testing.TestDescriptor;
 import org.gradle.api.tasks.testing.TestListener;
 import org.gradle.api.tasks.testing.TestResult;
+import org.gradle.process.CommandLineArgumentProvider;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -194,7 +198,11 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                     task.mustRunAfter(acquireCustody, hide);
                     task.usesService(custodyService);
                 });
-        project.getTasks().named(hidden.getCompileJavaTaskName()).configure(task -> task.dependsOn(restore));
+        project.getTasks().named(hidden.getCompileJavaTaskName()).configure(task -> {
+            task.dependsOn(restore);
+            task.doLast(ignored -> VerificationRunArtifacts.markCompleted(
+                    runDirectory.getAsFile().toPath(), VerificationRunArtifacts.REVIEWER_JAVA_COMPILE));
+        });
         project.getTasks().named(hidden.getProcessResourcesTaskName()).configure(task -> task.dependsOn(restore));
         TaskProvider<ToppleCatRehideTask> rehide = project.getTasks().register("toppleCatRehide", ToppleCatRehideTask.class,
                 task -> {
@@ -255,6 +263,11 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             task.systemProperty(ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
                     project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json").get().getAsFile()
                             .getAbsolutePath());
+            // A reviewer source set may contain Java helpers without executable tests. Gradle
+            // 9 otherwise fails such a task before the report can classify it as rows-only.
+            // The report still requires a successful hidden Java compilation and detects
+            // executable JUnit annotations before deciding whether this result is needed.
+            task.getFailOnNoDiscoveredTests().set(false);
             task.usesService(custodyService);
         });
         TaskProvider<ToppleCatMutationGateTask> mutationGate = project.getTasks().register("toppleCatMutationGate",
@@ -309,7 +322,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         });
         project.afterEvaluate(ignored -> configureAdversarialVerification(project, extension, restore, reviewerDefinition,
                 verificationTest, hiddenTest, mutationGate, report, rehide, verify, hide, updateEscrow, contractIntegrity,
-                contractIntegrityResult));
+                contractIntegrityResult, compileContracts));
     }
 
     private static void configureCaseProperties(
@@ -389,7 +402,8 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             TaskProvider<ToppleCatHideTask> hide,
             TaskProvider<ToppleCatUpdateEscrowTask> updateEscrow,
             TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity,
-            Path contractIntegrityResult
+            Path contractIntegrityResult,
+            TaskProvider<ToppleCatCompileContractsTask> compileContracts
     ) {
         AdversarialConfiguration configuration = AdversarialConfiguration.resolve(extension);
         configureApprovalPolicy(project, extension, configuration, hide, updateEscrow, contractIntegrity);
@@ -436,7 +450,8 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             verify.configure(task -> task.dependsOn(hiddenTest));
         }
         report.configure(task -> task.finalizedBy(rehide));
-        configureMutationGate(project, extension, configuration, mutationGate, report, verify, contractIntegrityResult);
+        configureMutationGate(project, extension, configuration, mutationGate, report, verify, contractIntegrityResult,
+                compileContracts);
     }
 
     private static void configureApprovalInputs(
@@ -495,7 +510,8 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             TaskProvider<ToppleCatMutationGateTask> mutationGate,
             TaskProvider<ToppleCatReportTask> report,
             TaskProvider<Task> verify,
-            Path contractIntegrityResult
+            Path contractIntegrityResult,
+            TaskProvider<ToppleCatCompileContractsTask> compileContracts
     ) {
         if (!configuration.mutationEnabled()) {
             return;
@@ -509,26 +525,44 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             return;
         }
         String producerName = extension.getAdversarial().getMutation().getProducerTask().get().trim();
-        if (producerName.equals("pitest") && project.getTasks().findByName(producerName) == null) {
-            project.getPluginManager().apply(PITEST_PLUGIN_ID);
-            configureDefaultPit(project, productionPackages.targets());
+        boolean managedDefaultPit;
+        if (producerName.equals("pitest")) {
+            managedDefaultPit = project.getTasks().findByName(producerName) == null;
+            if (managedDefaultPit) {
+                project.getPluginManager().apply(PITEST_PLUGIN_ID);
+                configureDefaultPit(project, productionPackages.targets());
+            }
+        } else {
+            managedDefaultPit = false;
         }
         Task producer = project.getTasks().findByName(producerName);
         mutationGate.configure(task -> {
             task.getProducerAvailable().set(producer != null);
             if (producer != null) {
                 task.dependsOn(producer);
+                if (managedDefaultPit) {
+                    // This PIT task was created by ToppleCat, so its targetTests are owned by
+                    // ToppleCat rather than a consumer. Descriptor generation must finish
+                    // before PIT launches with the canonical target argument.
+                    producer.dependsOn(compileContracts);
+                    configureManagedDefaultPitTargetTests(project, producer);
+                }
             }
         });
         if (producer != null) {
             producer.onlyIf(ignored -> !project.getGradle().getTaskGraph().hasTask(verify.get())
                     || ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
-            configureFullMutationMatrix(project, producer);
+            if (producerName.equals("pitest")) {
+                configureFullMutationMatrix(project, producer);
+            }
         }
         verify.configure(task -> task.dependsOn(mutationGate));
     }
 
-    private static void configureDefaultPit(Project project, Set<String> targetClasses) {
+    private static void configureDefaultPit(
+            Project project,
+            Set<String> targetClasses
+    ) {
         Object pitest = project.getExtensions().findByName("pitest");
         if (pitest == null) {
             throw new GradleException("ToppleCat could not configure its default PIT producer. "
@@ -545,7 +579,66 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         setPitProperty(pitest, "getTimestampedReports", false);
         setPitProperty(pitest, "getMutationThreshold", 0);
         setPitProperty(pitest, "getFailWhenNoMutations", false);
-        project.getLogger().lifecycle("ToppleCat configured the default PIT producer with a full mutation matrix against sourceSets.test.");
+        project.getLogger().lifecycle("ToppleCat configured the default PIT producer with a full mutation matrix against canonical public @ToppleTest classes.");
+    }
+
+    /** Configures the canonical targetTests for the PIT producer ToppleCat itself applied. */
+    private static void configureManagedDefaultPitTargetTests(Project project, Task producer) {
+        Object pitest = project.getExtensions().findByName("pitest");
+        if (pitest == null) {
+            throw new GradleException("ToppleCat could not configure its managed PIT targetTests.");
+        }
+
+        // Do not attach a task-produced Provider to PIT's targetTests input. Gradle's
+        // configuration-cache serializer queries that input before producer tasks execute,
+        // and querying a task-backed provider at that point is invalid. Keep PIT's declared
+        // targetTests input empty and add the compiler-backed target as a lazy command-line
+        // argument provider; JavaExec evaluates it when PIT actually launches, after the
+        // compiler-contract dependency has completed.
+        Path descriptorDirectory = project.getLayout().getBuildDirectory().getAsFile().get().toPath()
+                .resolve("topplecat")
+                .resolve("compiler");
+        setPitProperty(pitest, "getTargetTests", Set.of());
+        try {
+            Object providers = producer.getClass().getMethod("getArgumentProviders").invoke(producer);
+            @SuppressWarnings("unchecked")
+            List<CommandLineArgumentProvider> argumentProviders = (List<CommandLineArgumentProvider>) providers;
+            argumentProviders.add(new CanonicalPitTargetArgumentProvider(descriptorDirectory.toString()));
+        } catch (ReflectiveOperationException | ClassCastException exception) {
+            throw new GradleException("ToppleCat could not configure PIT targetTests at execution time.", exception);
+        }
+        project.getLogger().lifecycle("ToppleCat configured its managed PIT targetTests from compiler-emitted canonical public descriptors.");
+    }
+
+    private static List<String> canonicalTestClasses(Path descriptorDirectory) {
+        Set<String> classes = new TreeSet<>();
+        for (CompilerScenarioDescriptor descriptor : CompilerDescriptorReader.read(List.of(descriptorDirectory))) {
+            classes.add(descriptor.declaringBinaryName());
+        }
+        return List.copyOf(classes);
+    }
+
+    /**
+     * A serializable argument provider is required because PIT task actions are retained in the
+     * configuration cache. Capturing Project, TaskProvider, or a Gradle Provider would make the
+     * PIT task graph non-cacheable. JavaExec evaluates this provider when launching PIT.
+     */
+    private static final class CanonicalPitTargetArgumentProvider
+            implements CommandLineArgumentProvider, Serializable {
+        private final String descriptorDirectory;
+
+        private CanonicalPitTargetArgumentProvider(String descriptorDirectory) {
+            this.descriptorDirectory = descriptorDirectory;
+        }
+
+        @Override
+        public Iterable<String> asArguments() {
+            List<String> canonicalTests = canonicalTestClasses(Path.of(descriptorDirectory));
+            if (canonicalTests.isEmpty()) {
+                throw new GradleException("ToppleCat compiler emitted no canonical public @ToppleTest descriptors for PIT.");
+            }
+            return List.of("--targetTests=" + String.join(",", canonicalTests));
+        }
     }
 
     private static void configureFullMutationMatrix(Project project, Task producer) {

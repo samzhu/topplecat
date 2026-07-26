@@ -23,8 +23,20 @@ By default the task:
 6. writes current-run reports and evidence;
 7. re-hides reviewer source.
 
+For the managed PIT producer, `targetTests` comes from compiler-emitted
+descriptors for every public canonical `@ToppleTest` declaring class. This
+keeps coverage valid when production and test packages differ. Consumer-owned
+`targetTests` and custom mutation producers are preserved. A usable report that
+does not cover a canonical test is a mutation `FAIL`; a missing, malformed, or
+interrupted report is `INCOMPLETE`.
+
 Use `./gradlew test` only for the public implementation loop. A green public
 test task is a development signal, not the final ToppleCat verdict.
+
+When reviewer custody contains only hidden rows, the public canonical
+`@ToppleTest` execution is also the reviewer-row retest evidence. A passing row
+set can therefore make `REVIEWER_JUNIT` pass without a placeholder hidden Java
+class; any hidden Java tests still require their own passing `hiddenTest` result.
 
 ## Verdicts
 

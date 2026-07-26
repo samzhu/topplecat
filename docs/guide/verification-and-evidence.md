@@ -64,20 +64,45 @@ PIT for mutation verification, and enforces expected-value consumption. It
 writes reports/evidence and re-hides reviewer source after a hidden retest.
 Without consumer PIT configuration, ToppleCat applies PIT `1.25.5`, its JUnit 5
 plugin `1.2.3`, discovered production package targets, XML output, full mutation
-matrix, and a 100% per-AC threshold. The first mutation run can be noticeably
-slower because PIT has to analyse the project. ToppleCat matches PIT's JUnit
-Unique IDs to the compiled canonical method signature, so two `@ToppleTest`
-methods in one Java class keep independent mutation sets and scores.
+matrix, and a 100% per-AC threshold. It also derives PIT `targetTests` from the
+compiler-emitted descriptors for every approved public canonical `@ToppleTest`
+declaring class. This avoids relying on package-name coincidence when production and test
+packages differ. The first mutation run can be noticeably slower because PIT
+has to analyse the project. ToppleCat matches PIT's JUnit Unique IDs to the
+compiled canonical method signature, so two `@ToppleTest` methods in one Java
+class keep independent mutation sets and scores.
 
 The default producer measures **public executable contract mutation strength**:
 it runs `sourceSets.test` with public test classes and public case rows only.
 Hidden rows and reviewer-only JUnit tests answer the separate hidden-retest
 question and never help default PIT kill a mutant. A boundary that must kill a
-mutant belongs in the public contract. ToppleCat adds no per-case mutation score
-and does not infer the test scope of a custom third-party producer.
+mutant belongs in the public contract. An explicitly configured consumer
+`targetTests` is preserved, as is a custom mutation producer; ToppleCat does not
+overwrite or infer either scope. If a usable PIT report covers no canonical
+test, the affected AC is `FAIL`; if the report is missing, malformed, or
+interrupted, mutation is `INCOMPLETE` and cannot become a passing aggregate.
+ToppleCat adds no per-case mutation score.
 
-The [0.0.3 release notes](../releases/0.0.3.md) describe the reviewer approval
-epoch and the mandatory integrity gate.
+Reviewer rows are executed by the public canonical `@ToppleTest`. Therefore a
+reviewer source set containing only hidden rows can still produce
+`REVIEWER_JUNIT=PASS` and `EXPECTED_CONSUMPTION=PASS` when those rows pass and
+assert every expected value. Java helper sources without an executable JUnit method
+are compiled but do not count as hidden tests. Reviewer-only Java tests remain an additional,
+independent requirement when present; their failure cannot be masked by passing
+rows. With hidden retest enabled but no hidden rows and no hidden Java tests, the
+reviewer gate remains `INCOMPLETE`.
+
+No individual gate is a general proof that an agent did not hard-code a visible
+answer. Reviewer retests exercise independently designed business cases; a
+shortcut can still happen to satisfy them. Mutation answers whether the public
+contract notices production behavior changing. Read the current-run gate states
+to see what rejected a claim, and accept it only when the aggregate verdict is
+`PASS`.
+
+The [0.0.4 release notes](../releases/0.0.4.md) describe the compiler-backed
+canonical PIT target and the mutation verification outcomes. The [0.0.3 release
+notes](../releases/0.0.3.md) describe the reviewer approval epoch and mandatory
+integrity gate.
 
 ## Verdicts
 
@@ -107,6 +132,14 @@ definition, and resolved verification policy. A mismatch is a completed `FAIL`;
 a legacy v1 escrow or missing approval is `INCOMPLETE`. In either case the four
 downstream gates do not run and are recorded as `INCOMPLETE` with a safe
 precondition reason. No previous JUnit or mutation artifact is borrowed.
+
+The seal protects the public contract, not the production implementation. An
+implementation agent may change production source; that is the work being
+verified. It must not change the sealed tests, typed rows, Gradle logic, semantic
+definition, or verification policy. In an existing-project handoff, a separate
+public handoff manifest may record the starting production source and exported
+files. That manifest helps the delivery workflow audit what was handed over; it
+does not replace the reviewer approval seal or provide a sandbox.
 
 Use the `toppleCat.adversarial` tree only when that trade-off is deliberate:
 

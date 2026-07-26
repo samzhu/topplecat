@@ -34,13 +34,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
+if [[ -e "$fixture_root" ]]; then
+  echo "Mutation-gate integration test cannot safely create its temporary reviewer fixture: $fixture_root already exists." >&2
+  exit 1
+fi
 if [[ -d "$project/.topplecat" ]]; then
   rm -rf "$project/.topplecat"
 fi
-if [[ ! -f "$fixture_root/java/integration/mutation/ReviewerMutationBoundaryTest.java" \
-      || ! -f "$fixture_root/resources/topplecat/cases/coupon-reviewer.json" ]]; then
-  mkdir -p "$fixture_root/java/integration/mutation" "$fixture_root/resources/topplecat/cases"
-  cat > "$fixture_root/java/integration/mutation/ReviewerMutationBoundaryTest.java" <<'EOF'
+mkdir -p "$fixture_root/java/integration/mutation" "$fixture_root/resources/topplecat/cases"
+fixture_created=true
+cat > "$fixture_root/java/integration/mutation/ReviewerMutationBoundaryTest.java" <<'EOF'
 package integration.mutation;
 
 import org.junit.jupiter.api.Test;
@@ -54,7 +57,7 @@ class ReviewerMutationBoundaryTest {
     }
 }
 EOF
-  cat > "$fixture_root/resources/topplecat/cases/coupon-reviewer.json" <<'EOF'
+cat > "$fixture_root/resources/topplecat/cases/coupon-reviewer.json" <<'EOF'
 [
   {
     "caseId": "coupon-reviewer",
@@ -64,8 +67,6 @@ EOF
   }
 ]
 EOF
-  fixture_created=true
-fi
 rm -rf "$project/build"
 
 "$gradle" publishToMavenLocal
