@@ -199,20 +199,30 @@ reviewer-only.
 
 ## Delivery Hygiene
 
-`toppleCatHide` moves reviewer source into plaintext `.topplecat/escrow/`.
-It is not encryption, and `./gradlew clean` does not delete it. The correct order
-is hide first, then create an implementation environment that never exposes
-reviewer material.
+`toppleCatHide` moves reviewer source into plaintext reviewer-local custody at
+`~/.topplecat/projects/<sha256-project-key>/escrow/`. The state contains the
+manifest, hidden blobs, approval epoch, revisions, history, audit, lock, and
+recovery data. It is not encryption or a sandbox, and `./gradlew clean` does not
+delete it. A legacy project-local `.topplecat/escrow/` requires the explicit
+`toppleCatMigrateEscrow` task and is removed only after a successful migration.
+The correct order is Hide first, then create an implementation environment that
+never exposes reviewer material.
 
 Do not commit reviewer source to Git history the implementation agent can read.
 Deleting `src/hiddenTest` or creating another worktree from that history does
-not remove the old objects. Use one of these boundaries:
+not remove the old objects. The external workflow must provide a trusted
+reviewer/CI boundary and exclude reviewer state, hidden source, build output,
+and such Git history from the public handoff. Use one of these boundaries:
 
 - a public export without `.git`, `.topplecat/`, or `build/`;
 - an isolated environment whose repository history never contained reviewer
   material; or
 - a public implementation repository paired with a separate private reviewer
   repository or CI environment.
+
+ToppleCat itself does not provide an OS sandbox, control CI identity, or decide
+whether a same-user Gradle/JVM process can inspect files. Home-directory custody
+alone cannot defend against malicious build scripts or production code.
 
 `toppleCatRestore` is for an authorized reviewer who needs to inspect or edit
 the exact stored source. It is not an implementation-loop command.

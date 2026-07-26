@@ -2,6 +2,7 @@ package io.github.samzhu.topplecat.gradle;
 
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
+import io.github.samzhu.topplecat.core.EscrowService;
 import io.github.samzhu.topplecat.core.ToppleEvidence;
 import io.github.samzhu.topplecat.core.ToppleEvidenceJson;
 import io.github.samzhu.topplecat.core.VerificationRunJson;
@@ -16,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -169,7 +171,8 @@ class ToppleCatPluginFunctionalTest {
         assertEquals(TaskOutcome.SUCCESS, hidden.task(":toppleCatHide").getOutcome());
         assertTrue(hidden.getOutput().contains("Local hidden storage is plaintext"), hidden.getOutput());
         assertFalse(Files.exists(project.resolve("src/hiddenTest")));
-        assertTrue(Files.isRegularFile(project.resolve(".topplecat/escrow/manifest.json")));
+        assertFalse(Files.exists(project.resolve(".topplecat/escrow")));
+        assertTrue(Files.isRegularFile(reviewerEscrowRoot().resolve("manifest.json")));
         var publicOnlyCheck = runner("toppleCatCheck", "--stacktrace").build();
         assertEquals(TaskOutcome.SUCCESS, publicOnlyCheck.task(":toppleCatCheck").getOutcome());
         assertFalse(Files.readString(project.resolve("build/topplecat/contract-definition.json"))
@@ -179,11 +182,90 @@ class ToppleCatPluginFunctionalTest {
 
         assertEquals(TaskOutcome.SUCCESS, restored.task(":toppleCatRestore").getOutcome());
         assertEquals(originalReviewerSource, Files.readString(reviewerSource));
-        assertTrue(restored.getOutput().contains("reviewer files are available to the reviewer"), restored.getOutput());
+        assertTrue(restored.getOutput().contains("ToppleCat restore complete")
+                || restored.getOutput().contains("reviewer files are available to the reviewer"), restored.getOutput());
         var reviewerCheck = runner("toppleCatCheck", "--stacktrace").build();
         assertEquals(TaskOutcome.SUCCESS, reviewerCheck.task(":toppleCatCheck").getOutcome());
         assertTrue(Files.readString(project.resolve("build/topplecat/contract-definition.json"))
                 .contains("coupon-reviewer"));
+    }
+
+    @Test
+    void migratesLegacyEscrowToReviewerLocalState() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial { mutation { enabled.set(false) } }
+                }
+                """);
+        deleteRecursively(project.resolve(".topplecat-state"));
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenReviewAsset();
+
+        Path legacy = project.resolve(".toppleCatEscrowLocalLegacy");
+        Path legacyStateRoot = project.resolve(legacy);
+        new EscrowService(legacyStateRoot).hide(project, project.resolve("src/hiddenTest"));
+        Path legacyEscrow = project.resolve(".topplecat/escrow");
+        copyDirectory(legacyStateRoot.resolve("projects")
+                .resolve(EscrowService.projectKey(project))
+                .resolve("escrow"), legacyEscrow);
+        assertTrue(Files.exists(legacyEscrow.resolve("manifest.json")));
+
+        var migrated = runner("toppleCatMigrateEscrow", "--stacktrace").build();
+        assertEquals(TaskOutcome.SUCCESS, migrated.task(":toppleCatMigrateEscrow").getOutcome());
+        assertTrue(Files.exists(reviewerEscrowRoot().resolve("manifest.json")));
+        assertFalse(Files.exists(legacyEscrow.resolve("manifest.json")));
+
+        var verify = runner("toppleCatVerify", "--stacktrace").buildAndFail();
+        assertEquals(TaskOutcome.FAILED, verify.task(":toppleCatReport").getOutcome());
+        ToppleEvidence verifyEvidence = ToppleEvidenceJson.read(Files.readString(
+                project.resolve("build/topplecat/evidence.json")));
+        assertEquals(EvidenceVerdict.INCOMPLETE, verifyEvidence.gates().stream()
+                .filter(gate -> "CONTRACT_INTEGRITY".equals(gate.name()))
+                .findFirst()
+                .orElseThrow()
+                .verdict());
+        var restored = runner("toppleCatRestore", "--stacktrace").build();
+        assertEquals(TaskOutcome.SUCCESS, restored.task(":toppleCatRestore").getOutcome());
+        assertFalse(Files.exists(legacyEscrow));
+    }
+
+    @Test
+    void refusesVerificationWhenProjectMovesWithoutReviewerStateRootMatch() throws Exception {
+        verificationProject("""
+                toppleCat {
+                    adversarial { mutation { enabled.set(false) } }
+                }
+                """);
+        writeTestSource(couponSource("100"));
+        writePublicCase("coupon.json", """
+                [{"caseId":"coupon-public","acId":"AC-CART-COUPON",
+                  "inputs":{},"expected":{"discount":100}}]
+                """);
+        writeHiddenReviewAsset();
+        runner("toppleCatHide", "--stacktrace").build();
+
+        Path moved = Files.createTempDirectory("topplecat-move-project");
+        try {
+            Files.createDirectories(moved.resolve("src"));
+            copyDirectory(project.resolve("src"), moved.resolve("src"));
+            Files.copy(project.resolve("settings.gradle"), moved.resolve("settings.gradle"));
+            Files.copy(project.resolve("build.gradle"), moved.resolve("build.gradle"));
+
+            var movedVerify = runner(moved, moved.resolve(".topplecat-state"), "toppleCatVerify", "--stacktrace").buildAndFail();
+            System.out.println(movedVerify.getOutput());
+
+            assertEquals(TaskOutcome.FAILED, movedVerify.task(":toppleCatHide").getOutcome());
+            assertTrue(movedVerify.getOutput().contains("Cannot create reviewer approval without reviewer source"),
+                    movedVerify.getOutput());
+            assertFalse(Files.exists(EscrowService.reviewerStatePath(moved, moved.resolve(".topplecat-state"))
+                    .resolve("manifest.json")));
+        } finally {
+            deleteRecursively(moved);
+        }
     }
 
     @Test
@@ -207,7 +289,7 @@ class ToppleCatPluginFunctionalTest {
         var result = runner("toppleCatUpdateEscrow", "--stacktrace").buildAndFail();
 
         assertTrue(result.getOutput().contains("No ToppleCat escrow manifest exists"), result.getOutput());
-        assertFalse(Files.exists(project.resolve(".topplecat/escrow/manifest.json")));
+        assertFalse(Files.exists(reviewerEscrowRoot().resolve("manifest.json")));
     }
 
     @Test
@@ -356,7 +438,7 @@ class ToppleCatPluginFunctionalTest {
                   "inputs":{},"expected":{"discount":100}}]
                 """);
         writeHiddenReviewAsset();
-        Path lockPath = project.resolve(".topplecat/escrow/.lock");
+        Path lockPath = reviewerEscrowRoot().resolve(".lock");
         Files.createDirectories(lockPath.getParent());
 
         try (FileChannel channel = FileChannel.open(lockPath, CREATE, WRITE); FileLock ignored = channel.lock()) {
@@ -1461,6 +1543,7 @@ class ToppleCatPluginFunctionalTest {
                 }
                 toppleCat {
                     adversarial {
+                        hiddenRetest { enabled.set(false) }
                         mutation {
                             enabled.set(true)
                             threshold.set(100)
@@ -1773,14 +1856,66 @@ class ToppleCatPluginFunctionalTest {
         return imports + source;
     }
 
+    private static void copyDirectory(Path source, Path destination) throws Exception {
+        try (var paths = Files.walk(source)) {
+            paths.sorted().forEach(path -> {
+                Path target = destination.resolve(source.relativize(path));
+                try {
+                    if (Files.isDirectory(path)) {
+                        Files.createDirectories(target);
+                    } else {
+                        Files.createDirectories(target.getParent());
+                        Files.copy(path, target);
+                    }
+                } catch (Exception exception) {
+                    throw new RuntimeException("Cannot copy directory " + source + " to " + destination + ": "
+                            + exception.getMessage(), exception);
+                }
+            });
+        }
+    }
+
+    private static void deleteRecursively(Path path) throws Exception {
+        if (!Files.exists(path)) {
+            return;
+        }
+        try (var paths = Files.walk(path)) {
+            paths.sorted(java.util.Comparator.reverseOrder()).forEach(target -> {
+                try {
+                    Files.deleteIfExists(target);
+                } catch (Exception exception) {
+                    throw new RuntimeException("Cannot delete " + target, exception);
+                }
+            });
+        }
+    }
+
     private void writePublicCase(String name, String source) throws Exception {
         Path cases = project.resolve("src/test/resources/topplecat/cases/").resolve(name);
         Files.createDirectories(cases.getParent());
         Files.writeString(cases, source);
     }
 
+    private Path reviewerStateRoot() {
+        try {
+            return project.toRealPath().resolve(".topplecat-state");
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("Cannot resolve canonical reviewer state root for " + project, exception);
+        }
+    }
+
+    private Path reviewerEscrowRoot() {
+        return EscrowService.reviewerStatePath(project, reviewerStateRoot());
+    }
+
     private GradleRunner runner(String... arguments) {
-        return GradleRunner.create().withProjectDir(project.toFile()).withPluginClasspath().withArguments(arguments);
+        return runner(project, reviewerStateRoot(), arguments);
+    }
+
+    private GradleRunner runner(Path projectRoot, Path stateRoot, String... arguments) {
+        String[] runnerArguments = Stream.concat(Stream.of(arguments),
+                Stream.of("-Dtopplecat.stateRoot=" + stateRoot.toAbsolutePath())).toArray(String[]::new);
+        return GradleRunner.create().withProjectDir(projectRoot.toFile()).withPluginClasspath().withArguments(runnerArguments);
     }
 
     private static boolean containsStandaloneToken(String source, String token) {

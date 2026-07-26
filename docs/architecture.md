@@ -26,7 +26,8 @@ work, and return `self()`. `toppleCatCheck` validates that shape before review.
 `@ToppleAc` is deliberately outside that restriction for supplementary JUnit
 coverage.
 
-`toppleCatHide` moves the whole reviewer source set into local hidden storage
+`toppleCatHide` moves the whole reviewer source set into reviewer-local custody
+at `~/.topplecat/projects/<sha256-project-key>/escrow/`
 before implementation work. When hidden retest is enabled, `toppleCatVerify`
 restores it only long enough to run verification, then rehides it in a
 finalizer. The implementation loop normally runs plain `./gradlew test` against
@@ -36,14 +37,15 @@ public cases.
 
 Every verification execution uses `build/topplecat/runs/current/` until the
 report assigns it a fresh execution-time UUID and archives it below
-`build/topplecat/runs/`. Public JUnit, reviewer JUnit, mutation, narrative, and
-expected-consumption artifacts are collected from that one run. ToppleCat keeps
-the latest three archives. Every run records the `JUNIT`, `REVIEWER_JUNIT`,
-`EXPECTED_CONSUMPTION`, and `MUTATION` gates. A failed or missing required stage
-does not borrow an older successful artifact: the final evidence verdict becomes
-`INCOMPLETE` when ToppleCat cannot prove a required stage completed. A reviewer
-may explicitly disable a safeguard; its gate is then `DISABLED` with the
-configuration reason and does not block an aggregate `PASS`.
+`build/topplecat/runs/`. Public JUnit, reviewer JUnit, mutation, narrative,
+and expected-consumption artifacts are collected from that one run. ToppleCat keeps
+the latest three archives. Every run records `CONTRACT_INTEGRITY`, `JUNIT`,
+`REVIEWER_JUNIT`, `EXPECTED_CONSUMPTION`, and `MUTATION` gates. A failed or
+missing required stage does not borrow an older successful artifact: the final
+evidence verdict becomes `INCOMPLETE` when ToppleCat cannot prove a required
+stage completed. A reviewer may explicitly disable a safeguard; its gate is then
+`DISABLED` with the configuration reason and does not block an aggregate `PASS`
+unless another required gate is `FAIL` or `INCOMPLETE`.
 
 After a run, stable copies are published below `build/topplecat/` for a user to
 inspect. Those copies are convenience outputs, not inputs to a later verdict.
@@ -94,10 +96,19 @@ anchor reading context to canonical `@ToppleTest` contracts, and
 present. `toppleCatReview` is the pre-handoff reviewer projection. The public
 `reports/spec/index.html` appears only after `toppleCatVerify`.
 
-Local hidden storage is plaintext mechanical state, not a secrecy boundary.
-`./gradlew clean` does not remove `.topplecat/escrow/`, and removing
-`src/hiddenTest` does not erase it from Git history. Never put reviewer source
-in history an implementation agent can read. Handoff requires a public export
-without `.git`, `.topplecat/`, or `build/`; an isolated environment whose
-history never contained reviewer material; or a separate public implementation
-repository and private reviewer repository or CI environment.
+Reviewer custody is stored at `~/.topplecat/projects/<sha256-project-key>/escrow/`.
+It is plaintext mechanical state, not encryption, sandboxing, or a security
+boundary. The state contains manifest, hidden source blobs, approval epoch,
+history, revisions, audit, lock, and recovery data. A legacy project-local
+`.topplecat/escrow/` is handled only by explicit `toppleCatMigrateEscrow`, which
+removes it after a successful migration. `./gradlew clean` does not remove
+reviewer-local state, and removing `src/hiddenTest` does not erase it from Git
+history.
+
+ToppleCat relies on the external workflow to provide a trusted reviewer/CI
+execution boundary. That workflow must hand agents only public source and safe
+feedback, excluding reviewer state, hidden source, build artifacts, and any Git
+history that contained reviewer material. ToppleCat does not decide OS access,
+sandboxing, CI identity, or whether same-user Gradle/JVM code can inspect files;
+home-directory custody alone cannot defend against malicious build scripts or
+production code.

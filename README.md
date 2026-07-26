@@ -103,9 +103,10 @@ PASS / FAIL / INCOMPLETE evidence and human reports
 2. **Check and review it.** `toppleCatCheck` validates the contract.
    `toppleCatReview` renders the complete reviewer-only review.
 3. **Transfer reviewer custody.** `toppleCatHide` moves `src/hiddenTest` into
-   local plaintext custody storage. It is not a secrecy boundary. To evolve an
-   existing reviewer suite, an authorized reviewer uses the explicit restore,
-   review, and update workflow rather than ordinary hide.
+   reviewer-local plaintext custody at
+   `~/.topplecat/projects/<sha256-project-key>/escrow/`. It is not a secrecy
+   boundary. To evolve an existing reviewer suite, an authorized reviewer uses
+   the explicit restore, review, and update workflow rather than ordinary hide.
 4. **Implement normally.** Give the implementation agent a public-only
    environment and use ordinary `./gradlew test`.
 5. **Verify the claim.** `toppleCatVerify` first checks the sealed public
@@ -272,15 +273,22 @@ the run archive are complete. A green final gate therefore means aggregate
 
 ## Keep Reviewer Data Private
 
-Local `.topplecat/escrow/` is mechanical plaintext storage, not encryption.
-`./gradlew clean` removes generated `build/` output but does not remove escrow.
-Removing `src/hiddenTest` from a working tree also does not erase it from Git
-history: a worktree created from history that contains reviewer source is not a
-privacy boundary. Never commit reviewer material to history the implementation
-agent can read. Hand off either a public export without `.git`, `.topplecat/`,
-or `build/`; an isolated environment whose history never contained reviewer
-material; or a public repository paired with a separate private reviewer
-repository or CI environment.
+Reviewer custody lives under `~/.topplecat/projects/<sha256-project-key>/escrow/`
+and includes the manifest, hidden source blobs, approval epoch, revisions,
+history, audit, lock, and recovery state. It is plaintext mechanical storage,
+not encryption or a sandbox. `./gradlew clean` removes generated `build/` output
+but does not remove reviewer state. A legacy project-local `.topplecat/escrow/`
+is accepted only for explicit `toppleCatMigrateEscrow`; successful migration
+removes that local escrow. A moved or cloned project never adopts another
+project's state or silently creates a new approval.
+
+ToppleCat does not control OS permissions, sandboxing, CI identity, or whether a
+Gradle/JVM process can access arbitrary files. The external workflow must run
+Verify in a trusted reviewer/CI boundary, hand the agent only public source and
+safe feedback, and exclude reviewer state, hidden source, build artifacts, and
+any Git history that ever contained reviewer material. Home-directory custody
+alone cannot defend against a malicious build script or production code running
+as the same OS user.
 
 ## Choose a Sample
 

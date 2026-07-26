@@ -157,6 +157,18 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             task.getOutputs().upToDateWhen(ignored -> false);
             task.getOutputs().doNotCacheIf("Reviewer source restore is custody-state dependent.", ignored -> true);
         });
+        TaskProvider<ToppleCatMigrateEscrowTask> migrateEscrow = project.getTasks().register("toppleCatMigrateEscrow",
+                ToppleCatMigrateEscrowTask.class, task -> {
+                    task.setGroup("verification");
+                    task.setDescription("Migrates a legacy project-local escrow into reviewer-local custody.");
+                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                });
+        migrateEscrow.configure(task -> {
+            task.mustRunAfter(acquireCustody);
+            task.usesService(custodyService);
+            task.getOutputs().upToDateWhen(ignored -> false);
+            task.getOutputs().doNotCacheIf("Legacy escrow migration is custody-state dependent.", ignored -> true);
+        });
         TaskProvider<ToppleCatUpdateEscrowTask> updateEscrow = project.getTasks().register(
                 "toppleCatUpdateEscrow", ToppleCatUpdateEscrowTask.class, task -> {
                     task.setGroup("verification");

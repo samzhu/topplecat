@@ -10,6 +10,7 @@ import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
 import io.github.samzhu.topplecat.core.ContractIntegrityResult;
 import io.github.samzhu.topplecat.core.ContractIntegrityResultJson;
+import io.github.samzhu.topplecat.core.EscrowService;
 import io.github.samzhu.topplecat.core.EvidenceGate;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ExpectedConsumptionExecution;
@@ -489,7 +490,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         }
         digest(digests, "verification-data.json", reports.resolve("verification/data.json"));
         digest(digests, "contract-integrity.json", integrityResult);
-        Path manifest = root.resolve(".topplecat/escrow/manifest.json");
+        Path manifest = EscrowService.reviewerStatePath(root, EscrowService.defaultReviewerStateRoot()).resolve("manifest.json");
         if (Files.exists(manifest)) {
             digest(digests, "escrow-manifest.json", manifest);
         }

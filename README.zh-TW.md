@@ -99,8 +99,10 @@ PASS / FAIL / INCOMPLETE 證據與人類報表
 2. **檢查並審閱。** `toppleCatCheck` 驗證合約；`toppleCatReview`
    產生包含完整 reviewer 資料的審閱頁。
 3. **移交 reviewer custody。** `toppleCatHide` 把 `src/hiddenTest`
-   移入本機明文 custody storage；這不是保密邊界。若要演進既有的 reviewer
-   suite，授權 reviewer 必須使用明確的還原、審閱與更新流程，而非一般 hide。
+   移入 reviewer-local 明文 custody：
+   `~/.topplecat/projects/<sha256-project-key>/escrow/`；這不是保密邊界。若要
+   演進既有的 reviewer suite，授權 reviewer 必須使用明確的還原、審閱與更新
+   流程，而非一般 hide。
 4. **正常實作。** 只把 public-only environment 交給 implementation
    agent，平常使用 `./gradlew test`。
 5. **驗證完成宣稱。** `toppleCatVerify` 先確認封存的公開合約與驗證 policy
@@ -260,13 +262,20 @@ Aggregate verdict 為 `FAIL` 或 `INCOMPLETE` 時，`toppleCatVerify` 與
 
 ## 保護 Reviewer 資料
 
-本機 `.topplecat/escrow/` 是機械式明文儲存，不是加密。`./gradlew clean`
-會移除生成的 `build/`，但不會移除 escrow。從 working tree 移除
-`src/hiddenTest` 也不會把它從 Git history 擦除；若 history 曾含 reviewer
-source，由它建立的 worktree 不是保密邊界。絕對不要把 reviewer material
-commit 到 implementation agent 可讀的 history。交付時應使用不含 `.git`、
-`.topplecat/`、`build/` 的 public export；history 從未含 reviewer material
-的隔離環境；或 public repository 搭配獨立 private reviewer repository／CI。
+Reviewer custody 位於 `~/.topplecat/projects/<sha256-project-key>/escrow/`，
+包含 manifest、hidden source blobs、approval epoch、revisions、history、audit、
+lock 與 recovery state。這是明文機械式儲存，不是加密或 sandbox。`./gradlew
+clean` 會移除生成的 `build/`，但不會移除 reviewer state。既有的
+project-local `.topplecat/escrow/` 只能透過明確的
+`toppleCatMigrateEscrow` 遷移；成功後會移除 local escrow。專案被移動或 clone
+時，不會採用其他專案的 state，也不會默默建立新的 approval。
+
+ToppleCat 不控制 OS 權限、sandbox、CI identity，或同一 Gradle/JVM process
+能否存取任意檔案。外部 workflow 必須在可信任的 reviewer/CI 邊界執行 Verify，
+只把 public source 與安全 feedback 交給 agent，並排除 reviewer state、hidden
+source、build artifacts，以及曾經包含 reviewer material 的 Git history。單靠
+home-directory custody 無法防禦同一 OS user 執行的惡意 build script 或 production
+code。
 
 ## 選擇 Sample
 

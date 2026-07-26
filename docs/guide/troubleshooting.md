@@ -128,6 +128,17 @@ escrow this explicit sequence performs the migration to v2. Until then, JUnit,
 reviewer JUnit, expected consumption, and mutation are deliberately recorded as
 `INCOMPLETE`; no stale public Spec bundle is retained.
 
+## Reviewer State Is Missing After a Move or Clone
+
+The project key is the SHA-256 of the canonical project root. A moved or cloned
+checkout therefore does not match the original reviewer-local state and must
+not create a new approval from public files. Restore the original checkout, or
+have an authorized reviewer recover the matching
+`~/.topplecat/projects/<project-key>/escrow/` state. If the tree still contains
+legacy `.topplecat/escrow/`, run `./gradlew toppleCatMigrateEscrow` explicitly;
+the task preserves v1/v2 manifest data and removes the project-local escrow only
+after migration succeeds.
+
 ## PIT Is Not Producing Mutation Results
 
 With the default `pitest` producer, ToppleCat configures PIT automatically. If a
@@ -147,13 +158,15 @@ and safe feedback are still produced.
 
 ## Delivery Hygiene
 
-`.topplecat/escrow/` is plaintext mechanical state, not a secrecy boundary.
-`./gradlew clean` does not remove it, and Git history can retain reviewer files
-after they leave the working tree. Never commit reviewer source to history the
-implementation agent can read. Use a public export without `.git`,
-`.topplecat/`, or `build/`; an isolated environment whose history never
-contained reviewer material; or separate public implementation and private
-reviewer repositories or CI environments.
+Reviewer state is plaintext mechanical custody at
+`~/.topplecat/projects/<sha256-project-key>/escrow/`, not encryption, sandboxing,
+or a secrecy boundary. `./gradlew clean` does not remove it. A legacy
+`.topplecat/escrow/` requires `toppleCatMigrateEscrow`; do not copy it into a
+public handoff. Git history can retain reviewer files after they leave the
+working tree, so the external workflow must exclude reviewer state, hidden
+source, build output, and any history that contained them. ToppleCat does not
+control OS access or CI identity and cannot defend against same-user malicious
+build scripts or production code.
 
 ## The Public Report Lacks Reviewer Detail
 

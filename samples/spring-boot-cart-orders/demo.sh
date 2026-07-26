@@ -7,6 +7,18 @@ sample="$root/samples/spring-boot-cart-orders"
 gradle="$root/gradlew"
 service="$sample/src/main/java/sample/cartorders/OrderService.java"
 service_backup="$(mktemp)"
+owns_state_root=false
+if [[ -n "${TOPPLECAT_STATE_ROOT:-}" ]]; then
+  state_root="$TOPPLECAT_STATE_ROOT"
+else
+  state_root="$(mktemp -d)"
+  owns_state_root=true
+fi
+mkdir -p "$state_root"
+
+run_sample() {
+  "$gradle" -p "$sample" -Dtopplecat.stateRoot="$state_root" "$@"
+}
 
 cleanup() {
   local status=$?
@@ -16,9 +28,12 @@ cleanup() {
     cp "$service_backup" "$service"
     rm -f "$service_backup"
   fi
-  if [[ -f "$sample/.topplecat/escrow/manifest.json" && ! -d "$sample/src/hiddenTest" ]]; then
-    "$gradle" -p "$sample" -q toppleCatRestore >/dev/null 2>&1 \
-      || echo "Demo cleanup warning: could not restore reviewer source for $sample. Run ./gradlew -p samples/spring-boot-cart-orders toppleCatRestore." >&2
+  if [[ ! -d "$sample/src/hiddenTest" ]]; then
+    run_sample -q toppleCatRestore >/dev/null 2>&1 \
+      || echo "Demo cleanup warning: could not restore reviewer source for $sample." >&2
+  fi
+  if [[ "$owns_state_root" == true ]]; then
+    rm -rf "$state_root"
   fi
   exit "$status"
 }
@@ -32,17 +47,20 @@ if [[ ! -f "$service" ]]; then
 fi
 cp "$service" "$service_backup"
 
-if [[ -f "$sample/.topplecat/escrow/manifest.json" && ! -d "$sample/src/hiddenTest" ]]; then
-  "$gradle" -p "$sample" toppleCatRestore
+if [[ ! -d "$sample/src/hiddenTest" ]]; then
+  run_sample toppleCatRestore || true
 fi
-rm -rf "$sample/.topplecat" "$sample/build"
+if [[ -d "$sample/.topplecat" ]]; then
+  rm -rf "$sample/.topplecat"
+fi
+rm -rf "$sample/build"
 cp "$sample/demo/OrderService.broken.java" "$service"
 
 "$gradle" publishToMavenLocal
-"$gradle" -p "$sample" toppleCatCheck toppleCatHide
+run_sample toppleCatCheck toppleCatHide
 
 set +e
-"$gradle" -p "$sample" toppleCatVerify
+run_sample toppleCatVerify
 first_exit=$?
 set -e
 if [[ $first_exit -eq 0 ]]; then
@@ -51,7 +69,7 @@ if [[ $first_exit -eq 0 ]]; then
 fi
 
 cp "$sample/demo/OrderService.fixed.java" "$service"
-"$gradle" -p "$sample" toppleCatVerify
+run_sample toppleCatVerify
 
 echo "evidence: $sample/build/topplecat/evidence.json"
 echo "agent feedback: $sample/build/topplecat/agent-feedback.json"

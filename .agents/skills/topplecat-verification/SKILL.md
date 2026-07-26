@@ -17,16 +17,17 @@ that branch, and preserve reviewer custody throughout the run.
 - A canonical method is ordered `@ToppleStageField` orchestration. Stages own
   setup, production calls, assertions, attachments, and control flow.
 - Public material lives under `src/test`; reviewer-owned material lives under
-  `src/hiddenTest`. An implementation agent receives neither reviewer source nor
-  `.topplecat/`, reviewer reports, private failures, or attachment details.
+  `src/hiddenTest`. Agents receive neither reviewer source nor
+  `~/.topplecat/projects/<sha256-project-key>/escrow/` or private reports.
 - `./gradlew test` is an implementation signal. Only current-run
   `build/topplecat/evidence.json` is the final contract verdict.
 
 ## Select The Gate
 
-1. Inspect the Gradle build, approved Spec or task, Java bindings, public case
-   roots, configured `specDocs`, `src/hiddenTest`,
-   `.topplecat/escrow/manifest.json`, and current-run evidence.
+1. Inspect the Gradle build, approved task, Java bindings, case roots,
+   `src/hiddenTest`,
+   `~/.topplecat/projects/<sha256-project-key>/escrow/manifest.json`, legacy
+   `.topplecat/escrow/manifest.json`, and current evidence.
 2. Choose exactly one branch:
    - **Author** for a new or changed AC, case, DTO expectation, or Stage.
    - **Review and hide** when static checks are green but reviewer sign-off or
@@ -56,11 +57,8 @@ and no later gate runs before that branch's preconditions are satisfied.
 5. Run the narrow public test. New behavior must produce a meaningful red result
    before implementation; record why an existing behavior is already green.
 
-**Completion criterion:** every affected AC has one literal public binding;
-every affected data-driven AC has one canonical `@ToppleTest` and at least one
-valid public row; every top-level expected key reaches `ToppleCase.verify`;
-every reviewer row targets an existing public AC and differs meaningfully from
-the public examples; Check passes; and the narrow test result is recorded.
+**Completion criterion:** affected ACs have literal bindings, valid public rows,
+consumed expected keys, meaningful reviewer rows, and a passing Check.
 
 ### Review And Hide
 
@@ -73,13 +71,12 @@ the public examples; Check passes; and the narrow test result is recorded.
    and stop for explicit sign-off.
 4. After sign-off, run `./gradlew toppleCatHide`; it seals public contract and
    policy. Ordinary Hide never refreshes a seal.
-5. Prepare a public export without `.git`, `.topplecat/`, `build/`, or
-   `src/hiddenTest`, or an isolated implementation environment whose Git
-   history never contained reviewer material.
+5. Prepare a public export without `.git`, `.topplecat/`, `build/`, reviewer-local
+   state, or `src/hiddenTest`, or an isolated implementation environment whose
+   Git history never contained reviewer material.
 
-**Completion criterion:** every reviewed AC is explicitly accepted; Hide
-completes for the entire reviewer source set; and the implementation tree
-contains only public contract and production material.
+**Completion criterion:** reviewer accepts every AC; Hide completes; the
+implementation tree contains only public contract and production material.
 
 ### Implement
 
@@ -141,3 +138,7 @@ optional work; and one bounded pilot AC has a concrete conversion plan.
   Verify or ordinary Hide.
 - An `INCOMPLETE` verdict stays in **Verify** until its required producer or
   configuration completes; it is never relabelled as `PASS` or `DISABLED`.
+
+ToppleCat is not an OS sandbox and does not control CI identity or same-user
+Gradle/JVM access; the external workflow must provide the trusted reviewer/CI
+boundary and give agents only public source plus safe feedback.

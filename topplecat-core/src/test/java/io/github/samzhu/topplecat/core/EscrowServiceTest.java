@@ -8,6 +8,11 @@ import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
@@ -21,6 +26,160 @@ class EscrowServiceTest {
     @TempDir
     Path project;
 
+    private static Path reviewerStateRoot(Path project) {
+        return project.resolve(".topplecat-local");
+    }
+
+    private static Path reviewerEscrowRoot(Path project) {
+        return reviewerStateRoot(project).resolve("projects")
+                .resolve(EscrowService.projectKey(project))
+                .resolve("escrow");
+    }
+
+    private static Path manifest(Path project) {
+        return reviewerEscrowRoot(project).resolve("manifest.json");
+    }
+
+    private static Path lock(Path project) {
+        return reviewerEscrowRoot(project).resolve(".lock");
+    }
+
+    private static Path blob(Path project, String hash) {
+        return reviewerEscrowRoot(project).resolve("files").resolve(hash.substring(0, 2)).resolve(hash);
+    }
+
+    private static Path revisions(Path project) {
+        return reviewerEscrowRoot(project).resolve("revisions");
+    }
+
+    private EscrowService service() {
+        return new EscrowService(reviewerStateRoot(project));
+    }
+
+    private EscrowService serviceWithFailure() {
+        return new EscrowService(reviewerStateRoot(project), () -> {
+            throw new IllegalStateException("injected activation failure");
+        });
+    }
+
+    @Test
+    void derivesAStableKeyAndIsolatesProjectsInOneReviewerStateRoot() throws Exception {
+        Path secondProject = project.resolve("second-project");
+        Files.createDirectories(secondProject);
+
+        assertEquals(EscrowService.projectKey(project), EscrowService.projectKey(project.resolve(".")));
+        assertFalse(EscrowService.projectKey(project).equals(EscrowService.projectKey(secondProject)));
+        assertFalse(EscrowService.reviewerStatePath(project, reviewerStateRoot(project))
+                .equals(EscrowService.reviewerStatePath(secondProject, reviewerStateRoot(project))));
+    }
+
+    @Test
+    void migratesVersionTwoLegacyEscrowAndPreservesApproval() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        Path legacyState = project.resolve("legacy-state");
+        ReviewerContractApproval approved = approval("a");
+        EscrowManifest original = new EscrowService(legacyState).hide(project, hidden, approved);
+        Path legacy = project.resolve(".topplecat/escrow");
+        copyDirectory(legacyState.resolve("projects").resolve(EscrowService.projectKey(project)).resolve("escrow"), legacy);
+
+        EscrowManifest migrated = service().migrateLegacyEscrow(project);
+
+        assertEquals(EscrowManifest.SCHEMA_VERSION_V2, migrated.schemaVersion());
+        assertEquals(original.approval(), migrated.approval());
+        assertEquals(migrated, service().manifest(project));
+        assertFalse(Files.exists(legacy));
+        assertFalse(Files.exists(hidden));
+    }
+
+    @Test
+    void migratesVersionOneLegacyEscrowWithoutInventingApproval() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        Path legacyState = project.resolve("legacy-state");
+        EscrowManifest original = new EscrowService(legacyState).hide(project, hidden);
+        Path legacy = project.resolve(".topplecat/escrow");
+        copyDirectory(legacyState.resolve("projects").resolve(EscrowService.projectKey(project)).resolve("escrow"), legacy);
+
+        EscrowManifest migrated = service().migrateLegacyEscrow(project);
+
+        assertEquals(EscrowManifest.SCHEMA_VERSION_V1, original.schemaVersion());
+        assertEquals(EscrowManifest.SCHEMA_VERSION_V1, migrated.schemaVersion());
+        assertEquals(null, migrated.approval());
+        assertFalse(Files.exists(legacy));
+    }
+
+    @Test
+    void concurrentLegacyMigrationFailureDoesNotDeleteTheFirstOperationDestination() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        Path legacyState = project.resolve("legacy-state");
+        new EscrowService(legacyState).hide(project, hidden, approval("a"));
+        Path legacy = project.resolve(".topplecat/escrow");
+        copyDirectory(legacyState.resolve("projects").resolve(EscrowService.projectKey(project)).resolve("escrow"), legacy);
+
+        CountDownLatch secondMigrationStaged = new CountDownLatch(1);
+        CountDownLatch allowSecondMigrationToContinue = new CountDownLatch(1);
+        EscrowService delayed = new EscrowService(reviewerStateRoot(project), () -> {
+        }, () -> {
+            secondMigrationStaged.countDown();
+            try {
+                if (!allowSecondMigrationToContinue.await(5, TimeUnit.SECONDS)) {
+                    throw new AssertionError("Timed out waiting to resume the second migration.");
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("Interrupted while pausing the second migration.", exception);
+            }
+        });
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            var delayedMigration = executor.submit(() -> delayed.migrateLegacyEscrow(project));
+            assertTrue(secondMigrationStaged.await(5, TimeUnit.SECONDS));
+
+            EscrowManifest migrated = service().migrateLegacyEscrow(project);
+
+            allowSecondMigrationToContinue.countDown();
+            ExecutionException error = assertThrows(ExecutionException.class, delayedMigration::get);
+            assertTrue(error.getCause() instanceof ToppleCatException, error::toString);
+            assertEquals(migrated, service().manifest(project));
+            assertTrue(Files.isRegularFile(manifest(project)));
+            assertFalse(Files.exists(legacy));
+        } finally {
+            allowSecondMigrationToContinue.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void rejectsCorruptLegacyEscrowBeforeCreatingReviewerLocalCustody() throws Exception {
+        Path hidden = project.resolve("src/hiddenTest");
+        Path source = hidden.resolve("java/example/HiddenOrderTest.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "class HiddenOrderTest {}\n");
+        Path legacyState = project.resolve("legacy-state");
+        EscrowManifest original = new EscrowService(legacyState).hide(project, hidden, approval("a"));
+        Path legacy = project.resolve(".topplecat/escrow");
+        copyDirectory(legacyState.resolve("projects").resolve(EscrowService.projectKey(project)).resolve("escrow"), legacy);
+        String originalManifest = Files.readString(legacy.resolve("manifest.json"));
+        EscrowEntry entry = original.entries().getFirst();
+        Path legacyBlob = legacy.resolve("files").resolve(entry.sha256().substring(0, 2)).resolve(entry.sha256());
+        Files.writeString(legacyBlob, "corrupt legacy blob\n");
+
+        ToppleCatException error = assertThrows(ToppleCatException.class, () -> service().migrateLegacyEscrow(project));
+
+        assertTrue(error.getMessage().contains("Escrow integrity failed"), error::getMessage);
+        assertEquals(originalManifest, Files.readString(legacy.resolve("manifest.json")));
+        assertEquals("corrupt legacy blob\n", Files.readString(legacyBlob));
+        assertFalse(Files.exists(reviewerEscrowRoot(project)));
+    }
+
     @Test
     void hidesRestoresAndRehidesTheCompleteReviewerSourceSet() throws Exception {
         Path hidden = project.resolve("src/hiddenTest");
@@ -30,14 +189,14 @@ class EscrowServiceTest {
         Files.createDirectories(cases.getParent());
         Files.writeString(test, "class HiddenOrderTest {}\n");
         Files.writeString(cases, "- caseId: hidden\n  acId: AC-ORDER\n  inputs: {}\n  expected: {total: 700}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
 
         EscrowManifest hiddenManifest = escrow.hide(project, hidden);
 
         assertEquals(EscrowState.HIDDEN, hiddenManifest.state());
         assertEquals(2, hiddenManifest.entries().size());
         assertFalse(Files.exists(hidden));
-        assertTrue(Files.isRegularFile(project.resolve(".topplecat/escrow/manifest.json")));
+        assertTrue(Files.isRegularFile(manifest(project)));
         assertEquals(EscrowSourceKind.HIDDEN_CASES, hiddenManifest.entries().stream()
                 .filter(entry -> entry.path().endsWith("coupon-hidden.yaml")).findFirst().orElseThrow().sourceKind());
 
@@ -57,7 +216,7 @@ class EscrowServiceTest {
         Path source = hidden.resolve("java/example/HiddenOrderTest.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         ReviewerContractApproval approved = approval("a");
 
         EscrowManifest hiddenManifest = escrow.hide(project, hidden, approved);
@@ -78,7 +237,7 @@ class EscrowServiceTest {
         Path source = hidden.resolve("java/example/HiddenOrderTest.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
 
         EscrowManifest legacy = escrow.hide(project, hidden);
         escrow.restore(project);
@@ -99,13 +258,11 @@ class EscrowServiceTest {
         Files.createDirectories(source.getParent());
         Files.writeString(source, "class HiddenOrderTest {}\n");
         ReviewerContractApproval originalApproval = approval("a");
-        EscrowService original = new EscrowService();
+        EscrowService original = service();
         original.hide(project, hidden, originalApproval);
         original.restore(project);
         Files.writeString(source, "class HiddenOrderTest { int revision = 2; }\n");
-        EscrowService failing = new EscrowService(() -> {
-            throw new IllegalStateException("injected activation failure");
-        });
+        EscrowService failing = serviceWithFailure();
 
         assertThrows(ToppleCatException.class, () -> failing.update(project, hidden, approval("b")));
 
@@ -120,7 +277,7 @@ class EscrowServiceTest {
         Path test = hidden.resolve("java/example/HiddenOrderTest.java");
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         escrow.hide(project, hidden);
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class ModifiedHiddenOrderTest {}\n");
@@ -136,7 +293,7 @@ class EscrowServiceTest {
         Path test = hidden.resolve("java/example/HiddenOrderTest.java");
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
 
         EscrowManifest firstHide = escrow.hide(project, hidden);
         EscrowManifest secondHide = escrow.hide(project, hidden);
@@ -158,7 +315,7 @@ class EscrowServiceTest {
         Files.createDirectories(second.getParent());
         Files.writeString(first, "- caseId: first\n  acId: SPEC-42-AC-01\n  inputs: {}\n  expected: {accepted: true}\n");
         Files.writeString(second, "- caseId: second\n  acId: SPEC-43-AC-01\n  inputs: {}\n  expected: {accepted: true}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
 
         EscrowManifest hiddenManifest = escrow.hide(project, hidden);
 
@@ -179,7 +336,7 @@ class EscrowServiceTest {
         Files.createDirectories(first.getParent());
         Files.writeString(first, "class FirstReviewerTest {}\n");
         Files.writeString(second, "class SecondReviewerTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         escrow.hide(project, hidden);
 
         Files.createDirectories(first.getParent());
@@ -199,7 +356,7 @@ class EscrowServiceTest {
         Path unexpected = hidden.resolve("java/example/NewReviewerTest.java");
         Files.createDirectories(escrowed.getParent());
         Files.writeString(escrowed, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         escrow.hide(project, hidden);
         Files.createDirectories(unexpected.getParent());
         Files.writeString(unexpected, "class NewReviewerTest {}\n");
@@ -219,7 +376,7 @@ class EscrowServiceTest {
         Path unexpected = hidden.resolve("java/example/NewReviewerTest.java");
         Files.createDirectories(escrowed.getParent());
         Files.writeString(escrowed, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         escrow.hide(project, hidden);
         escrow.restore(project);
         Files.writeString(unexpected, "class NewReviewerTest {}\n");
@@ -239,9 +396,9 @@ class EscrowServiceTest {
         Path test = hidden.resolve("java/example/HiddenOrderTest.java");
         Files.createDirectories(test.getParent());
         Files.writeString(test, "class HiddenOrderTest {}\n");
-        Path lockPath = project.resolve(".topplecat/escrow/.lock");
+        Path lockPath = lock(project);
         Files.createDirectories(lockPath.getParent());
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
 
         try (FileChannel channel = FileChannel.open(lockPath, CREATE, WRITE); FileLock ignored = channel.lock()) {
             ToppleCatException error = assertThrows(ToppleCatException.class, () -> escrow.hide(project, hidden));
@@ -249,7 +406,7 @@ class EscrowServiceTest {
         }
 
         assertTrue(Files.exists(test));
-        assertFalse(Files.exists(project.resolve(".topplecat/escrow/manifest.json")));
+        assertFalse(Files.exists(manifest(project)));
     }
 
     @Test
@@ -259,7 +416,7 @@ class EscrowServiceTest {
         Path added = hidden.resolve("resources/topplecat/cases/order-reviewer.yaml");
         Files.createDirectories(original.getParent());
         Files.writeString(original, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         escrow.hide(project, hidden);
         escrow.restore(project);
         Files.createDirectories(added.getParent());
@@ -283,7 +440,7 @@ class EscrowServiceTest {
         Files.createDirectories(modified.getParent());
         Files.writeString(modified, "class HiddenOrderTest {}\n");
         Files.writeString(removed, "class RemovedReviewerTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         escrow.hide(project, hidden);
         escrow.restore(project);
         Files.writeString(modified, "class HiddenOrderTest { int revision = 2; }\n");
@@ -308,7 +465,7 @@ class EscrowServiceTest {
         Path source = hidden.resolve("java/example/HiddenOrderTest.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         escrow.hide(project, hidden);
 
         ToppleCatException error = assertThrows(ToppleCatException.class, () -> escrow.update(project, hidden));
@@ -324,11 +481,12 @@ class EscrowServiceTest {
         Path source = hidden.resolve("java/example/HiddenOrderTest.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         EscrowManifest original = escrow.hide(project, hidden);
         escrow.restore(project);
         EscrowEntry entry = original.entries().getFirst();
-        Path blob = project.resolve(".topplecat/escrow/files").resolve(entry.sha256().substring(0, 2)).resolve(entry.sha256());
+        Path blob = blob(project, entry.sha256());
+        Files.createDirectories(blob.getParent());
         Files.writeString(blob, "corrupt\n");
 
         assertThrows(ToppleCatException.class, () -> escrow.update(project, hidden));
@@ -343,20 +501,18 @@ class EscrowServiceTest {
         Path source = hidden.resolve("java/example/HiddenOrderTest.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, "class HiddenOrderTest {}\n");
-        EscrowService original = new EscrowService();
+        EscrowService original = service();
         original.hide(project, hidden);
         original.restore(project);
         Files.writeString(source, "class HiddenOrderTest { int revision = 2; }\n");
-        EscrowService escrow = new EscrowService(() -> {
-            throw new IllegalStateException("injected activation failure");
-        });
+        EscrowService escrow = serviceWithFailure();
 
         ToppleCatException error = assertThrows(ToppleCatException.class, () -> escrow.update(project, hidden));
 
         assertTrue(error.getMessage().contains("no update was activated"), error::getMessage);
         assertEquals(EscrowState.RESTORED, original.manifest(project).state());
         assertEquals("class HiddenOrderTest {}\n", Files.readString(source));
-        Path recovery = project.resolve(".topplecat/escrow/recovery");
+        Path recovery = reviewerEscrowRoot(project).resolve("recovery");
         assertTrue(Files.isDirectory(recovery));
         try (var paths = Files.walk(recovery)) {
             Path revisedSource = paths.filter(Files::isRegularFile)
@@ -373,7 +529,7 @@ class EscrowServiceTest {
         Path added = hidden.resolve("resources/topplecat/cases/private-reviewer.yaml");
         Files.createDirectories(original.getParent());
         Files.writeString(original, "class HiddenOrderTest {}\n");
-        EscrowService escrow = new EscrowService();
+        EscrowService escrow = service();
         escrow.hide(project, hidden);
         escrow.restore(project);
         Files.createDirectories(added.getParent());
@@ -399,11 +555,25 @@ class EscrowServiceTest {
     }
 
     private static Path updateAuditPath(Path project) throws Exception {
-        Path revisions = project.resolve(".topplecat/escrow/revisions");
+        Path revisions = revisions(project);
         try (var paths = Files.walk(revisions)) {
             return paths.filter(Files::isRegularFile)
                     .filter(path -> path.getFileName().toString().equals("audit.json"))
                     .findFirst().orElseThrow();
+        }
+    }
+
+    private static void copyDirectory(Path source, Path destination) throws Exception {
+        try (var paths = Files.walk(source)) {
+            for (Path path : paths.toList()) {
+                Path target = destination.resolve(source.relativize(path));
+                if (Files.isDirectory(path)) {
+                    Files.createDirectories(target);
+                } else {
+                    Files.createDirectories(target.getParent());
+                    Files.copy(path, target);
+                }
+            }
         }
     }
 

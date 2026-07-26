@@ -71,8 +71,9 @@ Once public and reviewer contracts exist, run:
 ./gradlew toppleCatVerify
 ```
 
-`toppleCatHide` moves the reviewer source set into local hidden storage. `test`
-is the public development loop. `toppleCatVerify` runs hidden retests, PIT
+`toppleCatHide` moves the reviewer source set into
+`~/.topplecat/projects/<sha256-project-key>/escrow/`, the reviewer-local
+plaintext custody store. `test` is the public development loop. `toppleCatVerify` runs hidden retests, PIT
 mutation, and expected-consumption enforcement by default, writes evidence and
 reports, and re-hides restored reviewer source. Its first mutation run can take
 longer. Aggregate `FAIL` or `INCOMPLETE` makes the command exit non-zero after
@@ -86,16 +87,21 @@ and does not hide anything first.
 
 ## Delivery Hygiene
 
-Local hidden storage is plaintext mechanical state, not encryption.
-`./gradlew clean` removes `build/`, including HTML reports, but it **does not**
-remove `.topplecat/escrow/`. After `toppleCatHide`, do not give the
-implementation agent the reviewer working tree merely because it was cleaned.
-Never commit reviewer material to Git history the implementation agent can
-read; deleting the working files or creating another worktree from that history
-does not hide them. Deliver a public export without `.git`, `.topplecat/`, or
-`build/`, or use an isolated environment whose history never contained reviewer
-material. A separate private reviewer repository or CI environment is also an
-appropriate custody boundary.
+Reviewer-local storage is plaintext mechanical state, not encryption or a
+sandbox. It contains the manifest, hidden blobs, approval epoch, revisions,
+history, audit, lock, and recovery state below
+`~/.topplecat/projects/<sha256-project-key>/escrow/`; `./gradlew clean` removes
+`build/` but does not remove it. A legacy `.topplecat/escrow/` can only be moved
+by `toppleCatMigrateEscrow`, which removes the project-local copy after success.
+After Hide, do not give the implementation agent reviewer state, hidden source,
+build artifacts, or Git history that contained reviewer material. Use a public
+export without `.git`, `.topplecat/`, and `build/`, or an isolated public-only
+environment.
+
+ToppleCat does not provide an OS sandbox, enforce CI identity, or restrict
+same-user Gradle/JVM code. The external workflow must run Verify in a trusted
+reviewer/CI boundary; home-directory custody alone cannot defend against a
+malicious build script or production code.
 
 Use the [JUnit cart-orders tutorial](../../samples/junit-cart-orders/TUTORIAL.md)
 to see a hidden retest reject a public-case coincidence.

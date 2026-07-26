@@ -8,14 +8,19 @@ ToppleCat contract.
 ```text
 src/test/             implementation-visible contract
 src/hiddenTest/       complete reviewer-only source set
-.topplecat/escrow/    reviewer-local plaintext hidden storage
+~/.topplecat/projects/<sha256-project-key>/escrow/
+                     reviewer-local plaintext custody state
 build/topplecat/      generated review and verification artifacts
 ```
 
-Treat `.topplecat/escrow/` as local mechanical storage, not encryption or secure
-delivery. `./gradlew clean` removes generated build output but leaves escrow
-state intact. Removing `src/hiddenTest` from the working tree does not erase it
-from Git history.
+The reviewer-local escrow contains the manifest, hidden source blobs, approval
+epoch, revisions, history, audit, lock, and recovery state. Treat it as local
+mechanical storage, not encryption, sandboxing, or secure delivery. A legacy
+project-local `.topplecat/escrow/` is accepted only by the explicit
+`toppleCatMigrateEscrow` task; successful migration removes that local escrow.
+`./gradlew clean` removes generated build output but leaves reviewer state
+intact. Removing `src/hiddenTest` from the working tree does not erase it from
+Git history.
 
 ## Reviewer Sequence
 
@@ -40,10 +45,12 @@ than deleting it and never refreshes an existing approval.
 
 Never commit reviewer source to Git history the implementation agent can read.
 A checkout or worktree derived from history that contains reviewer material is
-not a privacy boundary. Use a public export without `.git`, `.topplecat/`, or
-`build/`; an isolated environment whose history never contained reviewer
-material; or a public implementation repository paired with a separate private
-reviewer repository or CI environment.
+not a privacy boundary. The external workflow must provide a trusted reviewer/CI
+execution boundary and hand agents only public source and safe feedback. Use a
+public export without `.git`, `.topplecat/`, `build/`, reviewer-local state, and
+`src/hiddenTest`; an isolated environment whose history never contained
+reviewer material; or a public implementation repository paired with a separate
+private reviewer repository or CI environment.
 
 Give the implementation agent only:
 
@@ -90,4 +97,10 @@ Specs modify the same DTO, production path, or reviewer source set.
 - Restore known source through `toppleCatRestore`; never reconstruct it from a
   report.
 - Keep `.topplecat/` while `src/hiddenTest` is absent. Deleting escrow in that
-  state can destroy the only local reviewer copy.
+  state can destroy the only local reviewer copy. For reviewer-local custody,
+  preserve `~/.topplecat/projects/<project-key>/escrow/` until Restore or
+  migration has succeeded.
+
+ToppleCat does not provide an OS sandbox, enforce CI identity, or decide whether
+same-user Gradle/JVM code can inspect files. Home-directory custody alone cannot
+defend against malicious build scripts or production code.

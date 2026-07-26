@@ -53,12 +53,14 @@ work:
 ./gradlew -p samples/spring-boot-cart-orders toppleCatHide
 ```
 
-`./gradlew clean` does not remove `.topplecat/escrow/`, and removing a working
-file does not erase it from Git history. Never commit reviewer source to history
-the implementation agent can read. Give the agent a public export without
-`.git`, `.topplecat/`, or `build/`, or use an isolated environment whose
-history never contained it. Use `toppleCatRestore` only when an authorized
-reviewer needs to inspect or edit the hidden source again.
+Reviewer source is stored as plaintext mechanical custody at
+`~/.topplecat/projects/<sha256-project-key>/escrow/`, not encryption or a
+sandbox. `./gradlew clean` does not remove it, and removing a working file does
+not erase it from Git history. Never commit reviewer source to history the
+implementation agent can read. Give the agent a public export without `.git`,
+`.topplecat/`, reviewer-local state, or `build/`, or use an isolated public-only
+environment. Use `toppleCatRestore` only when an authorized reviewer needs to
+inspect or edit the hidden source again.
 
 ## Read the Narrative
 

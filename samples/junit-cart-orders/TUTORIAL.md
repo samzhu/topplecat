@@ -33,18 +33,19 @@ the Java test and typed case rows.
 ./gradlew -p samples/junit-cart-orders toppleCatHide
 ```
 
-The hide task moves `src/hiddenTest` into local hidden storage. The normal implementation command sees
-only public cases:
+The hide task moves `src/hiddenTest` into reviewer-local custody at
+`~/.topplecat/projects/<sha256-project-key>/escrow/`. The normal implementation command sees only public cases:
 
 ```bash
 ./gradlew -p samples/junit-cart-orders test
 ```
 
-The local hidden-storage directory is plaintext reviewer state. `./gradlew clean`
-does not delete it, and Git history can retain reviewer files after they leave
-the working tree. Never commit reviewer source to history the implementation
-agent can read. Deliver a public export without `.git`, `.topplecat/`, or
-`build/`, or use an isolated environment whose history never contained it.
+Reviewer-local custody is plaintext mechanical state, not encryption or a
+sandbox. `./gradlew clean` does not delete it, and Git history can retain
+reviewer files after they leave the working tree. Never commit reviewer source
+to history the implementation agent can read. Deliver a public export without
+`.git`, `.topplecat/`, reviewer-local state, or `build/`, or use an isolated
+public-only environment.
 
 An authorized reviewer can later inspect or edit the stored source with:
 

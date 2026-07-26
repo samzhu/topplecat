@@ -9,7 +9,7 @@ released `0.0.3`, use the Maven Central setup in the root
 
 | Sample | Choose it when | Demonstrates |
 | --- | --- | --- |
-| [junit-cart-orders](junit-cart-orders) | You use ordinary JUnit tests and service/domain DTOs. | Typed nested DTO injection, hidden retests, expected consumption, and local hidden storage. Mutation is deliberately disabled for demo speed. |
+| [junit-cart-orders](junit-cart-orders) | You use ordinary JUnit tests and service/domain DTOs. | Typed nested DTO injection, hidden retests, expected consumption, and reviewer-local custody. Mutation is deliberately disabled for demo speed. |
 | [spring-boot-cart-orders](spring-boot-cart-orders) | You use a Spring Boot test project. | The same canonical Stage DSL under `@SpringBootTest`, plus a reviewer JUnit test with a Spring-managed dependency. |
 
 Both samples deliberately begin with a public-case coincidence. Their demos run

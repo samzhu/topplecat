@@ -4,8 +4,12 @@ import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.PosixFileAttributeView;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -16,21 +20,86 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Custody service for the complete {@code src/hiddenTest} source set. */
 public final class EscrowService {
-    private static final Path ESCROW_ROOT = Path.of(".topplecat", "escrow");
+    private static final Path LEGACY_ESCROW_ROOT = Path.of(".topplecat", "escrow");
+    private static final String STATE_ROOT_PROPERTY = "topplecat.stateRoot";
+    private static final String REVIEWER_STATE_BASE = ".topplecat";
+    private static final String PROJECTS_DIRECTORY = "projects";
+    private static final String ESCROW_DIRECTORY = "escrow";
+    private static final PosixFilePermission[] OWNER_ONLY = new PosixFilePermission[]{
+            PosixFilePermission.OWNER_READ,
+            PosixFilePermission.OWNER_WRITE,
+            PosixFilePermission.OWNER_EXECUTE
+    };
+    private static final Runnable NO_OP = () -> {
+    };
 
     private final Runnable beforeActivation;
+    private final Runnable beforeLegacyMigrationLock;
+    private final Path reviewerStateRoot;
 
     public EscrowService() {
-        this(() -> {
-        });
+        this(defaultReviewerStateRoot(), NO_OP, NO_OP);
+    }
+
+    public EscrowService(Path reviewerStateRoot) {
+        this(reviewerStateRoot, NO_OP, NO_OP);
+    }
+
+    EscrowService(Path reviewerStateRoot, Runnable beforeActivation) {
+        this(reviewerStateRoot, beforeActivation, NO_OP);
+    }
+
+    EscrowService(Path reviewerStateRoot, Runnable beforeActivation, Runnable beforeLegacyMigrationLock) {
+        this.beforeActivation = Objects.requireNonNull(beforeActivation);
+        this.beforeLegacyMigrationLock = Objects.requireNonNull(beforeLegacyMigrationLock);
+        this.reviewerStateRoot = Objects.requireNonNull(reviewerStateRoot);
     }
 
     EscrowService(Runnable beforeActivation) {
-        this.beforeActivation = Objects.requireNonNull(beforeActivation);
+        this(defaultReviewerStateRoot(), beforeActivation, NO_OP);
+    }
+
+    public static Path defaultReviewerStateRoot() {
+        String configured = System.getProperty(STATE_ROOT_PROPERTY);
+        if (configured != null && !configured.isBlank()) {
+            return Paths.get(configured);
+        }
+        String home = System.getProperty("user.home");
+        if (home == null || home.isBlank()) {
+            throw new ToppleCatException("Cannot determine reviewer escrow state root because user.home is not configured.");
+        }
+        return Paths.get(home).resolve(REVIEWER_STATE_BASE);
+    }
+
+    public static String projectKey(Path projectRoot) {
+        return Hashing.sha256(canonicalProjectRoot(projectRoot).toString().replace('\\', '/').getBytes(StandardCharsets.UTF_8));
+    }
+
+    public static Path reviewerStatePath(Path projectRoot, Path reviewerStateRoot) {
+        return reviewerStateRoot.resolve(PROJECTS_DIRECTORY)
+                .resolve(projectKey(projectRoot))
+                .resolve(ESCROW_DIRECTORY);
+    }
+
+    public static Path legacyEscrowPath(Path projectRoot) {
+        return normalizedRoot(projectRoot).resolve(LEGACY_ESCROW_ROOT);
+    }
+
+    public static boolean hasLegacyEscrow(Path projectRoot) {
+        return Files.exists(legacyEscrowPath(projectRoot));
+    }
+
+    public static Path canonicalProjectRoot(Path projectRoot) {
+        try {
+            return projectRoot.toAbsolutePath().normalize().toRealPath();
+        } catch (IOException exception) {
+            return projectRoot.toAbsolutePath().normalize();
+        }
     }
 
     public EscrowManifest hide(Path projectRoot, Path hiddenSourceRoot) {
@@ -46,14 +115,16 @@ public final class EscrowService {
         Path root = normalizedRoot(projectRoot);
         Path hidden = hiddenSourceRoot.toAbsolutePath().normalize();
         requireInside(root, hidden);
-        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root)) {
-            Path manifestPath = manifestPath(root);
+        ensureStateDirectories(root, reviewerStateRoot);
+        ensureNoLegacyBlockingOperation(root);
+        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root, reviewerStateRoot)) {
+            Path manifestPath = manifestPath(root, reviewerStateRoot);
             if (!Files.exists(manifestPath)) {
-                return hideInitialSource(root, hidden, manifestPath, initialApproval);
+                return hideInitialSource(root, hidden, manifestPath, reviewerStateRoot, initialApproval);
             }
 
             EscrowManifest manifest = readManifest(manifestPath);
-            validateStoredFiles(root, manifest);
+            validateStoredFiles(root, manifest, reviewerStateRoot);
             if (manifest.state() == EscrowState.HIDDEN) {
                 if (!hasFiles(hidden)) {
                     return manifest;
@@ -74,13 +145,15 @@ public final class EscrowService {
 
     public EscrowManifest restore(Path projectRoot) {
         Path root = normalizedRoot(projectRoot);
-        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root)) {
-            Path manifestPath = manifestPath(root);
+        ensureStateDirectories(root, reviewerStateRoot);
+        ensureNoLegacyBlockingOperation(root);
+        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root, reviewerStateRoot)) {
+            Path manifestPath = manifestPath(root, reviewerStateRoot);
             if (!Files.exists(manifestPath)) {
                 throw new ToppleCatException("No ToppleCat escrow manifest exists. Run toppleCatHide before restoring reviewer source.");
             }
             EscrowManifest manifest = readManifest(manifestPath);
-            validateStoredFiles(root, manifest);
+            validateStoredFiles(root, manifest, reviewerStateRoot);
             Path hidden = root.resolve("src/hiddenTest");
 
             if (manifest.state() == EscrowState.RESTORED) {
@@ -91,20 +164,22 @@ public final class EscrowService {
                 throw new ToppleCatException("Refusing to overwrite reviewer source because src/hiddenTest is not exactly "
                         + "the escrowed source.");
             }
-            restoreEntries(root, manifest);
+            restoreEntries(root, manifest, reviewerStateRoot);
             return writeState(manifestPath, manifest, EscrowState.RESTORED);
         }
     }
 
     public EscrowManifest rehide(Path projectRoot) {
         Path root = normalizedRoot(projectRoot);
-        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root)) {
-            Path manifestPath = manifestPath(root);
+        ensureStateDirectories(root, reviewerStateRoot);
+        ensureNoLegacyBlockingOperation(root);
+        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root, reviewerStateRoot)) {
+            Path manifestPath = manifestPath(root, reviewerStateRoot);
             if (!Files.exists(manifestPath)) {
                 throw new ToppleCatException("No ToppleCat escrow manifest exists. Run toppleCatHide before re-hiding reviewer source.");
             }
             EscrowManifest manifest = readManifest(manifestPath);
-            validateStoredFiles(root, manifest);
+            validateStoredFiles(root, manifest, reviewerStateRoot);
             Path hidden = root.resolve("src/hiddenTest");
             if (manifest.state() == EscrowState.HIDDEN) {
                 if (sourceIsManifestSubset(root, hidden, manifest)) {
@@ -134,20 +209,24 @@ public final class EscrowService {
         Path root = normalizedRoot(projectRoot);
         Path hidden = hiddenSourceRoot.toAbsolutePath().normalize();
         requireInside(root, hidden);
-        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root)) {
+        ensureStateDirectories(root, reviewerStateRoot);
+        ensureNoLegacyBlockingOperation(root);
+        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root, reviewerStateRoot)) {
             return updateRestoredSource(root, hidden, approval);
         }
     }
 
     public EscrowManifest manifest(Path projectRoot) {
         Path root = normalizedRoot(projectRoot);
-        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root)) {
-            return readManifest(manifestPath(root));
+        ensureStateDirectories(root, reviewerStateRoot);
+        ensureNoLegacyBlockingOperation(root);
+        try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root, reviewerStateRoot)) {
+            return readManifest(manifestPath(root, reviewerStateRoot));
         }
     }
 
     private EscrowManifest updateRestoredSource(Path root, Path hidden, ReviewerContractApproval approval) {
-        Path manifestPath = manifestPath(root);
+        Path manifestPath = manifestPath(root, reviewerStateRoot);
         if (!Files.isRegularFile(manifestPath)) {
             throw new ToppleCatException("No ToppleCat escrow manifest exists. Run toppleCatHide before updating reviewer custody.");
         }
@@ -156,15 +235,15 @@ public final class EscrowService {
             throw new ToppleCatException("Escrow update requires restored reviewer source. Run toppleCatRestore, edit "
                     + "src/hiddenTest, review it, then run toppleCatUpdateEscrow.");
         }
-        validateStoredFiles(root, previous);
+        validateStoredFiles(root, previous, reviewerStateRoot);
 
         if (!previous.isLegacyVersionOne() && approval == null) {
             throw new ToppleCatException("Escrow update requires the reviewer-approved public contract and verification policy.");
         }
         List<EscrowEntry> entries = inventory(root, hidden);
         EscrowManifest updated = updatedManifest(previous, entries, approval);
-        storeEntries(root, entries);
-        validateStoredFiles(root, updated);
+        storeEntries(root, entries, reviewerStateRoot);
+        validateStoredFiles(root, updated, reviewerStateRoot);
 
         String previousManifest = EscrowManifestJson.write(previous);
         String updatedManifest = EscrowManifestJson.write(updated);
@@ -172,7 +251,7 @@ public final class EscrowService {
         String updatedDigest = Hashing.sha256(updatedManifest.getBytes(StandardCharsets.UTF_8));
         EscrowUpdateAudit audit = updateAudit(previous, updated, previousDigest, updatedDigest);
 
-        Path escrow = root.resolve(ESCROW_ROOT);
+        Path escrow = escrowRoot(root);
         String revisionId = UUID.randomUUID().toString();
         Path pending = escrow.resolve("pending").resolve(revisionId);
         Path pendingManifest = pending.resolve("manifest.json");
@@ -223,7 +302,7 @@ public final class EscrowService {
         }
     }
 
-    private static ToppleCatException recoverAfterFailedUpdate(
+    private ToppleCatException recoverAfterFailedUpdate(
             Path root,
             Path hidden,
             Path manifestPath,
@@ -232,7 +311,7 @@ public final class EscrowService {
             String revisionId,
             RuntimeException cause
     ) {
-        Path recovery = root.resolve(ESCROW_ROOT).resolve("recovery").resolve(revisionId);
+        Path recovery = escrowRoot(root).resolve("recovery").resolve(revisionId);
         Path retained = stagedRevision;
         try {
             if (Files.exists(stagedRevision)) {
@@ -245,7 +324,7 @@ public final class EscrowService {
         }
         try {
             deleteTree(hidden);
-            restoreEntries(root, previous);
+            restoreEntries(root, previous, reviewerStateRoot);
             if (!sourceMatchesManifest(root, hidden, previous)) {
                 throw new ToppleCatException("Recovered reviewer source does not match the previous escrow manifest.");
             }
@@ -263,10 +342,15 @@ public final class EscrowService {
             Path root,
             Path hidden,
             Path manifestPath,
+            Path reviewerStateRoot,
             ReviewerContractApproval initialApproval
     ) {
+        if (!hasFiles(hidden) && initialApproval != null && initialApproval.verificationPolicy().hiddenRetestEnabled()) {
+            throw new ToppleCatException("Cannot create reviewer approval without reviewer source. Restore or provide the complete "
+                    + "src/hiddenTest source set before running toppleCatHide.");
+        }
         List<EscrowEntry> entries = inventory(root, hidden);
-        storeEntries(root, entries);
+        storeEntries(root, entries, reviewerStateRoot);
 
         EscrowManifest hiddenManifest = initialApproval == null
                 ? new EscrowManifest(EscrowManifest.SCHEMA_VERSION_V1, EscrowState.HIDDEN, entries)
@@ -277,10 +361,14 @@ public final class EscrowService {
     }
 
     private static void restoreEntries(Path root, EscrowManifest manifest) {
+        restoreEntries(root, manifest, defaultReviewerStateRoot());
+    }
+
+    private static void restoreEntries(Path root, EscrowManifest manifest, Path reviewerStateRoot) {
         for (EscrowEntry entry : manifest.entries()) {
             Path target = root.resolve(entry.path()).normalize();
             requireInside(root, target);
-            Path stored = storedFile(root, entry.sha256());
+            Path stored = storedFile(root, entry.sha256(), reviewerStateRoot);
             byte[] bytes = readBytes(stored);
             try {
                 Files.createDirectories(Objects.requireNonNull(target.getParent()));
@@ -317,12 +405,177 @@ public final class EscrowService {
         return projectRoot.toAbsolutePath().normalize();
     }
 
+    private static void ensureOwnerOnly(Path path) {
+        if (path == null) {
+            return;
+        }
+        try {
+            PosixFileAttributeView permissions = Files.getFileAttributeView(path, PosixFileAttributeView.class);
+            if (permissions != null) {
+                permissions.setPermissions(Set.copyOf(Set.of(OWNER_ONLY)));
+            }
+        } catch (IOException | UnsupportedOperationException ignored) {
+            // best-effort hardening for reviewer custody storage.
+        }
+    }
+
+    private static void ensureStateDirectories(Path projectRoot, Path reviewerStateRoot) {
+        Path escrow = reviewerStatePath(projectRoot, reviewerStateRoot);
+        try {
+            Files.createDirectories(escrow);
+            ensureOwnerOnly(reviewerStateRoot);
+            ensureOwnerOnly(escrow);
+        } catch (IOException ignored) {
+            // security hardening is non-authoritative and best-effort only.
+        }
+    }
+
+    private static String legacyEscrowPrompt(Path projectRoot) {
+        return "No reviewer-local escrow exists. A legacy ToppleCat escrow exists at " + legacyEscrowPath(projectRoot)
+                + ". Run toppleCatMigrateEscrow first.";
+    }
+
+    private void ensureNoLegacyBlockingOperation(Path root) {
+        ensureNoLegacyBlockingOperation(root, reviewerStateRoot);
+    }
+
+    private void ensureNoLegacyBlockingOperation(Path root, Path stateRoot) {
+        if (!Files.exists(legacyEscrowPath(root))) {
+            return;
+        }
+        if (!Files.exists(manifestPath(root, stateRoot))) {
+            throw new ToppleCatException(legacyEscrowPrompt(root));
+        }
+    }
+
+    private Path escrowRoot(Path projectRoot) {
+        return reviewerStatePath(projectRoot, reviewerStateRoot);
+    }
+
+    public EscrowManifest migrateLegacyEscrow(Path projectRoot) {
+        Path root = normalizedRoot(projectRoot);
+        Path legacy = legacyEscrowPath(root);
+        if (!Files.exists(legacy)) {
+            throw new ToppleCatException("No legacy ToppleCat escrow exists at " + legacy + " to migrate.");
+        }
+
+        EscrowManifest manifest = readManifest(legacy.resolve("manifest.json"));
+        validateStoredFilesInEscrow(root, manifest, legacy);
+        Path destination = escrowRoot(root);
+        Path staging;
+        try {
+            staging = Files.createTempDirectory("topplecat-legacy-escrow-");
+        } catch (IOException exception) {
+            throw new ToppleCatException("Cannot prepare legacy escrow migration staging directory for " + legacy + ": "
+                    + exception.getMessage(), exception);
+        }
+        Path backup = legacy.resolveSibling(".escrow.backup-" + UUID.randomUUID());
+        List<Path> movedPayload = new ArrayList<>();
+        boolean legacyMoved = false;
+        try {
+            copyDirectory(legacy, staging);
+            Path stagedManifest = staging.resolve("manifest.json");
+            EscrowManifest staged = readManifest(stagedManifest);
+            if (!staged.equals(manifest)) {
+                throw new ToppleCatException("Migrated legacy escrow manifest does not match source.");
+            }
+            validateStoredFilesInEscrow(root, staged, staging);
+            beforeLegacyMigrationLock.run();
+            try (EscrowProjectLock ignored = EscrowProjectLock.acquireOperation(root, reviewerStateRoot)) {
+                // Acquiring the project-scoped lock creates destination/.lock.  Keep that
+                // live lock in place and move the legacy payload around it; attempting to
+                // atomically move the whole staged directory would therefore always fail
+                // with "Directory not empty".
+                try {
+                    if (hasEscrowPayload(destination)) {
+                        throw new ToppleCatException("Reviewer escrow already exists at " + destination
+                                + ", refuse migration to avoid merge.");
+                    }
+                    Files.createDirectories(destination.getParent());
+                    moveAtomically(legacy, backup);
+                    legacyMoved = true;
+                    moveStagedEscrowPayload(staging, destination, movedPayload);
+                    EscrowManifest activated = readManifest(destination.resolve("manifest.json"));
+                    if (!activated.equals(staged)) {
+                        throw new ToppleCatException("Migrated reviewer escrow manifest does not match staged custody.");
+                    }
+                    validateStoredFilesInEscrow(root, activated, destination);
+                } catch (IOException | RuntimeException exception) {
+                    try {
+                        deleteMigratedPayload(movedPayload);
+                    } catch (RuntimeException cleanupFailure) {
+                        exception.addSuppressed(cleanupFailure);
+                    }
+                    if (legacyMoved) {
+                        try {
+                            moveAtomically(backup, legacy);
+                        } catch (IOException restoreFailure) {
+                            exception.addSuppressed(restoreFailure);
+                        }
+                    }
+                    throw exception instanceof ToppleCatException ? (ToppleCatException) exception
+                            : new ToppleCatException("Cannot migrate legacy escrow from " + legacy + " to " + destination + ": "
+                            + exception.getMessage(), exception);
+                }
+                try {
+                    deleteTree(backup);
+                } catch (RuntimeException cleanupFailure) {
+                    // leave backup cleanup as best-effort; migration is complete once destination is active.
+                }
+            }
+            return readManifest(destination.resolve("manifest.json"));
+        } catch (RuntimeException exception) {
+            throw exception instanceof ToppleCatException ? (ToppleCatException) exception
+                    : new ToppleCatException("Cannot migrate legacy escrow at " + legacy + ": " + exception.getMessage(), exception);
+        } finally {
+            deleteTree(staging);
+        }
+    }
+
+    private static void moveStagedEscrowPayload(Path staging, Path destination, List<Path> movedPayload) throws IOException {
+        try (Stream<Path> paths = Files.list(staging)) {
+            for (Path child : paths.toList()) {
+                if (child.getFileName().toString().equals(".lock")) {
+                    continue;
+                }
+                Path target = destination.resolve(child.getFileName().toString());
+                moveAtomically(child, target);
+                movedPayload.add(target);
+            }
+        }
+    }
+
+    private static boolean hasEscrowPayload(Path destination) throws IOException {
+        try (Stream<Path> paths = Files.list(destination)) {
+            return paths.anyMatch(path -> !path.getFileName().toString().equals(".lock"));
+        }
+    }
+
+    private static void deleteMigratedPayload(List<Path> movedPayload) {
+        for (Path path : movedPayload.reversed()) {
+            deleteTree(path);
+        }
+    }
+
     private static Path manifestPath(Path projectRoot) {
-        return projectRoot.resolve(ESCROW_ROOT).resolve("manifest.json");
+        return manifestPath(projectRoot, defaultReviewerStateRoot());
+    }
+
+    private static Path manifestPath(Path projectRoot, Path reviewerStateRoot) {
+        return reviewerStatePath(projectRoot, reviewerStateRoot).resolve("manifest.json");
     }
 
     private static Path storedFile(Path projectRoot, String hash) {
-        return projectRoot.resolve(ESCROW_ROOT).resolve("files").resolve(hash.substring(0, 2)).resolve(hash);
+        return storedFile(projectRoot, hash, defaultReviewerStateRoot());
+    }
+
+    private static Path storedFile(Path projectRoot, String hash, Path reviewerStateRoot) {
+        return storedFileInEscrow(reviewerStatePath(projectRoot, reviewerStateRoot), hash);
+    }
+
+    private static Path storedFileInEscrow(Path escrowRoot, String hash) {
+        return escrowRoot.resolve("files").resolve(hash.substring(0, 2))
+                .resolve(hash);
     }
 
     private static EscrowManifest readManifest(Path path) {
@@ -390,10 +643,14 @@ public final class EscrowService {
     }
 
     private static void storeEntries(Path root, List<EscrowEntry> entries) {
+        storeEntries(root, entries, defaultReviewerStateRoot());
+    }
+
+    private static void storeEntries(Path root, List<EscrowEntry> entries, Path reviewerStateRoot) {
         for (EscrowEntry entry : entries) {
             Path source = root.resolve(entry.path()).normalize();
             byte[] bytes = readBytes(source);
-            Path stored = storedFile(root, entry.sha256());
+            Path stored = storedFile(root, entry.sha256(), reviewerStateRoot);
             try {
                 Files.createDirectories(Objects.requireNonNull(stored.getParent()));
                 if (Files.exists(stored) && !Hashing.sha256(readBytes(stored)).equals(entry.sha256())) {
@@ -409,6 +666,14 @@ public final class EscrowService {
     }
 
     private static void validateStoredFiles(Path projectRoot, EscrowManifest manifest) {
+        validateStoredFiles(projectRoot, manifest, defaultReviewerStateRoot());
+    }
+
+    private static void validateStoredFiles(Path projectRoot, EscrowManifest manifest, Path reviewerStateRoot) {
+        validateStoredFilesInEscrow(projectRoot, manifest, reviewerStatePath(projectRoot, reviewerStateRoot));
+    }
+
+    private static void validateStoredFilesInEscrow(Path projectRoot, EscrowManifest manifest, Path escrowRoot) {
         Set<String> paths = new HashSet<>();
         for (EscrowEntry entry : manifest.entries()) {
             if (entry.path() == null || entry.path().isBlank() || entry.sha256() == null || entry.sha256().length() != 64
@@ -417,7 +682,7 @@ public final class EscrowService {
             }
             Path source = projectRoot.resolve(entry.path()).normalize();
             requireInside(projectRoot, source);
-            Path stored = storedFile(projectRoot, entry.sha256());
+            Path stored = storedFileInEscrow(escrowRoot, entry.sha256());
             if (!Files.isRegularFile(stored) || !Hashing.sha256(readBytes(stored)).equals(entry.sha256())) {
                 throw new ToppleCatException("Escrow integrity failed for " + entry.path());
             }
@@ -470,6 +735,37 @@ public final class EscrowService {
             }
         } catch (IOException exception) {
             throw new ToppleCatException("Cannot stage reviewer source for escrow update: " + exception.getMessage(), exception);
+        }
+    }
+
+    private static void copyDirectory(Path source, Path target) {
+        try {
+            if (!Files.exists(source)) {
+                throw new ToppleCatException("Cannot copy missing source directory " + source);
+            }
+            try (Stream<Path> paths = Files.walk(source)) {
+                paths.sorted().forEach(path -> {
+                    Path destination = target.resolve(source.relativize(path));
+                    try {
+                        if (Files.isDirectory(path)) {
+                            Files.createDirectories(destination);
+                        } else {
+                            Files.createDirectories(Objects.requireNonNull(destination.getParent()));
+                            Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    } catch (IOException exception) {
+                        throw new ToppleCatException("Cannot copy escrow legacy state from " + path + " to " + destination + ": "
+                                + exception.getMessage(), exception);
+                    }
+                });
+            }
+        } catch (RuntimeException exception) {
+            throw exception instanceof ToppleCatException ? (ToppleCatException) exception
+                    : new ToppleCatException("Cannot copy escrow legacy state from " + source + " to " + target + ": "
+                    + exception.getMessage(), exception);
+        } catch (IOException exception) {
+            throw new ToppleCatException("Cannot iterate legacy escrow source at " + source + ": " + exception.getMessage(),
+                    exception);
         }
     }
 
