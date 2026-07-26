@@ -24,7 +24,7 @@ By default the task:
 7. re-hides reviewer source.
 
 Use `./gradlew test` only for the public implementation loop. A green public
-test task is a done claim, not the final ToppleCat verdict.
+test task is a development signal, not the final ToppleCat verdict.
 
 ## Verdicts
 
