@@ -18,6 +18,22 @@ The published modules are `topplecat-core`, `topplecat-junit`,
 `integration-tests/mutation-gate` is release-gate test infrastructure, not a
 published module or user sample.
 
+## Release Versioning
+
+ToppleCat uses three-part `X.Y.Z` release versions. Keep the same value in all
+release surfaces. For example, a 0.0.3 release uses:
+
+```text
+Gradle/Maven version: 0.0.3
+Git tag:              0.0.3
+GitHub Release:       ToppleCat 0.0.3
+```
+
+The release tag has no `v` prefix. `scripts/publish-central.sh` reads the
+Gradle project version, requires the matching `X.Y.Z` tag on `HEAD`, and
+publishes artifacts with that same value. Keep prior release tags and their
+documentation unchanged.
+
 ## Change Rules
 
 1. Read the public architecture and relevant guide before changing behavior.

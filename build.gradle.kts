@@ -5,6 +5,8 @@ plugins {
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import org.gradle.plugins.signing.SigningExtension
 
 allprojects {
@@ -17,6 +19,12 @@ subprojects {
         extensions.configure<JavaPluginExtension> {
             withSourcesJar()
             withJavadocJar()
+        }
+        tasks.withType<Javadoc>().configureEach {
+            // Keep publishing the complete Javadoc artifact while suppressing only
+            // missing-comment noise; malformed Javadoc and broken references still fail.
+            (options as StandardJavadocDocletOptions)
+                .addBooleanOption("Xdoclint:all,-missing", true)
         }
         tasks.withType<Test>().configureEach {
             useJUnitPlatform()

@@ -5,6 +5,7 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 project="$root/integration-tests/mutation-gate"
 gradle="$root/gradlew"
+source "$root/scripts/expected-rejection.sh"
 owns_state_root=false
 fixture_created=false
 fixture_root="$project/src/hiddenTest"
@@ -68,19 +69,19 @@ fi
 rm -rf "$project/build"
 
 "$gradle" publishToMavenLocal
-set +e
-"$gradle" -p "$project" -Dtopplecat.stateRoot="$state_root" toppleCatVerify
-status=$?
-set -e
-
-if [[ $status -eq 0 ]]; then
-  echo "Expected a surviving mutant to fail verification." >&2
-  exit 1
-fi
 
 mutation="$project/build/topplecat/mutation-results.json"
 evidence="$project/build/topplecat/evidence.json"
 feedback="$project/build/topplecat/agent-feedback.json"
+if ! expect_topplecat_rejection \
+  "Mutation-gate attack" \
+  "$evidence" \
+  "$feedback" \
+  "MUTATION" \
+  "$gradle" -p "$project" -Dtopplecat.stateRoot="$state_root" toppleCatVerify; then
+  exit 1
+fi
+
 for artifact in "$mutation" "$evidence" "$feedback"; do
   if [[ ! -f "$artifact" ]]; then
     echo "Mutation-gate integration test failed: expected artifact is missing: $artifact. Run the verification task and inspect its Gradle output." >&2

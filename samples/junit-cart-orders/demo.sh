@@ -5,6 +5,7 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 sample="$root/samples/junit-cart-orders"
 gradle="$root/gradlew"
+source "$root/scripts/expected-rejection.sh"
 service="$sample/src/main/java/sample/cartorders/OrderService.java"
 service_backup="$(mktemp)"
 owns_state_root=false
@@ -59,12 +60,12 @@ cp "$sample/demo/OrderService.broken.java" "$service"
 "$gradle" publishToMavenLocal
 run_sample toppleCatCheck toppleCatHide
 
-set +e
-run_sample toppleCatVerify
-first_exit=$?
-set -e
-if [[ $first_exit -eq 0 ]]; then
-  echo "Expected hidden retest failure, but verification passed." >&2
+if ! expect_topplecat_rejection \
+  "JUnit hidden-retest attack" \
+  "$sample/build/topplecat/evidence.json" \
+  "$sample/build/topplecat/agent-feedback.json" \
+  "JUNIT" \
+  run_sample toppleCatVerify; then
   exit 1
 fi
 

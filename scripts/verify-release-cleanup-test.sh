@@ -4,10 +4,12 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 tmp_parent="$(mktemp -d)"
+success_log="$(mktemp)"
 
 cleanup() {
   local status=$?
   trap - EXIT
+  rm -f "$success_log"
   rm -rf "$tmp_parent"
   exit "$status"
 }
@@ -32,7 +34,33 @@ fi
 rm -f "$failing_gradle"
 assert_empty
 
-TMPDIR="$tmp_parent" GRADLE_CMD="$root/gradlew" "$root/scripts/verify-release.sh" >/dev/null
+TMPDIR="$tmp_parent" GRADLE_CMD="$root/gradlew" "$root/scripts/verify-release.sh" >"$success_log" 2>&1
 assert_empty
+
+for expected in \
+  "EXPECTED FAILURE: JUnit hidden-retest attack was rejected." \
+  "EXPECTED FAILURE: Spring hidden-retest attack was rejected." \
+  "EXPECTED FAILURE: Mutation-gate attack was rejected." \
+  "Confirmed current-run evidence and safe agent feedback: JUNIT=FAIL." \
+  "Confirmed current-run evidence and safe agent feedback: MUTATION=FAIL." \
+  "verify-release PASS"; do
+  if ! grep -Fq "$expected" "$success_log"; then
+    echo "verify-release output regression: missing expected status: $expected" >&2
+    cat "$success_log" >&2
+    exit 1
+  fi
+done
+
+if grep -Fq "BUILD FAILED" "$success_log"; then
+  echo "verify-release output regression: successful release output exposed a raw BUILD FAILED" >&2
+  cat "$success_log" >&2
+  exit 1
+fi
+
+if grep -Fq "warning: no " "$success_log"; then
+  echo "verify-release output regression: Javadoc missing-comment warnings were not suppressed" >&2
+  cat "$success_log" >&2
+  exit 1
+fi
 
 echo "verify-release cleanup PASS: success and failure paths remove temporary state"

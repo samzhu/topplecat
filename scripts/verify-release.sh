@@ -68,6 +68,7 @@ assert_artifact_version() {
 
 run_sample "$junit_sample" "$junit_state_root" help --task toppleCatHide
 run_sample "$spring_sample" "$spring_state_root" help --task toppleCatHide
+echo "Release verification: running red-team attacks. Each attack must be rejected; expected rejections are labelled below."
 TOPPLECAT_STATE_ROOT="$junit_state_root" bash "$root/samples/junit-cart-orders/demo.sh"
 TOPPLECAT_STATE_ROOT="$spring_state_root" bash "$root/samples/spring-boot-cart-orders/demo.sh"
 TOPPLECAT_STATE_ROOT="$release_state_root/mutation-gate" bash "$root/integration-tests/mutation-gate/verify.sh"
