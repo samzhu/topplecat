@@ -13,7 +13,7 @@ artifacts.
 | `topplecat-report` | Safe public and reviewer-only report projections plus static HTML rendering. |
 | `topplecat-gradle-plugin` | Gradle tasks, source-set lifecycle, adversarial verification runs, report publication, and PIT mutation gate. |
 
-## Contract Boundary
+## Contract boundary
 
 Public tests and case rows live under `src/test`. Reviewer-only test code and
 case rows live together under `src/hiddenTest`. A hidden row targets an existing
@@ -23,7 +23,7 @@ For every canonical `@ToppleTest`, a small Java Stage DSL is both the execution
 surface and the human projection: the method directly orchestrates only its
 `@ToppleStageField` fields, while Stage steps record their sentence, perform
 work, and return `self()`. `toppleCatCheck` validates that shape before review.
-`@ToppleAc` is deliberately outside that restriction for supplementary JUnit
+`@ToppleAc` stays outside that restriction because it is supplementary JUnit
 coverage.
 
 `toppleCatHide` moves the whole reviewer source set into reviewer-local custody
@@ -33,7 +33,7 @@ restores it only long enough to run verification, then rehides it in a
 finalizer. The implementation loop normally runs plain `./gradlew test` against
 public cases.
 
-## Verification Runs
+## Verification runs
 
 Every verification execution uses `build/topplecat/runs/current/` until the
 report assigns it a fresh execution-time UUID and archives it below
@@ -55,9 +55,9 @@ artifacts are published and the run is archived, aggregate `FAIL` or
 `INCOMPLETE` fails the Gradle task; the reviewer-source rehide finalizer still
 runs.
 
-## Information Boundary
+## Information boundary
 
-The report and review projection is intentionally split:
+Reports are split by audience:
 
 - `toppleCatCheck` is a static diagnostic. `toppleCatReview` depends on it and
   writes the reviewer-only bundle at `build/topplecat/reports/review/`. It
@@ -70,27 +70,26 @@ The report and review projection is intentionally split:
 - `agent-feedback.json` contains only a gate-level verdict and safe reasons,
   never reviewer data, source names, or internal task names.
 
-PIT mutation is one of three adversarial safeguards enabled by default alongside
-hidden retest and expected-consumption enforcement. Hidden retest asks whether
-the implementation generalized beyond visible examples; mutation asks whether
-the public executable contract detects broken production behavior. Without
-consumer PIT setup, ToppleCat applies its default producer to `sourceSets.test`
-only, discovers production package targets, and derives PIT `targetTests` from
-compiler-emitted descriptors for every approved public canonical `@ToppleTest`
-declaring class. This target is configured before PIT executes, enables the full mutation
-matrix, and requires a 100% score for each acceptance condition. Reviewer rows
-and reviewer-only JUnit tests are excluded from that producer. Attribution
-matches the compiled canonical method identity against PIT's JUnit Unique ID
-rather than assigning every mutant covered by the same test class; multiple AC
-methods may therefore share a class without sharing a score. No per-case
-mutation score is produced. An explicit consumer `targetTests` and a custom
-mutation producer remain authoritative and are never overwritten. A usable
-report that excludes a canonical test is `MUTATION=FAIL`; a missing or unusable
-report is `MUTATION=INCOMPLETE`. A reviewer can explicitly disable any safeguard
-through `toppleCat.adversarial`; evidence then records `DISABLED` with the
-configuration reason instead of treating it as a pass.
+PIT mutation, hidden retests, and expected-consumption checks are enabled by
+default. Hidden retests ask whether the implementation works beyond the visible
+examples. Mutation asks whether the public contract notices broken production
+behavior.
 
-## External Spec and Delivery Boundaries
+Without consumer PIT setup, ToppleCat runs the default producer against
+`sourceSets.test`, discovers production packages, and reads compiler descriptors
+to find every approved canonical `@ToppleTest` class. PIT uses the full mutation
+matrix and requires 100% for each acceptance condition. Reviewer rows and
+reviewer-only JUnit tests are not part of that score.
+
+Attribution matches a compiled canonical method with PIT's JUnit Unique ID.
+Two AC methods can share a class without sharing a mutation score. ToppleCat
+does not calculate per-case scores. Consumer-owned `targetTests` and custom
+producers are left alone: excluding a canonical test produces
+`MUTATION=FAIL`, while a missing or unusable report produces
+`MUTATION=INCOMPLETE`. If a reviewer disables a safeguard through
+`toppleCat.adversarial`, evidence records `DISABLED` and the reason.
+
+## External spec and delivery boundaries
 
 External Markdown is optional reading context, not another contract. A consumer
 explicitly configures `toppleCat.specDocs`; `AC-...` headings or paragraphs

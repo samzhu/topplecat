@@ -1,10 +1,10 @@
-# Security Policy
+# Security policy
 
-## Supported Version
+## Supported version
 
 Before 1.0, security fixes target the latest code on `main`.
 
-## Report a Vulnerability
+## Report a vulnerability
 
 Use GitHub private vulnerability reporting from the repository **Security** tab.
 Do not put an undisclosed vulnerability, reviewer-only data, credentials, or

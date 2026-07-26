@@ -1,9 +1,18 @@
-# Reviewer Custody
+# Reviewer custody
 
 Read this reference before reviewing, hiding, restoring, or delivering a
 ToppleCat contract.
 
-## Source Boundary
+## Contents
+
+- Source boundary
+- Reviewer sequence
+- Delivery
+- Restore and approval updates
+- Multiple Specs
+- Recovery rules
+
+## Source boundary
 
 ```text
 src/test/             implementation-visible contract
@@ -22,7 +31,7 @@ project-local `.topplecat/escrow/` is accepted only by the explicit
 intact. Removing `src/hiddenTest` from the working tree does not erase it from
 Git history.
 
-## Reviewer Sequence
+## Reviewer sequence
 
 Run:
 
@@ -32,8 +41,8 @@ Run:
 ./gradlew toppleCatHide
 ```
 
-Inspect `build/topplecat/reports/review/index.html` before Hide. It contains public and
-reviewer cases and remains reviewer-only.
+Inspect `build/topplecat/reports/review/index.html` before Hide. It contains
+public and reviewer cases and remains reviewer-only.
 
 `toppleCatHide` validates and moves the complete `src/hiddenTest` source set into
 local plaintext storage. On its first hide it also seals the reviewed public
@@ -66,7 +75,7 @@ Run `./gradlew toppleCatRestore` only as an authorized reviewer who needs to
 inspect or edit hidden source. Restore requires an existing valid manifest,
 verifies stored hashes, and does not call Hide first.
 
-After editing reviewer source, or when intentionally changing public contract
+After editing reviewer source, or when approving a change to public contract
 material or verification policy, repeat Check and Review and then run
 `toppleCatUpdateEscrow`. That task is the explicit, atomic approval update path;
 ordinary Hide, Restore, Rehide, and Verify must preserve the existing approval.
@@ -88,7 +97,7 @@ Hide and Restore always operate on the complete reviewer source set atomically.
 Keep per-Spec selection out of custody operations. Serialize work when multiple
 Specs modify the same DTO, production path, or reviewer source set.
 
-## Recovery Rules
+## Recovery rules
 
 - Preserve source and escrow whenever a custody operation reports a mismatch.
 - Wait for an active Hide, Restore, or Verify operation to release the project
@@ -96,10 +105,9 @@ Specs modify the same DTO, production path, or reviewer source set.
 - Keep new, missing, or modified reviewer files in place for diagnosis.
 - Restore known source through `toppleCatRestore`; never reconstruct it from a
   report.
-- Keep `.topplecat/` while `src/hiddenTest` is absent. Deleting escrow in that
-  state can destroy the only local reviewer copy. For reviewer-local custody,
-  preserve `~/.topplecat/projects/<project-key>/escrow/` until Restore or
-  migration has succeeded.
+- Preserve `~/.topplecat/projects/<project-key>/escrow/` while
+  `src/hiddenTest` is absent; it may be the only reviewer copy. Preserve a
+  legacy `.topplecat/escrow/` until migration succeeds.
 
 ToppleCat does not provide an OS sandbox, enforce CI identity, or decide whether
 same-user Gradle/JVM code can inspect files. Home-directory custody alone cannot

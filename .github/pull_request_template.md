@@ -11,7 +11,7 @@ List the exact commands you ran.
 GRADLE_CMD=./gradlew scripts/verify-release.sh
 ```
 
-## Boundaries
+## Safety checks
 
 - [ ] Public reports and `agent-feedback.json` contain no reviewer-only data.
 - [ ] Generated `build/` output and `.topplecat/` state are not included.

@@ -1,10 +1,10 @@
-# JUnit Cart Orders Tutorial
+# JUnit cart orders tutorial
 
 This tutorial follows one acceptance condition from authoring check to final
-evidence. The checked-in service is intentionally wrong; leave it that way when
-you finish so the next reader sees the same failure.
+evidence. The checked-in service is wrong on purpose. Leave it that way when
+you finish, so the next run starts from the same failure.
 
-## 1. Check and Review the Contract
+## 1. Check and review the contract
 
 From the repository root, publish the local source snapshot and validate the
 sample:
@@ -15,19 +15,19 @@ sample:
 ./gradlew -p samples/junit-cart-orders toppleCatReview
 ```
 
-This is deliberately a source-checkout workflow. Once `0.0.4` is available in
-Maven Central, a normal consumer installs the artifact using the root
+These commands test the current source checkout. Once `0.0.4` is available in
+Maven Central, regular consumers should install the artifact using the root
 [README](../../README.md#install-004).
 
 After a successful check, `toppleCatReview` writes
 `samples/junit-cart-orders/build/topplecat/reports/review/index.html`. Open it through
-its `file://` path as the authorized reviewer. It presents static Stage domain
-sentences, all case rows, then collapsed canonical source, but intentionally
-shows no execution status or runtime record. It includes reviewer-only data, so
-never share it with an implementation agent. The executable contract remains
-the Java test and typed case rows.
+its `file://` path as the authorized reviewer. It shows the Stage sentences,
+case rows, and collapsed canonical source. It has no execution status because
+the tests have not run. The page contains reviewer data, so do not share it with
+an implementation agent. The Java test and typed case rows remain the
+executable contract.
 
-## 2. Hide Reviewer Source and Use the Public Loop
+## 2. Hide reviewer source and use the public loop
 
 ```bash
 ./gradlew -p samples/junit-cart-orders toppleCatHide
@@ -56,7 +56,7 @@ An authorized reviewer can later inspect or edit the stored source with:
 This is not part of the implementation loop; it restores only a source set that
 was previously hidden.
 
-## 3. Observe the Failed Verification
+## 3. Run the failing verification
 
 Run the reviewer gate. This command is expected to exit non-zero while the
 checked-in implementation is present:
@@ -71,7 +71,7 @@ agent should receive only
 aggregate verdict and gate-level status while omitting reviewer case
 identifiers, input values, expected values, test names, and raw assertion text.
 
-## 4. Apply the Demonstration Fix
+## 4. Apply the demonstration fix
 
 Copy the supplied correct implementation, then rerun verification:
 
@@ -83,7 +83,7 @@ cp samples/junit-cart-orders/demo/OrderService.fixed.java samples/junit-cart-ord
 The second command exits zero and records a `PASS` verdict in
 `samples/junit-cart-orders/build/topplecat/evidence.json`.
 
-## 5. Inspect Reports and Restore the Deliberate Defect
+## 5. Inspect reports and restore the sample bug
 
 ```bash
 cp samples/junit-cart-orders/demo/OrderService.broken.java samples/junit-cart-orders/src/main/java/sample/cartorders/OrderService.java

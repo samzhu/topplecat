@@ -3,83 +3,87 @@
 <p align="center">
   <img
     src="docs/images/topplecat-readme-hero.png"
-    alt="ToppleCat 推倒 AI agent 的假完成宣稱"
+    alt="ToppleCat 推倒 AI 程式代理的假完成宣稱"
     width="100%"
   >
 </p>
 
 <p align="center">
-  <strong>把 AI agent 的「已完成」變成證據。</strong>
+  <strong>把 AI 程式代理的「已完成」變成證據。</strong>
 </p>
 
 <p align="center">
   <a href="README.md">English</a>
   ·
-  <a href="https://github.com/samzhu/topplecat/actions/workflows/ci.yml">Build</a>
+  <a href="https://github.com/samzhu/topplecat/actions/workflows/ci.yml">建置</a>
   ·
   <a href="LICENSE">Apache-2.0</a>
 </p>
 
 ToppleCat 是一隻充滿好奇心的貓。
 
-每當 AI coding agent 宣稱某項 Java 工作**已完成**，ToppleCat 都會伸手
-輕輕撥一下。它會用實作看不到的案例重測、故意破壞 production behavior
-確認公開測試能否察覺，並檢查每一個宣告的結果是否真的被驗證。最後的判定來自
-所有 gate，不是某一個看起來安心的測試結果。
+每當 AI 程式代理宣稱某項 Java 工作**已完成**，ToppleCat 都會伸手撥一下。
+它會拿代理沒看過的隱藏案例重跑合約，也會用突變測試故意改壞正式程式，
+看看公開測試能不能抓到問題。每個已宣告的預期結果，也必須真的拿來和實際
+行為比對。這些檢查能找出代理憑空編造的規則、漏做功能卻宣稱完成的空殼實作，
+以及為了通過公開案例而把輸入與答案寫死在程式裡的做法。
 
-> 用 hidden retests、mutation gates 與可執行的 Java 驗收合約，推倒
-> AI agent 的「已完成」宣稱。空洞的完成，站不住腳。
+ToppleCat 不會只採信代理回報的一個綠燈。完成與否，要看這次執行的所有關卡
+和證據。
 
-ToppleCat 是 Java/JUnit 工作的委派驗證閘門。一般 Java 驗收測試與具型別
-的 JSON/YAML case rows 是可執行合約；產生的 JSON 與 HTML 是證據，不是
-另一份真相來源。
+> 用隱藏案例重測、突變測試與可執行的 Java 驗收合約，檢查 AI 程式代理的
+> 「已完成」宣稱。空洞的完成，站不住腳。
 
-Canonical scenario 是刻意寫得像商業語言的一般 Java 程式碼。
-[JGiven](https://github.com/TNG/JGiven) 是可讀、分階段 Java 測試的重要
-先行專案。ToppleCat 聚焦在另一個邊界：以 hidden retests、mutation
-evidence 與安全 feedback，獨立檢查委派工作的 done claim。它不使用
-Cucumber 或 Gherkin，也不在可執行 Java 合約之外增加第二套 authoring
-language。
+ToppleCat 是 Java/JUnit 委派工作的驗證關卡。一般 Java 驗收測試與有型別的
+JSON/YAML 案例資料列才是可執行合約；產生的 JSON 與 HTML 是證據，不是
+另一份事實來源。
 
-## ToppleCat 會抓到什麼
+主要驗收情境是讀起來像業務流程的一般 Java 程式碼。
+[JGiven](https://github.com/TNG/JGiven) 是最接近的先行專案。ToppleCat
+在這個做法外再加一層審閱邊界，用隱藏案例重測、突變測試證據與安全回饋，
+檢查代理的完成宣稱。它不用 Cucumber 或
+Gherkin，也沒有第二套可執行規格格式。
+
+## ToppleCat 會檢查什麼
 
 | 綠燈仍可能代表…… | ToppleCat 如何檢查 |
 | --- | --- |
-| 實作可能只針對看得見的範例調整。 | Reviewer 控制、以獨立業務情境設計的 **hidden retests**。 |
-| 測試有執行，卻無法察覺壞掉的行為。 | PIT 驅動的 **mutation gate**。 |
-| expected 已讀取，卻沒有和實際結果比較。 | 強制執行的 **expected consumption**。 |
-| 審閱後公開合約或驗證強度被改變。 | 強制、由 reviewer 封存的 **contract-integrity gate**。 |
-| 舊的或不完整的輸出被誤認為本次證明。 | Run-scoped gates、digests 與明確的 **evidence verdict**。 |
+| 實作可能只針對看得見的範例調整。 | 由審閱者控制、依不同業務情境設計的**隱藏案例重測**。 |
+| 測試有執行，卻無法察覺壞掉的行為。 | 由 PIT 執行的**突變測試關卡**。 |
+| 預期結果已讀取，卻沒有和實際結果比較。 | 強制檢查**預期結果是否真的被驗證**。 |
+| 審閱後公開合約或驗證強度被改變。 | 強制執行、由審閱者封存的**合約完整性關卡**。 |
+| 舊的或不完整的輸出被誤認為本次證明。 | 每次執行各自保存關卡結果、摘要值與明確判定。 |
 
-Hidden retest 與 mutation 回答的是不同問題。Hidden retest 用實作 agent 沒看過的
-業務案例檢查行為，不能保證抓到每一種硬編碼捷徑；預設 PIT producer 衡量的是
-**公開可執行合約的 mutation strength**，只使用 `sourceSets.test`、public test
-classes 與 public case rows。
-Reviewer rows 與 reviewer-only JUnit tests 永遠不會協助這個 producer 殺死 mutant。
-若某個 boundary 必須殺死 mutant，它就應屬於 public contract。對 ToppleCat
-管理的 PIT producer，compiler descriptor 會把每個 public canonical
-`@ToppleTest` 宣告 class 設成 `targetTests`；consumer 自己的 `targetTests`
-與 custom mutation producer 都會原樣保留。ToppleCat 不會增加 per-case mutation
-score，也不會推斷 custom producer 的範圍。
+隱藏案例重測與突變測試回答的是不同問題。隱藏案例重測會用實作代理沒看過的
+業務案例檢查行為，但不能保證抓到每一種硬編碼捷徑。預設的 PIT 執行工作衡量
+的是**公開可執行合約的突變測試強度**，只使用 `sourceSets.test`、公開測試類別
+與公開案例資料列。
 
-Reviewer rows 可以重用 public canonical `@ToppleTest`；當 `src/hiddenTest` 只有
-rows、沒有 Java tests 時，這支 canonical test 的結果就會提供 reviewer retest。
-只有 canonical method 無法表達的額外行為，才需要 reviewer-only Java test。若已啟用
-hidden retest，`src/hiddenTest` 裡沒有可執行 JUnit method 的 helper Java source
-只會被編譯，不會被算成 hidden test；若同時沒有 hidden rows 與 hidden Java
-tests，ToppleCat 會維持
-fail-closed，將 `REVIEWER_JUNIT` 記為 `INCOMPLETE`。
+審閱者案例資料列與審閱者專用 JUnit 測試，不會幫預設的 PIT 執行工作殺死
+突變版本。若某個邊界條件必須由突變測試保護，就應把它寫進公開合約。
+ToppleCat 管理 PIT 執行工作時，會從編譯器產生的描述檔找出每個公開的主要
+`@ToppleTest` 類別，並把它們設成 `targetTests`。使用端自行設定的
+`targetTests` 與自訂突變測試執行方式都會保留。ToppleCat 不會另外計算每個
+案例的突變分數，也不會猜測自訂執行方式涵蓋了哪些範圍。
 
-單一 gate 的結果只說明那一關的結果，不是對整個實作的保證。Hidden retest 有可能
-通過，而 mutation 拒絕了同一份偷懶實作；反過來也可能發生。請從
-`evidence.json` 看清楚是哪一關拒絕完成宣稱，只有當次 aggregate verdict 為 `PASS`
-才接受它。
+審閱者案例資料列可以重用公開的主要 `@ToppleTest`。當 `src/hiddenTest` 只有
+案例資料列、沒有 Java 測試時，就由這個主要測試執行隱藏案例。只有主要測試
+無法表達的額外行為，才需要審閱者專用的 Java 測試。若已啟用隱藏案例重測，
+`src/hiddenTest` 裡只有輔助用 Java 原始碼、沒有可執行的 JUnit 方法，
+這些原始碼只會被編譯，不會被當成隱藏測試。若隱藏案例資料列與隱藏 Java
+測試都不存在，ToppleCat 會安全地維持未完成狀態，將 `REVIEWER_JUNIT`
+記為 `INCOMPLETE`。
 
-## 看 ToppleCat 推倒一次假完成
+單一關卡只能說明自己檢查的事情，不能代表整份實作一定正確。隱藏案例可能
+通過，但突變測試擋下同一份偷懶實作；反過來也可能發生。請查看
+`evidence.json`，確認是哪一關拒絕完成宣稱。只有這次執行的整體判定為 `PASS`
+時，才能接受代理的完成宣稱。
 
-JUnit sample 一開始刻意保留一個能通過公開 case 的缺陷。可重複執行的
-demo 會用 hidden boundary 拒絕這項宣稱、套用真正的修正、再次驗證，
-最後還原 checked-in 原始碼。
+## 看一次假完成怎麼被抓到
+
+JUnit 範例一開始刻意保留一個能通過公開案例的缺陷。可重複執行的示範腳本
+會用隱藏邊界案例拒絕這項宣稱、套用真正的修正、再次驗證，最後還原儲存庫中
+原有的原始碼。
 
 ```bash
 git clone https://github.com/samzhu/topplecat.git
@@ -87,48 +91,46 @@ cd topplecat
 bash samples/junit-cart-orders/demo.sh
 ```
 
-最後輸出會指出 `evidence.json`、安全的 agent feedback 與 HTML 報表。
+最後輸出會指出 `evidence.json`、給代理看的安全回饋與 HTML 報告。
 完整 FAIL → PASS 故事請閱讀
 [JUnit 操作教學](samples/junit-cart-orders/TUTORIAL.md)。
 
-## 對應的開發流程
+## 開發流程
 
 ```text
-Java 驗收合約 + 具型別 public/reviewer cases
+Java 驗收合約 + 有型別的公開／審閱案例
           |
           v
 toppleCatCheck -> toppleCatReview -> toppleCatHide
           |
           v
-AI agent 只看公開工作樹並使用 ./gradlew test
+AI 程式代理只看公開工作目錄並使用 ./gradlew test
           |
           v
-Reviewer 或 CI 執行 toppleCatVerify
+審閱者或 CI 執行 toppleCatVerify
           |
           v
-PASS / FAIL / INCOMPLETE 證據與人類報表
+PASS / FAIL / INCOMPLETE 證據與人類可讀報告
 ```
 
-1. **撰寫可執行合約。** 公開測試與 case rows 放在 `src/test`；獨立設計
-   的 reviewer retests 放在 `src/hiddenTest`。
+1. **撰寫可執行合約。** 公開測試與案例資料列放在 `src/test`；獨立設計
+   的審閱案例放在 `src/hiddenTest`。
 2. **檢查並審閱。** `toppleCatCheck` 驗證合約；`toppleCatReview`
-   產生包含完整 reviewer 資料的審閱頁。
-3. **移交 reviewer custody。** `toppleCatHide` 把 `src/hiddenTest`
-   移入 reviewer-local 明文 custody：
-   `~/.topplecat/projects/<sha256-project-key>/escrow/`；這不是保密邊界。若要
-   演進既有的 reviewer suite，授權 reviewer 必須使用明確的還原、審閱與更新
-   流程，而非一般 hide。
-4. **正常實作。** 只把 public-only environment 交給 implementation
-   agent，平常使用 `./gradlew test`。
-5. **驗證完成宣稱。** `toppleCatVerify` 先確認封存的公開合約與驗證 policy
-   仍完全相符；只有相符時才暫時還原 reviewer source 並執行已啟用 gate。無論
-   結果都會寫出證據並重新隱藏來源。
+   產生包含完整審閱資料的審閱頁。
+3. **交由審閱者保管。** `toppleCatHide` 把 `src/hiddenTest` 移到審閱者本機
+   的明文保管區：`~/.topplecat/projects/<sha256-project-key>/escrow/`。
+   這不是保密邊界。若要修改既有的審閱案例組，授權審閱者必須走明確的還原、
+   審閱與更新流程，不能只執行一般的隱藏工作。
+4. **正常實作。** 只把公開工作環境交給實作代理，平常使用 `./gradlew test`。
+5. **驗證完成宣稱。** `toppleCatVerify` 先確認封存的公開合約與驗證政策仍
+   完全相符；只有相符時，才暫時還原審閱者原始碼並執行已啟用的關卡。無論
+   結果如何，都會寫出證據並重新隱藏原始碼。
 
 ## 安裝 0.0.4
 
-ToppleCat `0.0.4` 是本文件所說明的版本。Consumer 專案需要 Java 25 與支援它的
-Gradle 版本。正式發佈後，Plugin 與 library resolution 都加入 Maven Central
-即可；使用正式版的 consumer 不需要 `mavenLocal()`。
+ToppleCat `0.0.4` 是本文件說明的版本。使用端專案需要 Java 25，以及支援它的
+Gradle 版本。正式發佈後，Gradle 外掛與函式庫都能從 Maven Central 取得；
+使用正式版本的專案不需要 `mavenLocal()`。
 
 ```kotlin
 // settings.gradle.kts
@@ -161,16 +163,16 @@ dependencies {
 tasks.test { useJUnitPlatform() }
 ```
 
-空白 consumer 專案可用 `./gradlew toppleCatInit` 建立不覆寫現有檔案的
-起始合約。它是選用 bootstrap，不是一般工作流程。Repository 內的 demo
-刻意使用 `publishToMavenLocal`，以便測試目前 checkout 的原始碼而不是
-release artifact；那是 contributor／demo workflow，不是上面的安裝方式。
+空白的使用端專案可用 `./gradlew toppleCatInit` 建立起始合約，而且不會覆寫
+現有檔案。這只是選用的起始範本，不是一般流程。專案裡的示範腳本使用
+`publishToMavenLocal`，是為了測試目前工作副本的原始碼，而不是正式發佈的套件。
+這是開發與示範流程，不是一般使用者的安裝方式。
 
-## 撰寫可執行合約
+## 寫一份可執行合約
 
-Canonical `@ToppleTest` 是由 `ToppleStage` 方法組成的簡短商業流程。
-編譯器會限制 scenario method，只允許依序呼叫 Stage；setup、service call、
-assertion、helper 與 control flow 都放在 Stage 內。
+主要的 `@ToppleTest` 是由 `ToppleStage` 方法組成的簡短業務流程。
+編譯器會限制情境方法，只允許依序呼叫 Stage。前置設定、服務呼叫、斷言、
+輔助方法與流程控制都放在 Stage 裡。
 
 ```java
 @ToppleStageField CartGiven given;
@@ -186,11 +188,11 @@ void appliesCoupon(ToppleCase c) {
 }
 ```
 
-每個 Stage step 先呼叫 `recorded(...)`，執行工作，最後回傳 `self()`。
+每個 Stage 步驟先呼叫 `recorded(...)`，執行工作，最後回傳 `self()`。
 ToppleCat 會把這些呼叫編譯成穩定、可讀的情境句子，同時仍由 JUnit
-執行真正的 Java method。
+執行真正的 Java 方法。
 
-Case rows 可以保留巢狀 DTO、list、map 與 API result：
+案例資料列可以保留巢狀 DTO、List、Map 與 API 結果：
 
 ```yaml
 - caseId: coupon-public-example
@@ -206,16 +208,16 @@ Case rows 可以保留巢狀 DTO、list、map 與 API result：
       total: 400.00
 ```
 
-每個 row 恰好包含 `caseId`、`acId`、`inputs`、`expected`。Jackson 會
-把資料反序列化成指定的 Java type。每個頂層 `expected` key 都是一項
-assertion obligation：`c.verify("receipt", actual)` 會深度比較並完成它；
-只讀取 expected 不算驗證。
+每筆資料恰好包含 `caseId`、`acId`、`inputs`、`expected`。Jackson 會
+把資料反序列化成指定的 Java 型別。每個最外層的 `expected` 欄位，都是一項
+必須完成的驗證：`c.verify("receipt", actual)` 會深入比較實際結果與預期結果；
+只把預期結果讀出來，不算驗證。
 
-ToppleCat 支援 JSON 與 YAML，不支援 CSV，也不引入自然語言 runtime。
+ToppleCat 支援 JSON 與 YAML，不支援 CSV，也不需要自然語言執行環境。
 
-## 執行驗證閘門
+## 執行驗證
 
-以下指令從 consumer 專案執行：
+請在使用端專案執行以下指令：
 
 ```bash
 ./gradlew toppleCatCheck
@@ -225,88 +227,86 @@ ToppleCat 支援 JSON 與 YAML，不支援 CSV，也不引入自然語言 runtim
 ./gradlew toppleCatVerify
 ```
 
-`toppleCatRestore` 是 reviewer 檢查或修改 hidden source 時使用的還原指令，
-不屬於 implementation loop。授權 reviewer 還原並修改既有 suite 後，必須依下列
-custody 更新流程進行：
+`toppleCatRestore` 是審閱者檢查或修改隱藏原始碼時使用的還原指令，
+不屬於平常的實作流程。授權審閱者還原並修改既有案例組後，必須依照下面的
+保管資料更新流程操作：
 
 ```text
 toppleCatRestore
-    -> edit src/hiddenTest
+    -> 修改 src/hiddenTest
     -> toppleCatCheck
     -> toppleCatReview
-    -> reviewer accepts the review
+    -> 審閱者確認審閱內容
     -> toppleCatUpdateEscrow
 ```
 
-`toppleCatUpdateEscrow` 會先驗證並暫存完整的新版 reviewer source，再進行
-啟用。Filesystem 支援時會要求 atomic move；不支援時仍保留相同的驗證與
-復原路徑。一般 `toppleCatHide` 仍會拒絕已修改的 restored suite。公開
-implementation export 不含 reviewer source 或本機 escrow，因此這個僅供
-reviewer 使用的 task 會安全地失敗。
+`toppleCatUpdateEscrow` 會先驗證並暫存完整的新版審閱者原始碼，確認無誤後
+才啟用。檔案系統支援時會要求原子搬移；不支援時，仍會保留相同的驗證與
+復原機制。一般的 `toppleCatHide` 仍會拒絕已修改、但尚未重新核准的案例組。
+公開交付內容不含審閱者原始碼或本機保管區，因此這項只供審閱者使用的
+Gradle 工作會安全地失敗。
 
-## 閱讀結果
+## 看懂驗證結果
 
-| Artifact | 受眾 | 作用 |
+| 產物 | 受眾 | 作用 |
 | --- | --- | --- |
-| `build/topplecat/reports/review/index.html` | 僅 reviewer | 交付前的 Spec 脈絡、public/hidden cases、Stage 句子與 canonical source。 |
+| `build/topplecat/reports/review/index.html` | 僅審閱者 | 交付前的規格脈絡、公開與隱藏案例、Stage 句子及主要驗收測試原始碼。 |
 | `build/topplecat/reports/spec/index.html` | 公開 | 驗證後產生、供人類閱讀的公開合約。 |
-| `build/topplecat/reports/verification/index.html` | 僅 reviewer | Public/hidden case 結果、steps、failures、gates 與 attachments。 |
-| `build/topplecat/evidence.json` | Reviewer / CI | 機器 verdict 與 evidence digests。 |
-| `build/topplecat/agent-feedback.json` | Implementation agent | 已移除 reviewer 細節的安全 gate-level feedback。 |
+| `build/topplecat/reports/verification/index.html` | 僅審閱者 | 公開與隱藏案例的結果、步驟、失敗內容、關卡與附件。 |
+| `build/topplecat/evidence.json` | 審閱者／CI | 給機器讀取的判定與證據摘要值。 |
+| `build/topplecat/agent-feedback.json` | 實作代理 | 已移除審閱細節的安全關卡回饋。 |
 
-Verification report 是可離線開啟的自足 bundle。公開產物不包含 reviewer
-values、case IDs、source names/paths、attachments 或 raw private
-failures。
+驗證報告是一份可離線開啟的完整報告。公開產物不包含審閱者專用的值、
+案例編號、原始碼名稱或路徑、附件，以及未整理的私密失敗內容。
 
-第一個必要 gate 是 `CONTRACT_INTEGRITY`：它會把目前的公開 test source、case
-data、專案內 Gradle build logic、語意 definition 與有效 verification policy，
-和 Hide 或 UpdateEscrow 時由 reviewer 封存的核准內容比較。最終 verdict 是
-`PASS`、`FAIL` 或 `INCOMPLETE`。Hidden retest、mutation 與
-expected-consumption safeguards 預設啟用；若 reviewer 明確停用其中一項，evidence
-會記錄 `DISABLED`，不會假裝已通過。Contract integrity 本身無法停用。
+第一個必要關卡是 `CONTRACT_INTEGRITY`。它會把目前的公開測試原始碼、案例資料、
+專案內的 Gradle 建置邏輯、語意定義與有效的驗證政策，和執行 Hide 或
+UpdateEscrow 時由審閱者封存的核准內容逐一比對。最終判定是 `PASS`、`FAIL`
+或 `INCOMPLETE`。隱藏案例重測、突變測試與預期結果使用檢查預設都會啟用。
+若審閱者明確停用其中一項，證據會記錄 `DISABLED`，不會假裝它已經通過。
+合約完整性本身不能停用。
 
-若 contract integrity 不是 `PASS`，ToppleCat 會把其餘四個 gate 記錄為
-`INCOMPLETE`、重新隱藏 reviewer source，並移除任何過期的公開 Spec bundle。
-授權 reviewer 必須依 Restore → Check → Review → UpdateEscrow 的流程，才能
-核准刻意變更的公開合約或 policy。
+若合約完整性不是 `PASS`，ToppleCat 會把其餘四個關卡記為 `INCOMPLETE`，
+重新隱藏審閱者原始碼，並移除任何過期的公開規格報告。授權審閱者必須走完
+Restore → Check → Review → UpdateEscrow，才能核准刻意修改過的公開合約或
+驗證政策。
 
-Aggregate verdict 為 `FAIL` 或 `INCOMPLETE` 時，`toppleCatVerify` 與
-`toppleCatReport` 會在 evidence、reports、安全 feedback 與 run archive
-完整產生後讓 Gradle build 失敗。因此最終綠燈代表 aggregate `PASS`；
-無論成功或失敗，都可從 `evidence.json` 讀取 gate-level 細節。
+整體判定為 `FAIL` 或 `INCOMPLETE` 時，`toppleCatVerify` 與
+`toppleCatReport` 會先完整產生證據、報告、安全回饋與這次執行的封存資料，
+再讓 Gradle 建置失敗。因此，最後看到綠燈就代表整體判定是 `PASS`。
+無論成功或失敗，都能從 `evidence.json` 查看每一關的細節。
 
-預設 PIT producer 會從 compiler 產生的 descriptor，取得每一個已核准的 public
-canonical `@ToppleTest` 宣告 class，並設定 PIT 的 `targetTests`。即使
-production package 與 test package 不同，mutation coverage 仍會對準真正的
-公開合約。若 consumer 明確設定 PIT `targetTests`，ToppleCat 會保留該設定；
-若它排除 canonical test，PIT 報告可用時會得到 `MUTATION=FAIL`。若 PIT 沒有
-產生可用報告，gate 會是 `INCOMPLETE`，不能當成合約通過的證據。
+預設的 PIT 執行工作會從編譯器產生的描述檔，取得每個已核准的公開主要
+`@ToppleTest` 類別，並設定 PIT 的 `targetTests`。即使正式程式與測試位在
+不同的 Java 套件，突變測試仍會對準真正的公開合約。若使用端明確設定 PIT
+`targetTests`，ToppleCat 會保留該設定；若設定排除了主要驗收測試，而 PIT
+報告仍可讀取，就會得到 `MUTATION=FAIL`。若 PIT 沒有產生可用報告，該關卡
+會是 `INCOMPLETE`，不能拿來證明合約已通過。
 
-## 保護 Reviewer 資料
+## 審閱資料放在哪裡
 
-Reviewer custody 位於 `~/.topplecat/projects/<sha256-project-key>/escrow/`，
-包含 manifest、hidden source blobs、approval epoch、revisions、history、audit、
-lock 與 recovery state。這是明文機械式儲存，不是加密或 sandbox。`./gradlew
-clean` 會移除生成的 `build/`，但不會移除 reviewer state。既有的
-project-local `.topplecat/escrow/` 只能透過明確的
-`toppleCatMigrateEscrow` 遷移；成功後會移除 local escrow。專案被移動或 clone
-時，不會採用其他專案的 state，也不會默默建立新的 approval。
+審閱資料的保管區位於
+`~/.topplecat/projects/<sha256-project-key>/escrow/`，裡面包含清單、隱藏原始碼
+內容、核准版本、修訂紀錄、歷程、稽核資料、鎖定與復原狀態。這些資料以明文
+存放，沒有加密，也不是沙箱（sandbox）。`./gradlew clean` 會移除產生的
+`build/`，但不會刪除審閱資料。舊版留在專案內的 `.topplecat/escrow/`，
+只能透過 `toppleCatMigrateEscrow` 明確遷移；遷移成功後才會移除舊保管區。
+專案被移動或重新複製時，不會誤用其他專案的資料，也不會默默建立新的核准。
 
-ToppleCat 不控制 OS 權限、sandbox、CI identity，或同一 Gradle/JVM process
-能否存取任意檔案。外部 workflow 必須在可信任的 reviewer/CI 邊界執行 Verify，
-只把 public source 與安全 feedback 交給 agent，並排除 reviewer state、hidden
-source、build artifacts，以及曾經包含 reviewer material 的 Git history。單靠
-home-directory custody 無法防禦同一 OS user 執行的惡意 build script 或 production
-code。
+ToppleCat 不控制 OS 權限、沙箱、CI 身分，也不限制同一個 Gradle/JVM 程序
+能讀取哪些檔案。外部流程必須在可信任的審閱者或 CI 環境執行 Verify，只把
+公開原始碼與安全回饋交給代理，並排除審閱資料、隱藏原始碼、建置產物，以及
+曾經包含審閱資料的 Git 歷史。只把保管區放在家目錄，無法阻止同一位 OS
+使用者執行惡意的建置腳本或正式程式。
 
-## 選擇 Sample
+## 選擇範例
 
-| Sample | 適合從這裡開始的情境 |
+| 範例 | 適合從這裡開始的情境 |
 | --- | --- |
-| [JUnit cart orders](samples/junit-cart-orders) | 使用一般 JUnit 與 domain/service DTO。 |
-| [Spring Boot cart orders](samples/spring-boot-cart-orders) | 想在 Spring Boot test project 中使用 ToppleCat。 |
+| [JUnit cart orders](samples/junit-cart-orders) | 使用一般 JUnit 與領域／服務 DTO。 |
+| [Spring Boot cart orders](samples/spring-boot-cart-orders) | 想在 Spring Boot 測試專案中使用 ToppleCat。 |
 
-其他差異與完整 demo 指令請參考 [samples 導覽](samples/README.md)。
+其他差異與完整示範指令請參考[範例導覽](samples/README.md)。
 
 ## 文件
 
@@ -320,11 +320,11 @@ code。
 - [貢獻指南](CONTRIBUTING.md)
 - [安全政策](SECURITY.md)
 
-Repository 也附帶
+專案也附帶
 [`topplecat-verification`](.agents/skills/topplecat-verification/SKILL.md)
-agent skill，協助撰寫合約、維持 reviewer custody 並驗證 done claim。
+代理技能，協助撰寫合約、保管審閱資料並驗證完成宣稱。
 
-## 專案狀態
+## 目前狀態
 
-ToppleCat 目前是 pre-1.0，API 仍可能調整。開發環境需要 Java 25，並使用
-repository 內的 Gradle 9.1.0 wrapper。
+ToppleCat 目前仍是 1.0 前的版本，API 可能繼續調整。開發環境需要 Java 25，
+並使用專案隨附的 Gradle 9.1.0 Wrapper。

@@ -1,7 +1,7 @@
 # External validation records
 
-This directory is the public index for release-validation records. Release
-verification is reproducible from a clean checkout with:
+This directory indexes public release-validation records. From a clean
+checkout, run:
 
 ```bash
 ./gradlew check
@@ -12,6 +12,6 @@ python3 scripts/verify-docs.py
 git diff --check
 ```
 
-Records must contain only public commands, aggregate gate outcomes, and safe
-diagnostics. Reviewer-only source, custody paths, hidden case values, and raw
-failure details do not belong here.
+Keep these records limited to public commands, aggregate gate outcomes, and
+safe diagnostics. Do not include reviewer source, custody paths, hidden values,
+or raw failures.

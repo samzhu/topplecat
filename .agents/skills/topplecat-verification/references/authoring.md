@@ -1,4 +1,4 @@
-# Executable Contract Authoring
+# Executable contract authoring
 
 Read this reference when creating or changing a Spec, acceptance binding, typed
 case row, DTO expectation, or narrative stage.
@@ -8,12 +8,11 @@ case row, DTO expectation, or narrative stage.
 - Spec and AC identity
 - Source layout
 - Canonical Java contract
-- Typed rows
-- Expected obligations
+- Typed rows and expected obligations
 - Reviewer retests
 - Attachment evidence
 
-## Spec And AC Identity
+## Spec and AC identity
 
 Use the immutable issue or task-card identifier as the Spec namespace. Follow
 the repository's established format; for example:
@@ -46,7 +45,7 @@ The service accepts a valid cart and returns the created order.
 Markdown supplies human context. Java tests and typed rows remain the executable
 authority.
 
-## Source Layout
+## Source layout
 
 ```text
 src/test/java/                                      public Java contract
@@ -58,7 +57,7 @@ src/hiddenTest/resources/topplecat/cases/SPEC-42/   reviewer-only rows
 Use JSON or YAML. Preserve nested objects and arrays so Jackson can deserialize
 real DTOs. Keep CSV and string-table formats outside the ToppleCat contract.
 
-## Canonical Java Contract
+## Canonical Java contract
 
 Use exactly one canonical `@ToppleTest` method for each data-driven AC. Use
 `@ToppleAc` for additional non-parameterized ordinary JUnit coverage. Keep AC
@@ -80,12 +79,11 @@ void createsOrder(ToppleCase c) {
 }
 ```
 
-Search the existing domain Stage vocabulary before writing a canonical method.
-Reuse its steps whenever possible; add a step only when the vocabulary cannot
-express the approved behavior. The canonical method contains only direct calls
-to its `@ToppleStageField` fields. Move locals, service construction, SUT calls,
-assertions, `c.verify`, helpers, and control flow into Stage methods; keep
-expected-value assertions in Then stages.
+Check the existing domain Stage vocabulary before writing a canonical method.
+Reuse a step when it already expresses the approved behavior. The canonical
+method contains only direct calls to its `@ToppleStageField` fields. Move
+locals, service construction, SUT calls, assertions, `c.verify`, helpers, and
+control flow into Stage methods. Keep expected-value assertions in Then stages.
 
 Declare each Stage field as non-static and non-final, backed by a class with an
 accessible no-argument constructor. Every Stage step calls `recorded(...)` as
@@ -96,7 +94,7 @@ remain in reviewer reports.
 Prefer `@DisplayName` for the report title. Use
 `@ToppleAc(title = "...")` only as a non-parameterized fallback.
 
-## Typed Rows
+## Typed rows
 
 Each row contains exactly `caseId`, `acId`, `inputs`, and `expected`:
 
@@ -124,7 +122,7 @@ OrderRequest request = c.input("request", OrderRequest.class);
 Keep notes, feature tags, names, and dynamic identifiers outside the four-field
 row schema.
 
-## Expected Obligations
+## Expected obligations
 
 Treat every top-level key below `expected` as an assertion obligation:
 
@@ -137,7 +135,7 @@ Prefer one meaningful aggregate output when it expresses the API contract. Use
 multiple keys only when the production operation genuinely returns independent
 outcomes.
 
-## Reviewer Retests
+## Reviewer retests
 
 Reviewer retests are independently chosen business cases, not secret answer
 keys. They cannot prove that every possible hard-coded shortcut fails. Derive
@@ -146,10 +144,11 @@ Choose boundaries that expose likely shortcuts: mixed carts, threshold
 transitions, idempotency, inventory conflicts, validation errors, or nested
 response shape.
 
-During review, ask what an implementation that only recognizes the public SKU,
-coupon, threshold, or expected answer would do. Prefer an unseen rule
-combination or behavior path over another example from the same path. A hidden
-row still binds to an existing public AC; it does not add a private requirement.
+During review, consider what happens if an implementation recognizes only the
+public SKU, coupon, threshold, or expected answer. Choose an unseen rule
+combination or behavior path instead of another example from the same path. A
+hidden row still binds to an existing public AC; it does not add a private
+requirement.
 
 Reuse the public canonical `@ToppleTest` by adding reviewer rows whenever the
 same contract method can exercise the boundary. Add reviewer-only Java tests
@@ -161,7 +160,7 @@ Java tests are present, they remain an independent reviewer requirement.
 Bind every reviewer row to an existing public AC. Keep all reviewer material
 under `src/hiddenTest`.
 
-## Attachment Evidence
+## Attachment evidence
 
 Attach focused diagnostics only when expected output alone cannot explain a
 reviewer result. Call `attach(...)` inside the active Stage step:

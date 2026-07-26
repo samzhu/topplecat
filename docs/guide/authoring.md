@@ -1,12 +1,12 @@
-# Authoring Contracts
+# Authoring contracts
 
-## Java Acceptance Tests
+## Java acceptance tests
 
 Use one literal `@ToppleTest("AC-...")` method as the canonical parameterized
-test for each acceptance condition with case data. Its body is a required,
-static-readable `ToppleStage` orchestration—not a place for test plumbing. Use
-`@ToppleAc("AC-...")` for additional ordinary JUnit coverage; only canonical
-`@ToppleTest` methods have the Stage DSL restriction. `@DisplayName` supplies
+test for each acceptance condition with case data. Its body contains only a
+statically readable `ToppleStage` sequence; test plumbing belongs in the stage
+methods. Use `@ToppleAc("AC-...")` for extra JUnit coverage. Only canonical
+`@ToppleTest` methods follow the Stage DSL restriction. `@DisplayName` supplies
 the report title.
 
 ```java
@@ -36,7 +36,7 @@ the work, and ends with `return self();`. Put assertions in a Then step. `input`
 and `expected` can be nested objects, arrays, maps, and API DTOs; Jackson
 deserializes them directly to the requested Java type.
 
-## Case Rows
+## Case rows
 
 Public rows are JSON or YAML under `src/test/resources/topplecat/cases/`.
 Reviewer rows use the same schema under
@@ -55,7 +55,7 @@ fields:
 Do not use CSV, string tables, undocumented fields, or dynamic AC identifiers.
 A reviewer row must bind to an existing public acceptance condition.
 
-## Reviewer Retests
+## Reviewer retests
 
 Reviewer retests are independently chosen business cases. They are not secret
 answer keys and cannot prove that every possible hard-coded shortcut fails.
@@ -64,13 +64,12 @@ row. Choose boundaries that expose likely shortcuts: mixed carts, threshold
 transitions, idempotency, inventory conflicts, validation errors, or nested
 response shape.
 
-During review, ask what an implementation that only recognizes the public SKU,
-coupon, threshold, or expected answer would do. Prefer an unseen rule
-combination or behavior path over another example from the same path. A hidden
-row still targets an existing public AC; it must not silently introduce a new
-requirement.
+During review, ask what would happen if the implementation recognized only the
+public SKU, coupon, threshold, or expected answer. An unseen rule combination
+usually tells you more than another example from the same path. A hidden row
+still targets an existing public AC; it cannot introduce a new requirement.
 
-## Expected Consumption
+## Expected consumption
 
 Each top-level key in `expected` begins as `UNTOUCHED`.
 
@@ -86,7 +85,7 @@ any key is `READ` or `UNTOUCHED`. The evidence/report collector uses `UNKNOWN`
 only when a completed invocation did not provide expected-consumption sidecar
 data; `UNKNOWN` is not a substitute for an assertion.
 
-## Numeric Contract Equality
+## Numeric contract equality
 
 `c.verify(...)` compares JSON numbers recursively by exact mathematical value,
 not by JSON numeric node representation or decimal scale. Consequently `200`,
@@ -120,7 +119,7 @@ It depends on the check and writes the bundle at
 `build/topplecat/reports/review/`. The review contains all case data and must
 never be handed to an implementation agent.
 
-## Narrative Stages
+## Narrative stages
 
 `ToppleStage` is the required authoring surface for canonical `@ToppleTest`
 methods. A compiler-backed descriptor is the shared definition consumed by
@@ -145,16 +144,15 @@ falls back from malformed source: `toppleCatCheck` first rejects hidden helper
 calls, control flow, unknown stage fields or methods, and steps that violate the
 `recorded(...)`/`self()` contract.
 
-## External Spec Documents
+## External spec documents
 
 ToppleCat can add public SDD context from Markdown documents to the
 reviewer-only contract review and final report projections. The Markdown is an
 input for human reading, not a second contract: Java acceptance tests and typed
 case rows stay authoritative.
 
-There is no implicit scan. The recommended convention is a repository-root
-`specs/` directory, configured explicitly so a project without external specs
-keeps its existing silent behavior:
+ToppleCat does not scan for Markdown automatically. Configure a repository-root
+`specs/` directory when the project uses external specs:
 
 ```kotlin
 toppleCat {
@@ -186,7 +184,7 @@ The alignment check uses canonical `@ToppleTest` descriptors compiled from
 `src/test/java` only. Supplementary `@ToppleAc` methods and reviewer source do
 not participate.
 
-## Reviewer Attachments
+## Reviewer attachments
 
 Attachments are an advanced reviewer diagnostic, not part of the basic
 contract. Inside an active Stage step, attach focused evidence with

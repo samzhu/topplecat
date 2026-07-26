@@ -1,12 +1,12 @@
-# Spring Boot Cart Orders Tutorial
+# Spring Boot cart orders tutorial
 
 This sample uses the same acceptance-case model as the plain JUnit sample, but
 the canonical test is bootstrapped with `@SpringBootTest`. ToppleCat injects a
 typed `Cart` case into the Stage scenario. The reviewer-only JUnit test
-separately demonstrates an injected Spring-managed `OrderService`; neither test
+separately uses an injected Spring-managed `OrderService`; neither test
 turns the controller into its subject.
 
-## Run the Demonstration
+## Run the demonstration
 
 From the repository root, run:
 
@@ -14,19 +14,18 @@ From the repository root, run:
 bash samples/spring-boot-cart-orders/demo.sh
 ```
 
-The script publishes the local snapshot, validates and hides reviewer source for the sample,
-shows the expected failed verification, applies the demonstration fix, verifies
-the passing result, then restores the original source. It prints these stable
-artifact paths at the end. The sample explicitly disables mutation to keep this
-walkthrough fast, so its evidence records `MUTATION: DISABLED` rather than a
-mutation pass:
+The script publishes the local snapshot, hides the reviewer source, and shows
+the expected verification failure. It then applies the demonstration fix,
+verifies the passing result, and restores the original source. Mutation is
+disabled to keep the walkthrough fast, so the evidence records
+`MUTATION: DISABLED` rather than a mutation pass:
 
 ```text
 evidence: .../build/topplecat/evidence.json
 agent feedback: .../build/topplecat/agent-feedback.json
 ```
 
-## Review Before Hiding Reviewer Source
+## Review before hiding reviewer source
 
 Before using the demo's hide step, an authorized reviewer can inspect the
 complete static contract without executing the Spring tests:
@@ -37,9 +36,9 @@ complete static contract without executing the Spring tests:
 ./gradlew -p samples/spring-boot-cart-orders toppleCatReview
 ```
 
-These commands intentionally publish the source checkout so the sample tests
-the code in this repository. Once `0.0.4` is available in Maven Central, a
-normal consumer should install it using the root [README](../../README.md#install-004).
+These commands publish the source checkout so the sample tests the code in this
+repository. Once `0.0.4` is available in Maven Central, regular consumers should
+install it using the root [README](../../README.md#install-004).
 
 Open `samples/spring-boot-cart-orders/build/topplecat/reports/review/index.html` through
 its `file://` path. It shows direct Given/When/Then Stage sentences, public plus
@@ -62,7 +61,7 @@ implementation agent can read. Give the agent a public export without `.git`,
 environment. Use `toppleCatRestore` only when an authorized reviewer needs to
 inspect or edit the hidden source again.
 
-## Read the Narrative
+## Read the narrative
 
 The coupon test declares `@ToppleStageField` fields for Given, When, and Then
 helpers. Each helper records a report sentence before performing work, and

@@ -62,7 +62,7 @@ grep -Fxq '  display_name: "ToppleCat Verification"' "$metadata_path" \
   || fail "$metadata_path has a stale display_name."
 grep -Fxq '  short_description: "Gate Java done claims with executable contracts"' "$metadata_path" \
   || fail "$metadata_path has a stale short_description."
-grep -Fxq '  default_prompt: "Find the first unmet ToppleCat gate for this Java task, then author, review, hide, implement, restore, or verify it without crossing reviewer custody."' "$metadata_path" \
+grep -Fxq '  default_prompt: "Use $topplecat-verification to find and complete the first unmet gate for this Java task without crossing reviewer custody."' "$metadata_path" \
   || fail "$metadata_path has a stale default_prompt."
 
 required_contract=(

@@ -22,11 +22,15 @@
 
 ToppleCat is a curious cat.
 
-Whenever an AI coding agent says a Java task is **done**, ToppleCat gives the
-claim a small push. It reruns the contract with reviewer-only cases, checks
-whether public tests notice broken production behavior, and proves that every
-declared result was actually asserted. The final decision comes from the
-combined gates, not from one reassuring test result.
+Whenever an AI coding agent says a Java task is **done**, ToppleCat reaches out
+and gives the claim a little nudge. It reruns the contract with reviewer-only
+cases, mutates production behavior to see whether public tests notice, and
+checks that every declared result was actually asserted. These checks catch
+invented rules, hollow or partial implementations, and code written only to
+match visible examples.
+
+A reassuring command result from the agent is not enough. ToppleCat reads the
+current run's gates together and turns the done claim into evidence.
 
 > Hidden retests, mutation gates, and executable acceptance contracts for Java.
 > If it's hollow, it falls.
@@ -36,13 +40,12 @@ acceptance tests plus typed JSON or YAML case rows are the executable contract.
 Generated JSON and HTML are evidence, never a second source of truth.
 
 Canonical scenarios are ordinary Java written to read like business language.
-[JGiven](https://github.com/TNG/JGiven) is important prior art for readable,
-staged Java tests. ToppleCat focuses on a different boundary: independently
-checking a delegated done claim with hidden retests, mutation evidence, and safe
-feedback. It does not use Cucumber or Gherkin, and it does not introduce a
-second authoring language beside the executable Java contract.
+[JGiven](https://github.com/TNG/JGiven) is the closest prior art for readable,
+staged Java tests. ToppleCat adds a reviewer boundary around that idea: hidden
+retests, mutation evidence, and safe feedback check a delegated done claim.
+There is no Cucumber, Gherkin, or second executable authoring format.
 
-## What ToppleCat Catches
+## What ToppleCat catches
 
 | A green test can still mean... | ToppleCat checks it with... |
 | --- | --- |
@@ -77,7 +80,7 @@ implementation. A reviewer retest can pass while mutation rejects a shortcut,
 or the reverse can happen. Read `evidence.json` to see which gate rejected a
 claim; accept it only when the current run's aggregate verdict is `PASS`.
 
-## Watch a Fake Completion Fall
+## Watch a fake completion fall
 
 The JUnit sample starts with a deliberate defect that passes the public case.
 Its repeatable demo rejects that claim with a hidden boundary, applies the real
@@ -93,7 +96,7 @@ The final output points to `evidence.json`, safe agent feedback, and the HTML
 reports. Read the [JUnit walkthrough](samples/junit-cart-orders/TUTORIAL.md) for
 the complete FAIL-to-PASS story.
 
-## How It Fits the Development Flow
+## How it fits the development flow
 
 ```text
 Java acceptance contract + typed public/reviewer cases
@@ -168,12 +171,12 @@ tasks.test { useJUnitPlatform() }
 
 For an otherwise empty consumer project, `./gradlew toppleCatInit` creates a
 non-destructive starter contract. It is an optional bootstrap, not a normal
-workflow step. The checked-out repository demos intentionally use
+workflow step. The checked-out repository demos use
 `publishToMavenLocal` so they exercise the source checkout rather than the
 released artifact; that is a contributor/demo workflow, not the installation
 path above.
 
-## Write an Executable Contract
+## Write an executable contract
 
 A canonical `@ToppleTest` is a short, business-readable orchestration of
 `ToppleStage` methods. The compiler keeps setup, service calls, assertions,
@@ -221,7 +224,7 @@ consumes it; merely reading it does not count.
 ToppleCat supports JSON and YAML case rows. It does not support CSV or introduce
 a natural-language runtime.
 
-## Run the Gate
+## Run the gate
 
 Run these commands from the consumer project:
 
@@ -253,7 +256,7 @@ Ordinary `toppleCatHide` still rejects a changed restored suite. A public
 implementation export has neither reviewer source nor local escrow, so this
 reviewer-only task fails safely there.
 
-## Read the Result
+## Read the result
 
 | Artifact | Audience | Purpose |
 | --- | --- | --- |
@@ -272,7 +275,7 @@ test sources, case data, project-local Gradle logic, semantic definition, and
 effective verification policy with the reviewer approval sealed by Hide or
 UpdateEscrow. The final verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Hidden
 retest, mutation, and expected-consumption safeguards are enabled by default;
-if a reviewer deliberately disables one, evidence records `DISABLED` instead of
+if a reviewer chooses to disable one, evidence records `DISABLED` instead of
 pretending it passed. Contract integrity itself cannot be disabled.
 
 If contract integrity is not `PASS`, ToppleCat records the other four gates as
@@ -293,7 +296,7 @@ when it excludes a canonical test, the usable PIT report makes `MUTATION=FAIL`.
 If PIT produces no usable report, the gate is `INCOMPLETE` and cannot be treated
 as evidence of a passing contract.
 
-## Keep Reviewer Data Private
+## Keep reviewer data private
 
 Reviewer custody lives under `~/.topplecat/projects/<sha256-project-key>/escrow/`
 and includes the manifest, hidden source blobs, approval epoch, revisions,
@@ -312,7 +315,7 @@ any Git history that ever contained reviewer material. Home-directory custody
 alone cannot defend against a malicious build script or production code running
 as the same OS user.
 
-## Choose a Sample
+## Choose a sample
 
 | Sample | Start here when... |
 | --- | --- |
@@ -339,7 +342,7 @@ The repository also ships a
 skill for authoring contracts, preserving reviewer custody, and verifying done
 claims.
 
-## Project Status
+## Project status
 
 ToppleCat is pre-1.0 and its API may still change. Development currently
 requires Java 25 and the repository's Gradle 9.1.0 wrapper.

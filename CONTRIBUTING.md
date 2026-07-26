@@ -1,9 +1,9 @@
 # Contributing to ToppleCat
 
-ToppleCat welcomes focused fixes, tests, documentation, and improvements that
-strengthen delegation verification for Java/JUnit work.
+Small, focused changes are easiest to review. Bug fixes, tests, and
+documentation should support ToppleCat's Java/JUnit delegation gate.
 
-## Local Setup
+## Local setup
 
 - JDK 25
 - Gradle 9.1.0 through the repository wrapper
@@ -18,7 +18,7 @@ The published modules are `topplecat-core`, `topplecat-junit`,
 `integration-tests/mutation-gate` is release-gate test infrastructure, not a
 published module or user sample.
 
-## Release Versioning
+## Release versioning
 
 ToppleCat uses three-part `X.Y.Z` release versions. Keep the same value in all
 release surfaces. For example, a 0.0.3 release uses:
@@ -34,7 +34,7 @@ Gradle project version, requires the matching `X.Y.Z` tag on `HEAD`, and
 publishes artifacts with that same value. Keep prior release tags and their
 documentation unchanged.
 
-## Change Rules
+## Change rules
 
 1. Read the public architecture and relevant guide before changing behavior.
 2. Add or update Java/JUnit tests and typed JSON/YAML case rows for behavior.
@@ -43,7 +43,7 @@ documentation unchanged.
 4. Update public documentation when commands, artifact coordinates, reports, or
    authoring behavior changes.
 
-## Positioning Red Lines
+## Project boundaries
 
 - Do not replace Java/JUnit with another test framework or authoring syntax.
 - Do not add a natural-language scenario runtime or a second executable
@@ -53,7 +53,7 @@ documentation unchanged.
 - Keep mutation attribution automatic from PIT coverage data; users must not
   hand-maintain a second AC-to-mutation map.
 
-## Before a Pull Request
+## Before a pull request
 
 ```bash
 GRADLE_CMD=./gradlew scripts/verify-release.sh

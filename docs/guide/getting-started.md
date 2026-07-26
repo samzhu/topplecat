@@ -1,4 +1,4 @@
-# Getting Started
+# Getting started
 
 ToppleCat `0.0.4` is the release described by this guide. A consumer project needs
 Java 25 and a Gradle version that supports it. The current consumer example uses
@@ -6,7 +6,7 @@ JUnit Jupiter 6.1.1 and the `io.github.samzhu.topplecat` Gradle plugin.
 ToppleCat brings its Jackson dependencies transitively and adds no
 natural-language scenario runtime.
 
-## Add the Released Distribution
+## Add the released distribution
 
 Use Maven Central for both plugin and library resolution. Do not add
 `mavenLocal()` to a release consumer: it can silently select an unrelated stale
@@ -32,7 +32,7 @@ as a normal Gradle project does. See the
 mutation-verification changes in this
 version.
 
-## Configure the Consumer
+## Configure the consumer
 
 From the consumer project root, author the contract and inspect it:
 
@@ -41,9 +41,8 @@ From the consumer project root, author the contract and inspect it:
 ./gradlew toppleCatReview
 ```
 
-`toppleCatInit` is an optional bootstrap for an otherwise empty consumer project,
-not a core workflow task. It does not overwrite existing files or edit
-`.gitignore`:
+`toppleCatInit` can bootstrap an empty consumer project. It does not overwrite
+files or edit `.gitignore`:
 
 ```bash
 ./gradlew toppleCatInit
@@ -53,16 +52,15 @@ It creates public examples and a reviewer-only example. Replace them with your
 domain DTOs, production call, and independent reviewer boundary before using the
 workflow for a real handoff.
 
-`publishToMavenLocal` remains useful when developing ToppleCat from a source
-checkout or running this repository's checked-out demos. It is not part of
-installing the released distribution.
+Use `publishToMavenLocal` only while developing ToppleCat from source or running
+the checked-out demos. Released consumers install from Maven Central.
 
 Author each canonical `@ToppleTest` as direct calls on `@ToppleStageField`
 fields. Put production calls and assertions in the Stage methods, where
 `recorded(...)` is first and `return self();` is last; use `@ToppleAc` for any
 extra ordinary JUnit test.
 
-## First Verification Cycle
+## First verification cycle
 
 Once public and reviewer contracts exist, run:
 
@@ -93,7 +91,7 @@ When an authorized reviewer needs to inspect or change reviewer-only source,
 run `./gradlew toppleCatRestore`. It restores only an existing hidden source set
 and does not hide anything first.
 
-## Delivery Hygiene
+## Delivery hygiene
 
 Reviewer-local storage is plaintext mechanical state, not encryption or a
 sandbox. It contains the manifest, hidden blobs, approval epoch, revisions,

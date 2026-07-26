@@ -1,4 +1,4 @@
-# Verification and Evidence
+# Verification and evidence
 
 ## Workflow
 
@@ -19,7 +19,7 @@
 ./gradlew toppleCatVerify
 ```
 
-## Task Reference
+## Task reference
 
 | Task | When to run it | Effect |
 | --- | --- | --- |
@@ -31,10 +31,10 @@
 | `test` | During implementation. | Runs public tests and public case rows only. |
 | `toppleCatVerify` | Reviewer or CI final gate. | Freshly checks approval integrity, runs enabled safeguards only after a pass, writes evidence, and re-hides source. |
 
-`toppleCatInit` is an optional, non-destructive bootstrap for an otherwise empty
-consumer project. `toppleCatRestore` is deliberately outside the normal
-sequence: it is a reviewer recovery/editing operation, not part of the
-implementation loop. Internal orchestration tasks are not consumer commands.
+`toppleCatInit` bootstraps an empty consumer project without overwriting files.
+`toppleCatRestore` sits outside the normal sequence because it is a reviewer
+recovery and editing command. Internal orchestration tasks are not consumer
+commands.
 
 To evolve an escrowed reviewer suite, an authorized reviewer follows this
 explicit custody workflow:
@@ -92,12 +92,11 @@ independent requirement when present; their failure cannot be masked by passing
 rows. With hidden retest enabled but no hidden rows and no hidden Java tests, the
 reviewer gate remains `INCOMPLETE`.
 
-No individual gate is a general proof that an agent did not hard-code a visible
-answer. Reviewer retests exercise independently designed business cases; a
-shortcut can still happen to satisfy them. Mutation answers whether the public
-contract notices production behavior changing. Read the current-run gate states
-to see what rejected a claim, and accept it only when the aggregate verdict is
-`PASS`.
+No individual gate proves that an agent avoided every hard-coded shortcut.
+Reviewer retests cover independently chosen business cases, but a shortcut may
+still satisfy them. Mutation checks whether the public contract notices changed
+production behavior. Accept a claim only when the current aggregate verdict is
+`PASS`; the gate states show what failed.
 
 The [0.0.4 release notes](../releases/0.0.4.md) describe the compiler-backed
 canonical PIT target and the mutation verification outcomes. The [0.0.3 release
@@ -180,11 +179,11 @@ The public `reports/spec/index.html` is therefore a post-verify artifact, not a
 pre-handoff review. `reports/review/index.html` is the only pre-handoff HTML and
 is reviewer-only.
 
-## Reports and Evidence Boundary
+## Reports and evidence boundary
 
 All report pages are static, self-contained offline bundles.
 
-### Reviewer Contract Review
+### Reviewer contract review
 
 After static validation, `toppleCatReview` writes
 `build/topplecat/reports/review/index.html`. It contains public and reviewer
@@ -193,7 +192,7 @@ sentences, and collapsed canonical source. It identifies itself as
 reviewer-only and contains no invented PASS/FAIL status. A later failed check
 removes a previous review rather than leaving stale authoring output.
 
-### Public Spec Report
+### Public Spec report
 
 After verification, `build/topplecat/reports/spec/index.html` and `data.json`
 show public ACs, public rows, public Stage sentences, and any configured
@@ -204,7 +203,7 @@ ToppleCat does not publish this public bundle when contract integrity is not
 `PASS`; any previous stable Spec bundle is removed rather than presented as
 current evidence.
 
-### Reviewer Verification Report
+### Reviewer verification report
 
 `build/topplecat/reports/verification/index.html` and `data.json` include public
 and reviewer executions, expected-consumption state, narrative steps, gate
@@ -213,7 +212,7 @@ bundle reviewer-only. It supports status filters and search by AC, title, or
 case ID. A disabled safeguard is visibly `DISABLED` with its reason, never
 rendered as a passing gate.
 
-### Machine Evidence and Safe Feedback
+### Machine evidence and safe feedback
 
 `build/topplecat/evidence.json` is the machine verdict and digests for the
 current run. `build/topplecat/agent-feedback.json` is the only generated
@@ -230,7 +229,7 @@ not reveal paths, digests, policy values, AC IDs, case data, assertions, or raw
 failures. The detailed run-scoped `contract-integrity.json` remains
 reviewer-only.
 
-## Delivery Hygiene
+## Delivery hygiene
 
 `toppleCatHide` moves reviewer source into plaintext reviewer-local custody at
 `~/.topplecat/projects/<sha256-project-key>/escrow/`. The state contains the

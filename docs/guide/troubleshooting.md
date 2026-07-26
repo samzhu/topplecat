@@ -3,7 +3,7 @@
 `toppleCatCheck` is the early, static diagnostic. It does not execute tests or
 write HTML. Fix its named source data or Java binding, then rerun the same check.
 
-## A Canonical Test Breaks the Stage DSL
+## A canonical test breaks the Stage DSL
 
 ```text
 AC <ac-id> at <file>:<line>:<column> violates the @ToppleTest Stage DSL:
@@ -17,7 +17,7 @@ must call `recorded(...)` first and end with `return self();`; put `c.verify(...
 in a Then step. The diagnostic names the AC and source line and tells you which
 move to make. `@ToppleAc` is not subject to this canonical-method rule.
 
-## A Case References an Unknown Acceptance Condition
+## A case references an unknown acceptance condition
 
 ```text
 Case <case-id> in <source> references AC <ac-id>, but javac emitted no canonical @ToppleTest descriptor. Add a compilable @ToppleTest("<ac-id>") method or correct the case acId.
@@ -27,7 +27,7 @@ Add one public literal `@ToppleTest("AC-...")` method, or correct the row's
 `acId`. A reviewer row may target an existing public AC but may not create a new
 one.
 
-## There Is No Public Case Data
+## There is no public case data
 
 ```text
 No public ToppleCat JSON/YAML cases found under <public-case-root>
@@ -37,7 +37,7 @@ Add a `.json`, `.yaml`, or `.yml` row under
 `src/test/resources/topplecat/cases/`. Public case data is required for a
 canonical parameterized acceptance condition.
 
-## A Case File or Row Is Invalid
+## A case file or row is invalid
 
 An unsupported file is rejected with this exact diagnostic:
 
@@ -48,7 +48,7 @@ Topple case source must be JSON or YAML: <path>
 Each row must contain exactly `caseId`, `acId`, `inputs`, and `expected`; move
 notes and unrelated files outside the configured case roots.
 
-## An Expected Key Was Never Verified
+## An expected key was never verified
 
 A test can return successfully and still fail with this message:
 
@@ -59,7 +59,7 @@ Topple case <case-id> expected.<key> was declared by <ac-id> but never verified.
 Use `c.verify("<key>", actual)` for every top-level expected key. Reading with
 `c.expected(...)` does not fulfil the obligation.
 
-## An External Spec Is Not Aligned With Its Tests
+## An external spec is not aligned with its tests
 
 External Markdown is optional reading context, not another contract. There is no
 implicit scan: configure `toppleCat.specDocs` explicitly. A missing entry or a
@@ -82,12 +82,12 @@ canonical `@ToppleTest`, or remove the stale side. Leaving `specDocs` unset emit
 neither warning. Supplementary `@ToppleAc` methods and reviewer source do not
 participate in this alignment check.
 
-## A Safeguard Is Disabled or Incomplete
+## A safeguard is disabled or incomplete
 
 Each evidence run records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
-`EXPECTED_CONSUMPTION`, and `MUTATION`. `DISABLED` means the reviewer deliberately selected not to run one
-safeguard; it does not block aggregate `PASS`. These are the exact configuration
-reasons for disabled adversarial safeguards:
+`EXPECTED_CONSUMPTION`, and `MUTATION`. `DISABLED` means the reviewer chose not
+to run one safeguard; it does not block aggregate `PASS`. These are the exact
+configuration reasons for disabled adversarial safeguards:
 
 ```text
 disabled by toppleCat.adversarial.enabled=false
@@ -107,28 +107,28 @@ Rerun the complete `toppleCatVerify` task; do not use an older stable report to
 fill a missing current-run gate. A `FAIL` or `INCOMPLETE` aggregate verdict
 makes `toppleCatVerify` and `toppleCatReport` fail after evidence, reports, safe
 feedback, and the run archive are complete. Read `evidence.json` for the named
-gate and safe reason. When expected consumption is deliberately disabled, the
+gate and safe reason. When expected consumption is disabled, the
 Verification report still records consumption and displays:
 
 ```text
 Expected consumption enforcement disabled
 ```
 
-## Contract Integrity Is FAIL or INCOMPLETE
+## Contract integrity is FAIL or INCOMPLETE
 
 `CONTRACT_INTEGRITY` is a mandatory precondition. `FAIL` means ToppleCat
 successfully found that the public executable contract or resolved verification
 policy no longer matches the reviewer-approved epoch. `INCOMPLETE` normally
 means the escrow predates approval sealing or its approval cannot be read.
 
-Do not rerun Hide to accept the change: ordinary Hide deliberately preserves the
+Do not rerun Hide to accept the change: ordinary Hide does not replace the
 existing approval. An authorized reviewer must run Restore, inspect the intended
 change, run Check and Review, then run `toppleCatUpdateEscrow`. For a legacy v1
-escrow this explicit sequence performs the migration to v2. Until then, JUnit,
-reviewer JUnit, expected consumption, and mutation are deliberately recorded as
-`INCOMPLETE`; no stale public Spec bundle is retained.
+escrow this sequence performs the migration to v2. Until then, JUnit, reviewer
+JUnit, expected consumption, and mutation are recorded as `INCOMPLETE`; no stale
+public Spec bundle is retained.
 
-## Reviewer State Is Missing After a Move or Clone
+## Reviewer state is missing after a move or clone
 
 The project key is the SHA-256 of the canonical project root. A moved or cloned
 checkout therefore does not match the original reviewer-local state and must
@@ -139,7 +139,7 @@ legacy `.topplecat/escrow/`, run `./gradlew toppleCatMigrateEscrow` explicitly;
 the task preserves v1/v2 manifest data and removes the project-local escrow only
 after migration succeeds.
 
-## PIT Is Not Producing Mutation Results
+## PIT is not producing mutation results
 
 With the default `pitest` producer, ToppleCat configures PIT automatically and
 derives `targetTests` from compiler descriptors for approved public canonical
@@ -158,7 +158,7 @@ For a custom PIT output path, use the reported producer task and configure
 `toppleCat.adversarial.mutation.reportFile`. The producer must write a full
 mutation matrix whose `coveringTests` retain PIT's JUnit Unique IDs. ToppleCat
 matches each compiled canonical method signature to those IDs; class names
-alone are intentionally insufficient when one class contains several ACs. A
+alone do not identify the right method when one class contains several ACs. A
 surviving or unattributed mutant fails its acceptance condition while evidence
 and safe feedback are still produced.
 
@@ -169,11 +169,11 @@ feedback may say:
 Mutation verification did not exercise the required public acceptance contract. Check PIT test targeting and public acceptance coverage.
 ```
 
-This message deliberately omits reviewer test names, source paths, and raw PIT
-details. A missing, malformed, or interrupted report is `INCOMPLETE`, and an
-older report never fills that current-run gap.
+The message omits reviewer test names, source paths, and raw PIT details. A
+missing, malformed, or interrupted report is `INCOMPLETE`; an older report
+cannot fill the gap.
 
-## Reviewer Rows Without Hidden Java
+## Reviewer rows without hidden Java
 
 Hidden JSON/YAML rows do not require a placeholder Java test. `toppleCatVerificationTest`
 runs those rows through the public canonical `@ToppleTest`, and the report aggregates
@@ -185,7 +185,7 @@ must pass independently. If neither
 hidden rows nor hidden Java tests exist while retest is enabled, the gate stays
 `INCOMPLETE` rather than becoming an unconditional pass.
 
-## Delivery Hygiene
+## Delivery hygiene
 
 Reviewer state is plaintext mechanical custody at
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, not encryption, sandboxing,
@@ -197,7 +197,7 @@ source, build output, and any history that contained them. ToppleCat does not
 control OS access or CI identity and cannot defend against same-user malicious
 build scripts or production code.
 
-## The Public Report Lacks Reviewer Detail
+## The public report lacks reviewer detail
 
 This is expected for the Spec bundle and `agent-feedback.json`. Use
 `reports/verification/index.html` only in a reviewer-controlled environment when

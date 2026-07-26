@@ -1,9 +1,17 @@
-# Verification Evidence
+# Verification evidence
 
 Read this reference before verifying a done claim or interpreting ToppleCat
 outputs.
 
-## Verification Command
+## Contents
+
+- Verification command
+- Safeguard roles
+- Verdicts
+- Artifact boundary
+- Failure loop
+
+## Verification command
 
 Run:
 
@@ -38,6 +46,22 @@ When reviewer custody contains only hidden rows, the public canonical
 set can therefore make `REVIEWER_JUNIT` pass without a placeholder hidden Java
 class; any hidden Java tests still require their own passing `hiddenTest` result.
 
+## Safeguard roles
+
+- `CONTRACT_INTEGRITY` rejects public contract or verification-policy changes
+  made after reviewer approval.
+- Hidden retests exercise independently chosen business cases. They improve
+  functional coverage but cannot expose every hard-coded shortcut.
+- Expected consumption proves that each declared top-level expected value was
+  asserted, not merely read.
+- Mutation asks whether the public executable contract detects changed
+  production behavior. It does not use reviewer rows to improve the public
+  mutation score.
+
+Report the gate that rejected the claim. Do not describe a mutation failure as
+a hidden-retest failure, or a passing hidden retest as proof that no hard-coding
+exists.
+
 ## Verdicts
 
 - `PASS`: every enabled required gate completed and passed.
@@ -56,7 +80,7 @@ The gate order is `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
 If it is not `PASS`, the four downstream gates must be current-run
 `INCOMPLETE`; their old results and a stale public Spec bundle are never proof.
 
-## Artifact Boundary
+## Artifact boundary
 
 Public or safe-to-share artifacts:
 
@@ -77,8 +101,8 @@ mutation results and raw test failures
 ```
 
 The Spec bundle contains only public ACs, public rows, and public narrative
-sentences. The Verification bundle contains reviewer cases, expected values, private
-outcomes, and failure details.
+sentences. The Verification bundle contains reviewer cases, expected values,
+private outcomes, and failure details.
 
 `agent-feedback.json` contains gate-level safe summaries. It must not contain
 hidden case IDs or values, reviewer test names, source paths, internal task
@@ -89,7 +113,7 @@ verification policy changed after reviewer approval. For missing approval it may
 say only that an authorized reviewer must review and reseal. Detailed digests,
 changed paths, and policy fields stay in reviewer-only run artifacts.
 
-## Failure Loop
+## Failure loop
 
 1. Diagnose the failed AC or gate with reviewer-only artifacts.
 2. Decide whether the public contract is incomplete or production behavior is

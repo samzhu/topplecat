@@ -1,8 +1,8 @@
-# Spring Boot Cart Orders
+# Spring Boot cart orders
 
 This consumer shows ToppleCat running in a Spring Boot test project.
 `SpringCouponAcceptanceTest` loads the application context with
-`@SpringBootTest`; the reviewer-only boundary test demonstrates an injected
+`@SpringBootTest`; the reviewer-only boundary test uses an injected
 `OrderService`.
 
 Both canonical acceptance conditions use the required `ToppleStage` DSL, so the
@@ -10,11 +10,11 @@ reports tell the reviewer how the cart was prepared, when the order was created,
 and where the contract was checked. Production calls and assertions stay in the
 Stage methods; the canonical methods only arrange business-readable steps.
 
-The checked-in service has a deliberate public-case coincidence. A reviewer
-retest exposes it during `toppleCatVerify`.
+The checked-in service has a bug that happens to satisfy the public case. A
+reviewer retest exposes it during `toppleCatVerify`.
 
 Hidden retest and expected consumption stay enabled. Mutation is explicitly
-disabled to keep the demonstration fast, so evidence honestly records
+disabled to keep the demonstration fast, so evidence records
 `MUTATION: DISABLED`.
 
 ```bash
