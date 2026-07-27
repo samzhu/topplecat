@@ -34,6 +34,24 @@ ToppleCat 不會只採信代理回報的一個綠燈。完成與否，要看這�
 > 用隱藏案例重測、突變測試與可執行的 Java 驗收合約，檢查 AI 程式代理的
 > 「已完成」宣稱。空洞的完成，站不住腳。
 
+Robert C. Martin（Uncle Bob）最近也談到類似的工作方式：
+
+> I’m significantly older than you. I started coding in the late 60s. My
+> current strategy is to not read any of the code written by my agents. That’s
+> the only way I can take advantage of their productivity. What I do instead is
+> to surround the agents with extreme constraints. Unit tests, gherkin tests,
+> QA procedures, quality metrics, mutation testing, test coverage, and a
+> plethora of others. In the end, I have very high confidence in the code they
+> produce because they’ve had to run the gauntlet of all of my constraints and
+> tests.
+>
+> — [Robert C. Martin，2026 年 7 月 23 日](https://x.com/unclebobmartin/status/2080257779395154409)
+
+他的做法是先讓代理寫出的程式通過層層限制與測試，再決定能不能相信。
+ToppleCat 處理的是其中 Java/JUnit 委派驗證這一段：可執行的驗收合約、
+審閱者專用案例、預期結果檢查與突變測試。它不能取代程式碼審查、QA、
+CI 隔離或沙箱。
+
 ToppleCat 是 Java/JUnit 委派工作的驗證關卡。一般 Java 驗收測試與有型別的
 JSON/YAML 案例資料列才是可執行合約；產生的 JSON 與 HTML 是證據，不是
 另一份事實來源。
@@ -311,6 +329,7 @@ ToppleCat 不控制 OS 權限、沙箱、CI 身分，也不限制同一個 Gradl
 ## 文件
 
 - [開始使用](docs/guide/getting-started.md)
+- [常見問題：為什麼不用 Cucumber 或 `.feature`？](docs/faq.zh-TW.md)
 - [0.0.4 發佈說明](docs/releases/0.0.4.zh-TW.md)
 - [撰寫合約](docs/guide/authoring.md)
 - [驗證與證據](docs/guide/verification-and-evidence.md)

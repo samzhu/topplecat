@@ -35,6 +35,25 @@ current run's gates together and turns the done claim into evidence.
 > Hidden retests, mutation gates, and executable acceptance contracts for Java.
 > If it's hollow, it falls.
 
+Robert C. Martin recently described a similar way of working with coding
+agents:
+
+> I’m significantly older than you. I started coding in the late 60s. My
+> current strategy is to not read any of the code written by my agents. That’s
+> the only way I can take advantage of their productivity. What I do instead is
+> to surround the agents with extreme constraints. Unit tests, gherkin tests,
+> QA procedures, quality metrics, mutation testing, test coverage, and a
+> plethora of others. In the end, I have very high confidence in the code they
+> produce because they’ve had to run the gauntlet of all of my constraints and
+> tests.
+>
+> — [Robert C. Martin (Uncle Bob), July 23, 2026](https://x.com/unclebobmartin/status/2080257779395154409)
+
+His point is to make agent-written code run a gauntlet before trusting it.
+ToppleCat handles one Java/JUnit part of that approach: executable acceptance
+contracts, reviewer-only cases, expected-value checks, and mutation testing.
+It does not replace code review, QA, CI isolation, or a sandbox.
+
 ToppleCat is a delegation verification gate for Java and JUnit. Ordinary Java
 acceptance tests plus typed JSON or YAML case rows are the executable contract.
 Generated JSON and HTML are evidence, never a second source of truth.
@@ -328,6 +347,7 @@ commands.
 ## Documentation
 
 - [Getting started](docs/guide/getting-started.md)
+- [FAQ: why no Cucumber or `.feature` files?](docs/faq.md)
 - [0.0.4 release notes](docs/releases/0.0.4.md)
 - [Authoring contracts](docs/guide/authoring.md)
 - [Verification and evidence](docs/guide/verification-and-evidence.md)
