@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 86">
+  <defs>
+    <radialGradient id="coasterFill" cx="48%" cy="38%" r="72%">
+      <stop offset="0" stop-color="#f1bc73"/>
+      <stop offset="0.62" stop-color="#dfa45a"/>
+      <stop offset="1" stop-color="#bd6d2a"/>
+    </radialGradient>
+    <linearGradient id="coasterRim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7c986"/>
+      <stop offset="0.5" stop-color="#a65420"/>
+      <stop offset="1" stop-color="#653013"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="120" cy="45" rx="116" ry="38" fill="#6d3314" opacity="0.42"/>
+  <ellipse cx="120" cy="42" rx="115" ry="37" fill="url(#coasterRim)"/>
+  <ellipse cx="120" cy="39" rx="108" ry="31" fill="url(#coasterFill)"/>
+  <ellipse cx="120" cy="36" rx="94" ry="23" fill="#efb66a" opacity="0.6"/>
+  <path d="M30 29c27-18 153-22 181-1" fill="none" stroke="#ffe0aa" stroke-linecap="round" stroke-width="2" opacity="0.58"/>
+  <path d="M34 54c44 18 132 21 174 0" fill="none" stroke="#874219" stroke-linecap="round" stroke-width="2" opacity="0.5"/>
+</svg>
