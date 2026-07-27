@@ -1718,6 +1718,9 @@ class ToppleCatPluginFunctionalTest {
         assertTrue(html.contains("\\u003ctotal\\u003e"), html);
         assertTrue(html.contains("建立訂單"));
         assertTrue(html.contains("\"sourceCode\""));
+        assertTrue(html.contains("@ToppleTest(\\\"AC-CART-ORDER\\\")"), html);
+        assertTrue(html.contains("void createsOrder(ToppleCase c)"), html);
+        assertFalse(html.contains("static final class CartGiven"), html);
         assertFalse(html.contains(">PASS<"));
         assertFalse(html.contains(">FAIL<"));
 

@@ -145,7 +145,8 @@ class ReportViewsTest {
         String data = Files.readString(bundle.resolve("data.json"));
         String script = Files.readString(bundle.resolve("assets/report.js"));
         assertTrue(data.contains("CouponAcceptanceTest.java"), data);
-        assertTrue(script.contains("Source: ${e(ref.file)}:${e(ref.line)}:${e(ref.column)}"), script);
+        assertTrue(script.contains(
+                "Source: ${e(reference.file)}:${e(reference.line)}:${e(reference.column)}"), script);
     }
 
     @Test
@@ -182,12 +183,17 @@ class ReportViewsTest {
         String html = Files.readString(bundle.resolve("index.html"));
 
         String data = Files.readString(bundle.resolve("data.json"));
+        String script = Files.readString(bundle.resolve("assets/report.js"));
         assertTrue(html.contains("topplecat-report-data"));
         assertTrue(data.contains("window.injected = true"));
         assertFalse(html.contains("<script>window.injected = true</script>"));
         assertTrue(data.contains("coupon-hidden-800"));
         assertTrue(data.contains("700-secret-value"));
+        assertTrue(data.indexOf("coupon-public") < data.indexOf("coupon-hidden-800"), data);
         assertTrue(html.contains("assets/report.css"));
+        assertTrue(script.contains("Reviewer-only check"));
+        assertTrue(script.contains("highlightJava"));
+        assertTrue(script.contains("Canonical acceptance method"));
         assertFalse(html.contains(">PASS<"));
         assertFalse(html.contains(">FAIL<"));
         assertEquals(review, ReportJson.readReview(Files.readString(bundle.resolve("data.json"))));

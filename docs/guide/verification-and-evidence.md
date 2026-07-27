@@ -181,18 +181,29 @@ is reviewer-only.
 
 ## Reports and evidence boundary
 
-All report pages are static, self-contained offline bundles.
+All report pages are static, self-contained offline bundles. Their names state
+their purpose: **Contract review** checks the contract before handoff;
+**Verification evidence** records what happened when a completion claim was
+actually verified.
 
-### Reviewer contract review
+### Contract review (before handoff)
 
 After static validation, `toppleCatReview` writes
 `build/topplecat/reports/review/index.html`. It contains public and reviewer
 case rows, configured external Markdown context, compiler-defined Stage
-sentences, and collapsed canonical source. It identifies itself as
-reviewer-only and contains no invented PASS/FAIL status. A later failed check
-removes a previous review rather than leaving stale authoring output.
+sentences, and the canonical `@ToppleTest` method bound to each AC. The page
+shows public examples first and labels hidden rows as **Reviewer-only checks**:
+independently derived examples that retest the same AC without adding a new
+requirement. The corresponding Java method is shown beside the executable
+scenario with local syntax highlighting; unrelated methods and the rest of the
+test class are omitted.
 
-### Public Spec report
+The review identifies itself as reviewer-only and contains no invented
+PASS/FAIL status. It does not expose `src/hiddenTest` paths as part of the
+contract presentation. A later failed check removes a previous review rather
+than leaving stale authoring output.
+
+### Public contract report
 
 After verification, `build/topplecat/reports/spec/index.html` and `data.json`
 show public ACs, public rows, public Stage sentences, and any configured
@@ -203,7 +214,7 @@ ToppleCat does not publish this public bundle when contract integrity is not
 `PASS`; any previous stable Spec bundle is removed rather than presented as
 current evidence.
 
-### Reviewer verification report
+### Verification evidence (after execution)
 
 `build/topplecat/reports/verification/index.html` and `data.json` include public
 and reviewer executions, expected-consumption state, narrative steps, gate

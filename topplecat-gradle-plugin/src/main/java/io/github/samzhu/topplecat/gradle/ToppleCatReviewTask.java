@@ -59,7 +59,8 @@ public abstract class ToppleCatReviewTask extends DefaultTask {
         for (AcceptanceContract contract : definition.acceptanceConditions()) {
             titles.put(contract.acId(), contract.title());
             methods.put(contract.acId(), new ReviewMethod(ScenarioText.render(contract.scenario().steps()),
-                    sourceCode(getPublicTestSourceRoot().get().getAsFile().toPath(), contract.scenario().sourceRef().file())));
+                    sourceCode(getPublicTestSourceRoot().get().getAsFile().toPath(),
+                            contract.scenario().sourceRef().file(), contract.scenario().sourceRef().line())));
         }
         List<ToppleCaseData> cases = definition.acceptanceConditions().stream().flatMap(contract -> contract.cases().stream())
                 .map(ToppleCatReviewTask::caseData).toList();
@@ -84,12 +85,123 @@ public abstract class ToppleCatReviewTask extends DefaultTask {
                 testCase.expected(), Path.of("contract-definition.json"));
     }
 
-    private static String sourceCode(Path root, String fileName) {
+    private static String sourceCode(Path root, String fileName, long methodLine) {
         try (var sources = Files.walk(root)) {
             Path source = sources.filter(path -> path.getFileName().toString().equals(fileName)).findFirst().orElse(null);
-            return source == null ? "" : Files.readString(source);
+            if (source == null) {
+                return "";
+            }
+            return canonicalMethod(Files.readAllLines(source), methodLine);
         } catch (IOException exception) {
             throw new GradleException("Cannot read canonical source for reviewer review: " + exception.getMessage(), exception);
+        }
+    }
+
+    private static String canonicalMethod(List<String> lines, long oneBasedMethodLine) {
+        if (lines.isEmpty()) {
+            return "";
+        }
+        int declaration = (int) Math.max(0L, Math.min(lines.size() - 1L, oneBasedMethodLine - 1L));
+        int start = declaration;
+        while (start > 0 && lines.get(start - 1).stripLeading().startsWith("@")) {
+            start--;
+        }
+
+        int end = declaration;
+        int braces = 0;
+        boolean bodyStarted = false;
+        JavaLexicalState state = new JavaLexicalState();
+        for (int lineIndex = declaration; lineIndex < lines.size(); lineIndex++) {
+            String line = lines.get(lineIndex);
+            for (int index = 0; index < line.length(); index++) {
+                char current = line.charAt(index);
+                char next = index + 1 < line.length() ? line.charAt(index + 1) : '\0';
+                if (state.consume(current, next)) {
+                    continue;
+                }
+                if (current == '{') {
+                    braces++;
+                    bodyStarted = true;
+                } else if (current == '}') {
+                    braces--;
+                }
+            }
+            state.endLine();
+            end = lineIndex;
+            if (bodyStarted && braces == 0) {
+                break;
+            }
+        }
+
+        List<String> snippet = lines.subList(start, end + 1);
+        int indentation = snippet.stream()
+                .filter(line -> !line.isBlank())
+                .mapToInt(ToppleCatReviewTask::leadingWhitespace)
+                .min()
+                .orElse(0);
+        return snippet.stream()
+                .map(line -> line.length() >= indentation ? line.substring(indentation) : line)
+                .reduce((left, right) -> left + System.lineSeparator() + right)
+                .orElse("");
+    }
+
+    private static int leadingWhitespace(String line) {
+        int index = 0;
+        while (index < line.length() && Character.isWhitespace(line.charAt(index))) {
+            index++;
+        }
+        return index;
+    }
+
+    private static final class JavaLexicalState {
+        private boolean lineComment;
+        private boolean blockComment;
+        private boolean string;
+        private boolean character;
+        private boolean escaped;
+
+        private boolean consume(char current, char next) {
+            if (lineComment) {
+                return true;
+            }
+            if (blockComment) {
+                if (current == '*' && next == '/') {
+                    blockComment = false;
+                }
+                return true;
+            }
+            if (string || character) {
+                if (escaped) {
+                    escaped = false;
+                } else if (current == '\\') {
+                    escaped = true;
+                } else if ((string && current == '"') || (character && current == '\'')) {
+                    string = false;
+                    character = false;
+                }
+                return true;
+            }
+            if (current == '/' && next == '/') {
+                lineComment = true;
+                return true;
+            }
+            if (current == '/' && next == '*') {
+                blockComment = true;
+                return true;
+            }
+            if (current == '"') {
+                string = true;
+                return true;
+            }
+            if (current == '\'') {
+                character = true;
+                return true;
+            }
+            return false;
+        }
+
+        private void endLine() {
+            lineComment = false;
         }
     }
 }

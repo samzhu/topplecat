@@ -152,7 +152,11 @@ public final class ReportViews {
         List<ReviewAcceptanceCondition> acceptanceConditions = new ArrayList<>();
         for (String acId : acIds) {
             List<ReviewCase> rows = byAc.getOrDefault(acId, List.of()).stream()
-                    .map(row -> new ReviewCase(row.visibility(), row.caseId(), row.inputs(), row.expected())).toList();
+                    .map(row -> new ReviewCase(row.visibility(), row.caseId(), row.inputs(), row.expected()))
+                    .sorted(Comparator
+                            .comparing((ReviewCase row) -> row.visibility() != CaseVisibility.PUBLIC)
+                            .thenComparing(ReviewCase::caseId))
+                    .toList();
             acceptanceConditions.add(new ReviewAcceptanceCondition(acId, title(titles, acId), rows,
                     specNarratives.getOrDefault(acId, List.of()), methods.getOrDefault(acId, new ReviewMethod(List.of(), ""))));
         }
