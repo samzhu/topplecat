@@ -18,7 +18,7 @@ fi
 mkdir -p "$state_root"
 
 run_sample() {
-  "$gradle" -p "$sample" -Dtopplecat.stateRoot="$state_root" "$@"
+  "$gradle" -p "$sample" -Ptopplecat.useMavenLocal=true -Dtopplecat.stateRoot="$state_root" "$@"
 }
 
 cleanup() {

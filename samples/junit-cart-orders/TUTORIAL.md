@@ -6,26 +6,27 @@ you finish, so the next run starts from the same failure.
 
 ## 1. Check and review the contract
 
-From the repository root, publish the local source snapshot and validate the
-sample:
+For a normal trial of the published release, run the sample-local launcher:
 
 ```bash
-./gradlew publishToMavenLocal
-./gradlew -p samples/junit-cart-orders toppleCatCheck
-./gradlew -p samples/junit-cart-orders toppleCatReview
+cd samples/junit-cart-orders
+./gradlew toppleCatCheck
+./gradlew toppleCatReview
 ```
 
-These commands test the current source checkout. Once `0.0.4` is available in
-Maven Central, regular consumers should install the artifact using the root
-[README](../../README.md#install-004).
+The walkthrough demo intentionally tests the current checkout instead. It
+publishes to Maven Local and opts in with
+`-Ptopplecat.useMavenLocal=true`; that opt-in is not needed for normal use of
+the published artifact.
 
 After a successful check, `toppleCatReview` writes
 `samples/junit-cart-orders/build/topplecat/reports/review/index.html`. Open it through
 its `file://` path as the authorized reviewer. It shows the Stage sentences,
-case rows, and collapsed canonical source. It has no execution status because
-the tests have not run. The page contains reviewer data, so do not share it with
-an implementation agent. The Java test and typed case rows remain the
-executable contract.
+the exact canonical `@ToppleTest` method for each AC, then public examples
+followed by reviewer-only checks. It has no execution status because the tests
+have not run. The page contains reviewer data, so do not share it with an
+implementation agent. The Java test and typed case rows remain the executable
+contract.
 
 ## 2. Hide reviewer source and use the public loop
 

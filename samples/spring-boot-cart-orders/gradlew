@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Runs this sample with the Gradle Wrapper from the surrounding ToppleCat checkout.
+set -euo pipefail
+
+sample_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repository_root="$(cd "$sample_dir/../.." && pwd)"
+root_gradle="$repository_root/gradlew"
+
+if [[ ! -x "$root_gradle" ]]; then
+  echo "This sample launcher requires the ToppleCat repository Gradle Wrapper at $root_gradle." >&2
+  exit 1
+fi
+
+exec "$root_gradle" -p "$sample_dir" "$@"

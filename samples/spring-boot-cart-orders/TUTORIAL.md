@@ -14,7 +14,7 @@ From the repository root, run:
 bash samples/spring-boot-cart-orders/demo.sh
 ```
 
-The script publishes the local snapshot, hides the reviewer source, and shows
+The script publishes the local source snapshot, hides the reviewer source, and shows
 the expected verification failure. It then applies the demonstration fix,
 verifies the passing result, and restores the original source. Mutation is
 disabled to keep the walkthrough fast, so the evidence records
@@ -28,22 +28,21 @@ agent feedback: .../build/topplecat/agent-feedback.json
 ## Review before hiding reviewer source
 
 Before using the demo's hide step, an authorized reviewer can inspect the
-complete static contract without executing the Spring tests:
+complete static contract without executing the Spring tests. These commands use
+the published release:
 
 ```bash
-./gradlew publishToMavenLocal
 ./gradlew -p samples/spring-boot-cart-orders toppleCatCheck
 ./gradlew -p samples/spring-boot-cart-orders toppleCatReview
 ```
 
-These commands publish the source checkout so the sample tests the code in this
-repository. Once `0.0.4` is available in Maven Central, regular consumers should
-install it using the root [README](../../README.md#install-004).
+The demo uses Maven Local deliberately, with
+`-Ptopplecat.useMavenLocal=true`, so it can test the source checkout instead.
 
 Open `samples/spring-boot-cart-orders/build/topplecat/reports/review/index.html` through
 its `file://` path. It shows direct Given/When/Then Stage sentences, public plus
-reviewer rows, then collapsed canonical source. It contains hidden data and must
-never be given to an implementation agent.
+reviewer rows, and the exact canonical `@ToppleTest` method for each AC. It
+contains hidden data and must never be given to an implementation agent.
 
 Then move the reviewer source into local hidden storage before implementation
 work:

@@ -29,7 +29,7 @@ run_sample() {
   local sample="$1"
   local state_root="$2"
   shift 2
-  "$gradle" -p "$sample" -Dtopplecat.stateRoot="$state_root" "$@"
+  "$gradle" -p "$sample" -Ptopplecat.useMavenLocal=true -Dtopplecat.stateRoot="$state_root" "$@"
 }
 
 cleanup() {
@@ -54,6 +54,9 @@ fi
 "$gradle" clean check
 "$gradle" publishToMavenLocal
 bash "$root/scripts/verify-toppletest-stage-dsl.sh"
+# Samples expose the repository wrapper locally for the interactive walkthrough.
+"$junit_sample/gradlew" -Ptopplecat.useMavenLocal=true help --task toppleCatReview
+"$spring_sample/gradlew" -Ptopplecat.useMavenLocal=true help --task toppleCatReview
 run_sample "$junit_sample" "$junit_state_root" help --task toppleCatInit
 
 # Keep sample runs against candidate artifacts.
