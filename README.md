@@ -150,9 +150,9 @@ PASS / FAIL / INCOMPLETE evidence and human reports
    enabled gates only when that approval still matches. It writes evidence and
    hides the source again in every outcome.
 
-## Install 0.0.4
+## Install 0.0.5
 
-ToppleCat `0.0.4` is the release described here. A consumer project needs Java
+ToppleCat `0.0.5` is the release described here. A consumer project needs Java
 25 and a Gradle version that supports it. Once published, add Maven Central for
 both plugin and library resolution; a released consumer does not need
 `mavenLocal()`.
@@ -174,12 +174,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.4"
+    id("io.github.samzhu.topplecat") version "0.0.5"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.4"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.5"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
@@ -348,7 +348,7 @@ commands.
 
 - [Getting started](docs/guide/getting-started.md)
 - [FAQ: why no Cucumber or `.feature` files?](docs/faq.md)
-- [0.0.4 release notes](docs/releases/0.0.4.md)
+- [0.0.5 release notes](docs/releases/0.0.5.md)
 - [Authoring contracts](docs/guide/authoring.md)
 - [Verification and evidence](docs/guide/verification-and-evidence.md)
 - [Troubleshooting](docs/guide/troubleshooting.md)

@@ -71,7 +71,7 @@ JUnit 會執行它，同一組 Stage 呼叫也會轉成讓人閱讀的規格。�
 - ToppleCat 會指定主要的公開 `@ToppleTest`、讀取 PIT 報告、把突變結果
   對應回主要 AC、檢查門檻，並記錄這次驗證的判定。
 
-ToppleCat 0.0.4 使用 PIT Gradle 外掛 1.19.0、PIT 1.25.5，以及 PIT 的
+ToppleCat 0.0.5 使用 PIT Gradle 外掛 1.19.0、PIT 1.25.5，以及 PIT 的
 JUnit 5 外掛 1.2.3。這些只是目前內部使用的版本，不是新的 ToppleCat
 規格寫法。專案也可以改用自訂的突變測試產生器；改用後，就由該產生器負責
 執行突變測試，再把報告交給 ToppleCat 判定。

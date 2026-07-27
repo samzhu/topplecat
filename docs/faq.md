@@ -84,7 +84,7 @@ The responsibilities are separate:
   PIT run, reads that report, attributes mutants to canonical ACs, applies the
   required threshold, and records the current verdict.
 
-ToppleCat 0.0.4 uses the PIT Gradle plugin 1.19.0, PIT 1.25.5, and the PIT
+ToppleCat 0.0.5 uses the PIT Gradle plugin 1.19.0, PIT 1.25.5, and the PIT
 JUnit 5 plugin 1.2.3. These are implementation versions, not new ToppleCat
 authoring APIs. A project can configure a custom mutation producer instead;
 in that case, the custom producer is responsible for running mutation testing

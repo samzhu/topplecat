@@ -144,9 +144,9 @@ PASS / FAIL / INCOMPLETE 證據與人類可讀報告
    完全相符；只有相符時，才暫時還原審閱者原始碼並執行已啟用的關卡。無論
    結果如何，都會寫出證據並重新隱藏原始碼。
 
-## 安裝 0.0.4
+## 安裝 0.0.5
 
-ToppleCat `0.0.4` 是本文件說明的版本。使用端專案需要 Java 25，以及支援它的
+ToppleCat `0.0.5` 是本文件說明的版本。使用端專案需要 Java 25，以及支援它的
 Gradle 版本。正式發佈後，Gradle 外掛與函式庫都能從 Maven Central 取得；
 使用正式版本的專案不需要 `mavenLocal()`。
 
@@ -167,12 +167,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.4"
+    id("io.github.samzhu.topplecat") version "0.0.5"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.4"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.5"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
@@ -330,7 +330,7 @@ ToppleCat 不控制 OS 權限、沙箱、CI 身分，也不限制同一個 Gradl
 
 - [開始使用](docs/guide/getting-started.md)
 - [常見問題：為什麼不用 Cucumber 或 `.feature`？](docs/faq.zh-TW.md)
-- [0.0.4 發佈說明](docs/releases/0.0.4.zh-TW.md)
+- [0.0.5 發佈說明](docs/releases/0.0.5.zh-TW.md)
 - [撰寫合約](docs/guide/authoring.md)
 - [驗證與證據](docs/guide/verification-and-evidence.md)
 - [疑難排解](docs/guide/troubleshooting.md)

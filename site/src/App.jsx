@@ -209,7 +209,7 @@ function App() {
 
   const copyInstall = async () => {
     try {
-      await navigator.clipboard.writeText('id("io.github.samzhu.topplecat") version "0.0.4"');
+      await navigator.clipboard.writeText('id("io.github.samzhu.topplecat") version "0.0.5"');
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -375,14 +375,14 @@ function App() {
         <div className="install-panel">
           <div>
             <p className="install-note">Requires Java 25 and a Gradle version that supports it.</p>
-            <code>id("io.github.samzhu.topplecat") version "0.0.4"</code>
+            <code>id("io.github.samzhu.topplecat") version "0.0.5"</code>
           </div>
           <button className="copy-button" onClick={copyInstall}>
             {copied ? "Copied" : "Copy plugin line"} <Arrow />
           </button>
         </div>
         <div className="install-actions">
-          <a className="button button-amber" href={`${repositoryUrl}#install-004`} target="_blank" rel="noreferrer">Read installation guide <Arrow /></a>
+          <a className="button button-amber" href={`${repositoryUrl}#install-005`} target="_blank" rel="noreferrer">Read installation guide <Arrow /></a>
           <a className="button button-dark" href={`${repositoryUrl}/tree/main/samples/junit-cart-orders`} target="_blank" rel="noreferrer">Run the JUnit sample <Arrow /></a>
         </div>
       </section>
