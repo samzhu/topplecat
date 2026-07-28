@@ -1,7 +1,8 @@
 # ToppleCat 專案頁 PageSpeed 改善工作計劃
 
 狀態：已發布並完成正式 HTTPS 的六次 Lighthouse 冷快取驗收；Google PageSpeed
-Insights API 的匿名日配額為 0，直接 PSI 複測無法執行，詳見發布後結果。
+Insights API 的匿名日配額為 0，直接 PSI 複測無法執行。PSI UI 的後續診斷已定位
+到首屏繪製與初始 JavaScript 關鍵鏈，第二輪修正待部署後正式量測確認。
 日期：2026-07-28
 範圍：`site/` 的 Vite／React 專案頁；不變更 ToppleCat 的 Java 模組、GitHub Pages 網域或部署方式。
 
@@ -47,8 +48,9 @@ Mobile 測量的中位數驗證 LCP 朝 2.5 秒目標改善。若網路條件或
   `fetchpriority="high"` 優先發現。
 - Satoshi 改為 `preconnect` 加上非阻塞 stylesheet 與 `display=swap`，不再出現在
   Lighthouse 的 render-blocking 項目。
-- GSAP、Flip、ScrollTrigger 改成首屏初始繪製後才動態載入；首個 JavaScript
-  chunk 由約 121 KB gzip 降為約 28 KB gzip。CSS 保留三個原子動畫狀態和
+- GSAP 與 ScrollTrigger 改成首屏初始繪製後才動態載入；首個 JavaScript chunk 由
+  約 121 KB gzip 降為約 28 KB gzip。後續 PSI 診斷顯示 Flip 仍落在初始關鍵鏈，故
+  第二輪改為第一次 accordion 點擊才載入 Flip。CSS/GSAP 仍保留三個原子動畫狀態和
   reduced-motion 的靜態 FAKE 終態。
 - Lighthouse 具體定位到原正式站的 Accessibility 96：桌面導覽列與 evidence
   accordion 的索引文字對比不足。兩者已改為不透明的既有深綠／淺色 token；本機
@@ -113,13 +115,35 @@ LCP 由 8.12 秒降至 4.06 秒；Desktop 傳輸量降至 334 KB，LCP 由 3.21 
 新的 request waterfall 已沒有 Fontshare 的 render-blocking 項目；唯一的 blocking
 項目是本地 fingerprinted CSS，浪費時間為 0 ms。Mobile 的圖片傳送建議僅剩 tipped
 cup AVIF 約 12.8 KB，這是 640px 候選圖在高像素密度裝置的清晰度取捨，並非原始
-PNG 傳輸。LCP breakdown 顯示餘下的波動主要是正式站 TTFB 與網路資源載入時間，並非
-JavaScript blocking。
+PNG 傳輸。這六次測量中，LCP 波動主要落在正式站 TTFB 與資源載入時間；後續 PSI UI
+提供了更細的 element render delay 資訊，見下一段，不能倒推覆寫上述三次中位數。
 
 Google PSI REST endpoint 對匿名 consumer 回傳 HTTP 429：`Queries per day` quota
 limit 為 0。因此本次不能誠實地宣稱為 PSI 伺服器端測量；上述數據是對同一正式 HTTPS
 URL 的可重現 Lighthouse 冷快取驗收。若日後提供已啟用的 PSI API key，可用相同三次
 Mobile／Desktop 程序補上 Google 伺服器端報告。
+
+部署後另取得一份由 PageSpeed Insights UI 產生的 Mobile 報告（2026-07-28 14:06
+GMT+8；Moto G Power、Slow 4G、initial page load、Lighthouse 13.4.0）：Performance
+82、FCP 3.0 秒、LCP 3.6 秒、TBT 10 ms、CLS 0、Speed Index 4.7 秒。這是直接的
+Google PSI 單次證據，與上述三次正式 HTTPS Lighthouse 結果的改善方向一致；它不是
+三次中位數，因而不取代表格中的正式冷快取驗收資料。
+
+同一批 PSI UI 診斷顯示 cat sprite LCP 的組成為 TTFB 0 ms、資源載入延遲 140 ms、
+資源載入 330 ms、**元素繪製延遲 3,910 ms**。LCP 節點是
+`.motion-frame.motion-cat-sprite`；其後的 `background-position` 寫入會讓瀏覽器重新
+繪製這個候選。診斷也將初始 `Flip` chunk 列為 33 KiB 未使用 JavaScript，並記錄一次
+63 ms 主執行緒工作／54 ms forced reflow。因此第二輪維持同一張 3-frame sprite、素材
+尺寸、狀態時間表與可存取性語意，但改用初始 HTML/CSS 的 `<img>` strip 加合成層
+`translateX`、`steps(1, end)` 離散切換；不再讓 hero 依賴 GSAP。GSAP/ScrollTrigger 只在
+使用者接近 manifesto 時才下載，Flip 則延至第一次 accordion 點擊。此修改尚未經部署後
+量測，不把預期效益當成已驗收的結果。
+
+PSI 也顯示唯一 render-blocking 資源為本機 6.2 KiB CSS（150 ms），CLS 為 0，DOM 僅
+226 個元素（最大深度 9、最多子節點 44）。Fontshare 為約 79 KiB 的第三方字型請求，
+主執行緒時間為 0 ms；在不造成 CLS 或阻塞繪製的前提下，本輪不為分數犧牲字體設計。
+第一方 fingerprinted 資產的 GitHub Pages cache TTL 仍為 10 分鐘，影響回訪而非初訪
+LCP；現有 Pages 部署表面無法安全設定 immutable header，維持為獨立 hosting 決策。
 
 ## 不可違反的素材保留規則
 

@@ -126,8 +126,9 @@ button { font: inherit; }
 .motion-coaster { position: absolute; z-index: 2; top: var(--coaster-top); left: var(--coaster-left); display: block; width: var(--coaster-width); height: var(--coaster-height); max-width: none; filter: drop-shadow(0 3px 2px rgba(80, 38, 13, 0.35)); pointer-events: none; transform: translate(-50%, -50%) scale(var(--coaster-scale)); transform-origin: center; }
 .motion-frame { position: absolute; width: auto; height: var(--cat-frame-height); max-width: none; pointer-events: none; transform: translateX(-50%); visibility: hidden; opacity: 0; will-change: opacity, transform; }
 .motion-cat { z-index: 5; left: var(--cat-anchor-left); }
-.motion-cat-sprite { aspect-ratio: 1; background-image: url("./assets/characters/cat-action-sprite.webp"); background-image: image-set(url("./assets/characters/cat-action-sprite.avif") type("image/avif") 1x, url("./assets/characters/cat-action-sprite.webp") type("image/webp") 1x); background-repeat: no-repeat; background-size: 300% 100%; }
-.motion-cat-sprite { bottom: var(--cat-rest-bottom); visibility: visible; opacity: 1; background-position: 0% 0%; }
+.motion-cat-sprite { aspect-ratio: 1; bottom: var(--cat-rest-bottom); overflow: hidden; visibility: visible; opacity: 1; }
+.motion-cat-strip { display: block; width: 300%; height: 100%; max-width: none; transform: translate3d(0, 0, 0); will-change: transform; }
+.motion-cat-strip > img { display: block; width: 100%; height: 100%; max-width: none; }
 .motion-cup { z-index: 4; aspect-ratio: 1; clip-path: none; }
 .motion-cup > img { display: block; width: 100%; height: 100%; }
 .motion-upright-cup { height: 40.6%; bottom: -2.1%; left: 40.1%; transform: translateX(-50%); }
@@ -136,6 +137,27 @@ button { font: inherit; }
 .sprite-label { position: absolute; z-index: 6; padding: 0; border: 0; color: #f8f4e9; background: transparent; text-shadow: 1px 2px 0 rgba(4, 44, 37, 0.8), -1px -1px 0 rgba(4, 44, 37, 0.62); font-weight: 900; letter-spacing: -0.075em; line-height: 0.88; text-align: center; }
 .sprite-label--pass { top: var(--pass-top); left: var(--pass-left); font-size: var(--pass-size); transform: translate(-50%, -50%) rotate(var(--pass-rotation)); }
 .sprite-label--fake { top: var(--fake-top); left: var(--fake-left); visibility: hidden; opacity: 0; color: #f3dfbd; font-size: var(--fake-size); transform: translate(-50%, -50%) rotate(var(--fake-rotation)); }
+
+/* Keep the hero's three frame states out of the initial JavaScript path. */
+@media (prefers-reduced-motion: no-preference) {
+  .motion-cat-strip { animation: cat-frame 4.87s steps(1, end) infinite; }
+  .motion-rest-cup, .sprite-label--pass { animation: rest-frame 4.87s steps(1, end) infinite; }
+  .motion-fake-cup, .sprite-label--fake { animation: verdict-frame 4.87s steps(1, end) infinite; }
+}
+@keyframes cat-frame {
+  0%, 44.147% { transform: translate3d(0, 0, 0); }
+  44.148%, 50.718% { transform: translate3d(-33.333333%, 0, 0); }
+  50.719%, 84.599% { transform: translate3d(-66.666667%, 0, 0); }
+  84.6%, 100% { transform: translate3d(0, 0, 0); }
+}
+@keyframes rest-frame {
+  0%, 50.718% { visibility: visible; opacity: 1; }
+  50.719%, 100% { visibility: hidden; opacity: 0; }
+}
+@keyframes verdict-frame {
+  0%, 50.718% { visibility: hidden; opacity: 0; }
+  50.719%, 100% { visibility: visible; opacity: 1; }
+}
 .marquee { position: relative; z-index: 2; overflow: hidden; padding: 19px 0; background: #e9a34b; color: #143330; transform: rotate(-1.15deg) scale(1.025); }
 .marquee-track { width: max-content; display: flex; align-items: center; gap: 26px; padding-left: 26px; animation: marquee 31s linear infinite; font-size: clamp(1.25rem, 1.9vw, 1.65rem); font-weight: 800; letter-spacing: -0.04em; text-transform: uppercase; }
 .marquee i { width: 8px; height: 8px; flex: 0 0 auto; border: 2px solid #143330; border-radius: 50%; }
@@ -208,9 +230,10 @@ button { font: inherit; }
   html { scroll-behavior: auto; }
   .marquee-track { animation: none; }
   .hero-art, .hero-scene, .button, .accordion-panel, .copy-button, .nav-repository { transform: none !important; }
+  .reveal-word { opacity: 1; }
   .motion-rest-cup, .sprite-label--pass { visibility: hidden !important; opacity: 0 !important; }
   .motion-cat-sprite, .motion-fake-cup, .sprite-label--fake { visibility: visible !important; opacity: 1 !important; filter: none !important; }
-  .motion-cat-sprite { background-position: 100% 0% !important; }
+  .motion-cat-strip { animation: none !important; transform: translate3d(-66.666667%, 0, 0) !important; }
   .accordion-detail { transform: none; }
 }
 

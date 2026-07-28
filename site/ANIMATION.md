@@ -13,16 +13,18 @@ Only these three visible states are allowed:
 
 | State | Cat sprite | Upright cup | Tipped cup | PASS | FAKE | Meaning |
 | --- | --- | --- | --- | --- | --- | --- |
-| Rest | `0% 0%` | visible | hidden | visible | hidden | The claim appears to pass. |
-| Contact | `50% 0%` | visible | hidden | visible | hidden | The paw reaches the rim; nothing has moved yet. |
-| Verdict | `100% 0%` | hidden | visible | hidden | visible | The cup is side-tipped and the claim is exposed as fake. |
+| Rest | `translateX(0%)` | visible | hidden | visible | hidden | The claim appears to pass. |
+| Contact | `translateX(-33.333333%)` | visible | hidden | visible | hidden | The paw reaches the rim; nothing has moved yet. |
+| Verdict | `translateX(-66.666667%)` | hidden | visible | hidden | visible | The cup is side-tipped and the claim is exposed as fake. |
 
-Every change belonging to a state must happen at the same GSAP label with
-`.set()`. Do not fade or tween the cat, cups, or labels between states. In
-particular, do not introduce a fourth state containing a fully extended paw and
-an upright cup; that pause makes the nudge feel late and disconnected.
+Every change belonging to a state must happen at the same CSS keyframe boundary.
+The hero uses `steps(1, end)`: do not fade or tween the cat, cups, or labels
+between states. In particular, do not introduce a fourth state containing a
+fully extended paw and an upright cup; that pause makes the nudge feel late and
+disconnected.
 
-The current timing is:
+The current CSS loop is `4.87s`; it starts visibly in Rest, so the initial
+delay and the Rest hold share the first `2.15s` of the loop. The timing is:
 
 | Segment | Duration |
 | --- | --- |
@@ -45,8 +47,10 @@ depends on these exact layout properties:
   `887 × 887` frames on one horizontal strip. Its production derivatives are
   `characters/cat-action-sprite.avif` and `.webp`; neither format may crop,
   resize, or alter the sprite grid.
-- CSS uses `background-size: 300% 100%` and the positions `0%`, `50%`, and
-  `100%`. Do not substitute approximate percentages.
+- `.motion-cat-sprite` is a square overflow window around a 300%-wide
+  `.motion-cat-strip`. CSS initially renders the Rest frame, then its stepped
+  keyframes switch the strip to the exact `translateX` values in the state
+  table. Do not substitute approximate percentages or animate between frames.
 - The grounded paw occupies the same pixel coordinate in all three cat frames.
   Preserve the transparent padding. Never auto-trim the frames independently.
 - `original/props/cup-upright.org.png` and

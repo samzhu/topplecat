@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import catSpriteAvif from "./assets/characters/cat-action-sprite.avif";
+import catSpriteWebp from "./assets/characters/cat-action-sprite.webp";
 import coasterLayer from "./assets/props/coaster.svg";
 import tippedCup320Avif from "./assets/props/cup-tipped-320.avif";
 import tippedCup640Avif from "./assets/props/cup-tipped-640.avif";
@@ -85,150 +87,103 @@ const cupSources = {
 
 function App() {
   const scope = useRef(null);
-  const motion = useRef({ Flip: null });
+  const motion = useRef({ gsap: null, Flip: null, gsapPromise: null });
   const [activeAccordion, setActiveAccordion] = useState(0);
   const [copied, setCopied] = useState(false);
+
+  const loadGsap = async () => {
+    if (motion.current.gsap) return motion.current;
+    if (!motion.current.gsapPromise) {
+      motion.current.gsapPromise = Promise.all([
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+      ]).then(([{ gsap }, { ScrollTrigger }]) => {
+        gsap.registerPlugin(ScrollTrigger);
+        motion.current = { ...motion.current, gsap, ScrollTrigger };
+        return motion.current;
+      });
+    }
+    return motion.current.gsapPromise;
+  };
 
   useEffect(() => {
     let cancelled = false;
     let context;
-    const startMotion = async () => {
-      const [{ gsap }, { Flip }, { ScrollTrigger }] = await Promise.all([
-        import("gsap"),
-        import("gsap/Flip"),
-        import("gsap/ScrollTrigger"),
-      ]);
-      if (cancelled) return;
+    const section = scope.current?.querySelector(".manifesto");
+    if (!section || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return undefined;
+    }
 
-      gsap.registerPlugin(Flip, ScrollTrigger);
-      motion.current = { Flip };
-      context = gsap.context(() => {
-      const media = gsap.matchMedia();
-      const q = gsap.utils.selector(scope);
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      void loadGsap().then(({ gsap, ScrollTrigger }) => {
+        if (cancelled) return;
+        context = gsap.context(() => {
+          const media = gsap.matchMedia();
+          const q = gsap.utils.selector(scope);
 
-      media.add("(prefers-reduced-motion: no-preference)", () => {
-        // Keep the cat, cup, and verdict as three atomic states.
-        // See site/ANIMATION.md before changing this timeline.
-        const catTimeline = gsap.timeline({
-          delay: 0.95,
-          repeat: -1,
-          repeatDelay: 0.75,
-        });
+          media.add("(prefers-reduced-motion: no-preference)", () => {
+            gsap.utils.toArray(q(".reveal-word")).forEach((word) => {
+              gsap.to(word, {
+                opacity: 1,
+                scrollTrigger: {
+                  trigger: q(".manifesto")[0],
+                  start: "top 72%",
+                  end: "bottom 48%",
+                  scrub: 0.55,
+                },
+              });
+            });
 
-        catTimeline
-          .set(q(".motion-cat-sprite"), {
-            autoAlpha: 1,
-            backgroundPosition: "0% 0%",
-          })
-          .set(q(".motion-rest-cup"), { autoAlpha: 1 })
-          .set(q(".motion-fake-cup"), { autoAlpha: 0 })
-          .set(q(".sprite-label--pass"), { autoAlpha: 1 })
-          .set(q(".sprite-label--fake"), { autoAlpha: 0 })
-          .to({}, { duration: 1.2 }, 0)
-          .addLabel("frameContact", 1.2)
-          .set(q(".motion-cat-sprite"), {
-            backgroundPosition: "50% 0%",
-          }, "frameContact")
-          .to({}, { duration: 0.32 }, 1.2)
-          .addLabel("frameFake", 1.52)
-          .set(q(".motion-cat-sprite"), {
-            backgroundPosition: "100% 0%",
-          }, "frameFake")
-          .set(q(".motion-rest-cup"), { autoAlpha: 0 }, "frameFake")
-          .set(q(".motion-fake-cup"), { autoAlpha: 1 }, "frameFake")
-          .set(q(".sprite-label--pass"), { autoAlpha: 0 }, "frameFake")
-          .set(q(".sprite-label--fake"), { autoAlpha: 1 }, "frameFake")
-          .to({}, { duration: 1.65 }, 1.52);
+            gsap.utils.toArray(q(".gate-card")).forEach((card) => {
+              gsap.from(card, {
+                y: 44,
+                opacity: 0,
+                scrollTrigger: {
+                  trigger: card,
+                  start: "top 88%",
+                  once: true,
+                },
+              });
+            });
 
-        gsap.utils.toArray(q(".reveal-word")).forEach((word) => {
-          gsap.to(word, {
-            opacity: 1,
-            scrollTrigger: {
-              trigger: q(".manifesto")[0],
-              start: "top 72%",
-              end: "bottom 48%",
-              scrub: 0.55,
-            },
+            return undefined;
           });
-        });
 
-        gsap.utils.toArray(q(".gate-card")).forEach((card) => {
-          gsap.from(card, {
-            y: 44,
-            opacity: 0,
-            scrollTrigger: {
-              trigger: card,
-              start: "top 88%",
-              once: true,
-            },
+          media.add("(min-width: 960px) and (prefers-reduced-motion: no-preference)", () => {
+            const proofLayout = q(".proof-layout")[0];
+            const proofIntro = q(".proof-intro")[0];
+            if (!proofLayout || !proofIntro) return undefined;
+
+            return ScrollTrigger.create({
+              trigger: proofLayout,
+              start: "top top+=110",
+              end: "bottom bottom-=120",
+              pin: proofIntro,
+              pinSpacing: false,
+            });
           });
-        });
 
-        let heroVisible = true;
-        let documentVisible = document.visibilityState === "visible";
-        const syncPlayback = () => {
-          if (heroVisible && documentVisible) {
-            catTimeline.resume();
-          } else {
-            catTimeline.pause();
-          }
-        };
-        const observer = new IntersectionObserver(
-          ([entry]) => {
-            heroVisible = entry.isIntersecting;
-            syncPlayback();
-          },
-          { threshold: 0.15 },
-        );
-        const onVisibilityChange = () => {
-          documentVisible = document.visibilityState === "visible";
-          syncPlayback();
-        };
-        const hero = q(".hero-cinematic")[0];
-        if (hero) observer.observe(hero);
-        document.addEventListener("visibilitychange", onVisibilityChange);
+          media.add("(prefers-reduced-motion: reduce)", () => {
+            gsap.set(q(".reveal-word"), { opacity: 1 });
+            gsap.set(q(".gate-card"), { opacity: 1, y: 0 });
+          });
 
-        return () => {
-          observer.disconnect();
-          document.removeEventListener("visibilitychange", onVisibilityChange);
-          catTimeline.kill();
-        };
+          return () => media.revert();
+        }, scope);
       });
+    }, { rootMargin: "0px" });
+    observer.observe(section);
 
-      media.add("(min-width: 960px) and (prefers-reduced-motion: no-preference)", () => {
-        const proofLayout = q(".proof-layout")[0];
-        const proofIntro = q(".proof-intro")[0];
-        if (!proofLayout || !proofIntro) return undefined;
-
-        return ScrollTrigger.create({
-          trigger: proofLayout,
-          start: "top top+=110",
-          end: "bottom bottom-=120",
-          pin: proofIntro,
-          pinSpacing: false,
-        });
-      });
-
-      media.add("(prefers-reduced-motion: reduce)", () => {
-        gsap.set(q(".reveal-word"), { opacity: 1 });
-        gsap.set(q(".gate-card"), { opacity: 1, y: 0 });
-      });
-
-      return () => media.revert();
-      }, scope);
-    };
-
-    const timer = window.setTimeout(() => {
-      void startMotion();
-    }, 0);
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      observer.disconnect();
       context?.revert();
     };
   }, []);
 
-  const changeAccordion = (index) => {
+  const changeAccordion = async (index) => {
     if (index === activeAccordion) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
@@ -236,7 +191,13 @@ function App() {
       return;
     }
 
-    const { Flip } = motion.current;
+    let { Flip } = motion.current;
+    if (!Flip) {
+      const { gsap } = await loadGsap();
+      ({ Flip } = await import("gsap/Flip"));
+      gsap.registerPlugin(Flip);
+      motion.current = { ...motion.current, Flip };
+    }
     if (!Flip) {
       setActiveAccordion(index);
       return;
@@ -291,7 +252,13 @@ function App() {
           <div className="hero-scene hero-stage" role="img" aria-label="A ToppleCat watches a PASS label on a coffee mug, reaches for it, then tips the mug so the label becomes FAKE.">
             <img className="stage-floor" src={stageFloorLayer} alt="" aria-hidden="true" />
             <img className="motion-coaster" src={coasterLayer} alt="" aria-hidden="true" />
-            <div className="motion-frame motion-cat motion-cat-sprite" aria-hidden="true" />
+            <div className="motion-frame motion-cat motion-cat-sprite" aria-hidden="true">
+              <picture className="motion-cat-strip">
+                <source type="image/avif" srcSet={catSpriteAvif} />
+                <source type="image/webp" srcSet={catSpriteWebp} />
+                <img src={catSpriteWebp} width="2661" height="887" alt="" />
+              </picture>
+            </div>
             <Cup
               className="motion-frame motion-cup motion-upright-cup motion-rest-cup"
               avifSources={cupSources.upright.avif}
@@ -384,7 +351,7 @@ function App() {
             <button
               className={`accordion-panel ${item.className} ${activeAccordion === index ? "is-active" : ""}`}
               key={item.title}
-              onClick={() => changeAccordion(index)}
+              onClick={() => { void changeAccordion(index); }}
               aria-pressed={activeAccordion === index}
             >
               <span className="accordion-index">0{index + 1}</span>
