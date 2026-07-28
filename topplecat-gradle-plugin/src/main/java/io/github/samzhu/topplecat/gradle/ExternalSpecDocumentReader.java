@@ -43,7 +43,7 @@ final class ExternalSpecDocumentReader {
         return new ParsedSpecs(narratives, sources, true);
     }
 
-    private static List<Path> markdownDocuments(Collection<Path> configuredEntries) {
+    static List<Path> markdownDocuments(Collection<Path> configuredEntries) {
         Set<Path> documents = new LinkedHashSet<>();
         for (Path entry : configuredEntries) {
             if (!Files.exists(entry)) {

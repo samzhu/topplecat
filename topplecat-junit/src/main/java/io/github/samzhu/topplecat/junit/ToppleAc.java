@@ -1,6 +1,7 @@
 package io.github.samzhu.topplecat.junit;
 
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.Tag;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -11,6 +12,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.TYPE})
 @ExtendWith(ToppleAcExtension.class)
+@Tag(ToppleJunit.CONTRACT_TAG)
 public @interface ToppleAc {
     /** Stable acceptance-condition identifier. */
     String value();

@@ -1,5 +1,12 @@
 # Verification and evidence
 
+ToppleCat is an executable acceptance and delegation-verification tool. It is
+not a task manager, Spec lifecycle manager, or organizational approval system.
+The surrounding SDD or delivery workflow chooses the current work and performs
+any required sign-off. ToppleCat checks the Java/JUnit contract and typed cases,
+produces a readable projection, mechanically seals the contract inputs, and
+verifies the implementation agent's done claim.
+
 ## Workflow
 
 1. Author public Java tests and public JSON/YAML rows.
@@ -14,22 +21,43 @@
 6. Run `toppleCatVerify` as the reviewer or in CI.
 
 ```bash
-./gradlew toppleCatCheck toppleCatReview toppleCatHide
+./gradlew toppleCatCheck --spec specs/023-checkout/spec.md
+./gradlew toppleCatReview --spec specs/023-checkout/spec.md
+./gradlew toppleCatHide --spec specs/023-checkout/spec.md
 ./gradlew test
-./gradlew toppleCatVerify
+./gradlew toppleCatVerify --spec specs/023-checkout/spec.md
 ```
+
+`--spec` is repeatable and is the portable delivery-selection boundary; it does
+not create current-Spec state in the project. Supply the same selection to
+Check, Review, Hide, UpdateEscrow, and Verify. The approval seals the selected
+paths, Markdown digests, and AC set, so a changed selection yields a safe
+contract-integrity failure. Verify retests only selected hidden rows and tagged
+reviewer Java tests by default. Public JUnit and mutation remain full-contract.
+Use `--all-hidden` only to broaden the hidden retest:
+
+```bash
+./gradlew toppleCatVerify --spec specs/023-checkout/spec.md --all-hidden
+```
+
+Every selected AC needs current-run reviewer coverage: an actually executed
+selected hidden row or an AC-bound reviewer `@ToppleAc`/`@ToppleTest` check that
+entered its test body. A missing coverage entry makes `REVIEWER_JUNIT=INCOMPLETE`;
+safe feedback says only that the selected executable contract is missing reviewer
+coverage. A plain hidden `@Test`, an annotation in source text, or a disabled
+tagged test does not satisfy this requirement or run in the hidden retest.
 
 ## Task reference
 
 | Task | When to run it | Effect |
 | --- | --- | --- |
-| `toppleCatCheck` | Before review, hiding, and after contract edits. | Validates Java bindings, the canonical Stage DSL, and JSON/YAML case data without executing tests or writing HTML. |
-| `toppleCatReview` | Authorized reviewer, before hiding. | Renders the complete reviewer-only static contract review without executing tests. |
-| `toppleCatHide` | Before implementation begins. | Moves the entire reviewer source set into plaintext local custody storage and seals the reviewed public contract and effective verification policy. |
+| `toppleCatCheck` | Before review, hiding, and after contract edits. | Validates Java bindings, the canonical Stage DSL, JSON/YAML case data, and every AC in an explicit `--spec` selection without executing tests or writing HTML. |
+| `toppleCatReview` | Before hiding, when the delivery workflow wants a human-readable check. | Renders the selected reviewer-only static contract projection; it warns when a plain hidden JUnit test is not tagged with `@ToppleAc` or `@ToppleTest`. |
+| `toppleCatHide` | Before implementation begins. | Moves the entire reviewer source set into plaintext local custody storage and mechanically seals the public contract, selected delivery scope, and effective verification policy. |
 | `toppleCatRestore` | Authorized reviewer, only when source must be inspected or changed. | Restores the exact reviewer source set from local custody storage. |
-| `toppleCatUpdateEscrow` | Authorized reviewer, after restoring, editing, checking, and accepting a new review. | Validates, stages, audits locally, and atomically activates the complete revised reviewer source set and approval epoch. |
+| `toppleCatUpdateEscrow` | Authorized reviewer, after restoring, editing, and checking revised reviewer source. | Validates, stages, audits locally, and atomically activates the complete revised reviewer source set and mechanical approval epoch. |
 | `test` | During implementation. | Runs public tests and public case rows only. |
-| `toppleCatVerify` | Reviewer or CI final gate. | Freshly checks approval integrity, runs enabled safeguards only after a pass, writes evidence, and re-hides source. |
+| `toppleCatVerify` | Reviewer or CI final gate. | Freshly checks approval and selected-scope integrity, runs selected hidden safeguards (or `--all-hidden`) only after a pass, writes evidence, and re-hides source. |
 
 `toppleCatInit` bootstraps an empty consumer project without overwriting files.
 `toppleCatRestore` sits outside the normal sequence because it is a reviewer
@@ -44,9 +72,14 @@ toppleCatRestore
     -> edit src/hiddenTest
     -> toppleCatCheck
     -> toppleCatReview
-    -> reviewer accepts the review
+    -> complete any external review or sign-off the delivery workflow requires
     -> toppleCatUpdateEscrow
 ```
+
+The workflow step in that sequence belongs to the organization using
+ToppleCat. Gradle can generate the review and protect custody state, but it
+cannot prove that a person read the report or that a task-management system
+approved the delivery.
 
 The update task requires a readable `RESTORED` local escrow manifest and a
 complete inventory of the current reviewer source. It preserves the prior active
@@ -132,6 +165,10 @@ a legacy v1 escrow or missing approval is `INCOMPLETE`. In either case the four
 downstream gates do not run and are recorded as `INCOMPLETE` with a safe
 precondition reason. No previous JUnit or mutation artifact is borrowed.
 
+In this document, approval means that mechanical integrity snapshot. Delivery
+history, active-Spec selection, and organizational approval remain external
+workflow concerns.
+
 The seal protects the public contract, not the production implementation. An
 implementation agent may change production source; that is the work being
 verified. It must not change the sealed tests, typed rows, Gradle logic, semantic
@@ -203,6 +240,14 @@ PASS/FAIL status. It does not expose `src/hiddenTest` paths as part of the
 contract presentation. A later failed check removes a previous review rather
 than leaving stale authoring output.
 
+Review by acceptance condition: expand one AC, choose a public or reviewer case,
+read its compiler-resolved Given/When/Then steps, and compare the adjacent
+flattened inputs and expected output. The all-cases table is for comparing rows;
+the matching canonical `@ToppleTest` stays collapsed until a reviewer needs to
+trace the executable contract. The report never executes Java and never infers
+an output from source expressions. If a compiler binding has no case-data value,
+the sentence retains its `<displayName>` placeholder instead of inventing one.
+
 ### Public contract report
 
 After verification, `build/topplecat/reports/spec/index.html` and `data.json`
@@ -222,6 +267,11 @@ results, durations, attachments, and applicable private failures. Keep this
 bundle reviewer-only. It supports status filters and search by AC, title, or
 case ID. A disabled safeguard is visibly `DISABLED` with its reason, never
 rendered as a passing gate.
+
+Verification uses the same vertical Given/When/Then presentation. When a
+current-run narrative step exists, its actual sentence and status take priority;
+the compiler template is only the fallback when there is no execution record.
+This keeps execution evidence distinct from the static pre-handoff review.
 
 ### Machine evidence and safe feedback
 

@@ -49,6 +49,9 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         extension.getAdversarial().getMutation().getReportFile()
                 .convention(project.getLayout().getBuildDirectory().file("reports/pitest/mutations.xml"));
         extension.getAdversarial().getExpectedConsumption().getEnabled().convention(true);
+        extension.getCommandLineSpecPaths().convention(List.of());
+        extension.getCommandLineSpecProvided().convention(false);
+        extension.getAllHiddenRequested().convention(false);
         project.getPluginManager().withPlugin("java", ignored -> configureJavaProject(project, extension));
     }
 
@@ -104,8 +107,11 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                     task.getDescriptorClassDirectories().from(compileContracts.flatMap(
                             ToppleCatCompileContractsTask::getDescriptorClassesDirectory));
                     task.getSpecDocs().from(extension.getSpecDocs());
+                    configureScopeTask(task, extension);
                     task.getReviewRoot().set(project.getLayout().getBuildDirectory().dir("topplecat/reports/review"));
                     task.getDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
+                    task.getSelectedSpecScopeFile().set(project.getLayout().getBuildDirectory()
+                            .file("topplecat/selected-spec-scope.json"));
                     task.getOutputs().upToDateWhen(ignored -> false);
                     task.getOutputs().doNotCacheIf("ToppleCat contract inputs include reviewer custody state.", ignored -> true);
                 });
@@ -122,9 +128,11 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             task.dependsOn(check);
             task.getProjectRoot().set(project.getLayout().getProjectDirectory());
             task.getPublicTestSourceRoot().set(project.getLayout().getProjectDirectory().dir("src/test/java"));
+            task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
             task.getReviewRoot().set(project.getLayout().getBuildDirectory().dir("topplecat/reports/review"));
             task.getDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
             task.getSpecDocs().from(extension.getSpecDocs());
+            configureScopeTask(task, extension);
         });
         TaskProvider<ToppleCatHideTask> hide = project.getTasks().register("toppleCatHide", ToppleCatHideTask.class,
                 task -> {
@@ -133,6 +141,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                     task.dependsOn(review);
                     task.getProjectRoot().set(project.getLayout().getProjectDirectory());
                     task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
+                    configureScopeTask(task, extension);
                     configureApprovalInputs(task, project, test, extension);
                 });
         Provider<ToppleCatCustodyBuildService> custodyService = project.getGradle().getSharedServices()
@@ -180,6 +189,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                     task.dependsOn(review);
                     task.getProjectRoot().set(project.getLayout().getProjectDirectory());
                     task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
+                    configureScopeTask(task, extension);
                     configureApprovalInputs(task, project, test, extension);
                 });
         updateEscrow.configure(task -> {
@@ -244,6 +254,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
             task.mustRunAfter(acquireCustody);
             task.usesService(custodyService);
+            configureSelectedHiddenScope(task, extension, project, false);
         });
         reviewerDefinition.configure(task -> {
             task.dependsOn(contractIntegrity);
@@ -255,10 +266,11 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             task.dependsOn(prepareRun, restore, hidden.getClassesTaskName());
             task.setTestClassesDirs(hidden.getOutput().getClassesDirs());
             task.setClasspath(hidden.getRuntimeClasspath());
-            task.useJUnitPlatform();
+            task.useJUnitPlatform(options -> options.includeTags(ToppleJunit.CONTRACT_TAG));
             configureCaseProperties(task, extension, true, true);
             configureVerificationArtifacts(task, runDirectory, VerificationRunArtifacts.REVIEWER_JUNIT);
             configureNarrativeEvents(task, runDirectory, false);
+            configureReviewerJavaExecutions(task, runDirectory);
             requireFreshVerificationExecution(task);
             task.systemProperty(ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
                     project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json").get().getAsFile()
@@ -269,6 +281,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             // executable JUnit annotations before deciding whether this result is needed.
             task.getFailOnNoDiscoveredTests().set(false);
             task.usesService(custodyService);
+            configureSelectedHiddenScope(task, extension, project, true);
         });
         TaskProvider<ToppleCatMutationGateTask> mutationGate = project.getTasks().register("toppleCatMutationGate",
                 ToppleCatMutationGateTask.class, task -> {
@@ -296,6 +309,9 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                     task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
                     task.getDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
                     task.getSpecDocs().from(extension.getSpecDocs());
+                    task.getSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
+                    task.getSpecOptionProvided().set(extension.getCommandLineSpecProvided());
+                    task.getAllHidden().set(extension.getAllHiddenRequested());
                     task.getRunDirectory().set(runDirectory);
                     task.getContractIntegrityResultFile().set(contractIntegrity.flatMap(
                             ToppleCatContractIntegrityTask::getResultFile));
@@ -314,9 +330,10 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             task.usesService(custodyService);
         });
 
-        TaskProvider<Task> verify = project.getTasks().register("toppleCatVerify", task -> {
+        TaskProvider<ToppleCatVerifyTask> verify = project.getTasks().register("toppleCatVerify", ToppleCatVerifyTask.class, task -> {
             task.setGroup("verification");
             task.setDescription("Runs configured adversarial verification, then re-hides reviewer source.");
+            configureScopeTask(task, extension);
             task.dependsOn(acquireCustody, contractIntegrity, verificationTest);
             task.finalizedBy(report);
         });
@@ -338,6 +355,23 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         task.systemProperty(ToppleJunit.INCLUDE_HIDDEN_CASES_PROPERTY, Boolean.toString(includeHidden));
         task.systemProperty(ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY,
                 Boolean.toString(expectedConsumptionEnforced));
+    }
+
+    private static void configureSelectedHiddenScope(
+            Test task,
+            ToppleCatExtension extension,
+            Project project,
+            boolean filterReviewerJava
+    ) {
+        Path scope = project.getLayout().getBuildDirectory().getAsFile().get().toPath()
+                .resolve("topplecat/selected-spec-scope.json").toAbsolutePath();
+        task.doFirst(ignored -> {
+            boolean noSpecSelection = !extension.getCommandLineSpecProvided().getOrElse(false);
+            boolean allHidden = extension.getAllHiddenRequested().getOrElse(false) || noSpecSelection;
+            task.systemProperty(ToppleJunit.SELECTED_HIDDEN_SCOPE_FILE_PROPERTY, allHidden ? "" : scope.toString());
+            task.systemProperty(ToppleJunit.FILTER_CONTRACT_TESTS_PROPERTY,
+                    Boolean.toString(filterReviewerJava && !allHidden));
+        });
     }
 
     private static void configureVerificationArtifacts(Test task, Directory runDirectory, String gate) {
@@ -388,6 +422,19 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         }
     }
 
+    private static void configureReviewerJavaExecutions(Test task, Directory runDirectory) {
+        Path executions = runDirectory.file("reviewer-java-executions.jsonl").getAsFile().toPath();
+        task.systemProperty(ToppleJunit.REVIEWER_JAVA_EXECUTIONS_FILE_PROPERTY, executions.toAbsolutePath().toString());
+        task.doFirst(ignored -> {
+            try {
+                Files.deleteIfExists(executions);
+            } catch (IOException exception) {
+                throw new GradleException("Cannot clear ToppleCat reviewer Java execution evidence in " + runDirectory,
+                        exception);
+            }
+        });
+    }
+
     private static void configureAdversarialVerification(
             Project project,
             ToppleCatExtension extension,
@@ -398,7 +445,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             TaskProvider<ToppleCatMutationGateTask> mutationGate,
             TaskProvider<ToppleCatReportTask> report,
             TaskProvider<ToppleCatRehideTask> rehide,
-            TaskProvider<Task> verify,
+            TaskProvider<ToppleCatVerifyTask> verify,
             TaskProvider<ToppleCatHideTask> hide,
             TaskProvider<ToppleCatUpdateEscrowTask> updateEscrow,
             TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity,
@@ -470,6 +517,14 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         task.getApprovalMutationThreshold().convention(100);
         task.getApprovalMutationProducerKind().convention("DEFAULT");
         task.getApprovalMutationProducerTaskPath().convention("");
+        task.getApprovalSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
+        task.getApprovalSpecOptionProvided().set(extension.getCommandLineSpecProvided());
+        task.getApprovalFixedSpecDocs().from(extension.getSpecDocs());
+    }
+
+    private static void configureScopeTask(ToppleCatScopedTask task, ToppleCatExtension extension) {
+        task.getSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
+        task.getSpecOptionProvided().set(extension.getCommandLineSpecProvided());
     }
 
     private static void configureApprovalPolicy(
@@ -509,7 +564,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             AdversarialConfiguration configuration,
             TaskProvider<ToppleCatMutationGateTask> mutationGate,
             TaskProvider<ToppleCatReportTask> report,
-            TaskProvider<Task> verify,
+            TaskProvider<ToppleCatVerifyTask> verify,
             Path contractIntegrityResult,
             TaskProvider<ToppleCatCompileContractsTask> compileContracts
     ) {

@@ -4,6 +4,7 @@ import io.github.samzhu.topplecat.core.CaseVisibility;
 import io.github.samzhu.topplecat.core.CompilerScenarioDescriptor;
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
+import io.github.samzhu.topplecat.core.SelectedSpecScopeJson;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.core.ToppleCaseReader;
 import io.github.samzhu.topplecat.core.ToppleCaseSource;
@@ -31,7 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Builds the sole ContractDefinition from javac descriptors and typed public/reviewer case data. */
-public abstract class ToppleCatCheckTask extends DefaultTask {
+public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
     @org.gradle.api.tasks.Internal
     public abstract DirectoryProperty getProjectRoot();
 
@@ -64,6 +65,9 @@ public abstract class ToppleCatCheckTask extends DefaultTask {
     @OutputFile
     public abstract RegularFileProperty getDefinitionFile();
 
+    @OutputFile
+    public abstract RegularFileProperty getSelectedSpecScopeFile();
+
     @TaskAction
     public void check() {
         deleteReview(getReviewRoot().get().getAsFile().toPath());
@@ -90,12 +94,27 @@ public abstract class ToppleCatCheckTask extends DefaultTask {
         List<CompilerScenarioDescriptor> descriptors = CompilerDescriptorReader.read(getDescriptorClassDirectories().getFiles()
                 .stream().map(file -> file.toPath()).toList());
         ContractDefinition definition = ContractDefinitionBuilder.build(descriptors, cases);
-        ExternalSpecDocumentReader.ParsedSpecs specDocs = ExternalSpecDocumentReader.read(
-                getProjectRoot().get().getAsFile().toPath(), getSpecDocs().getFiles().stream().map(file -> file.toPath()).toList());
-        warnForSpecAlignment(specDocs, descriptors);
+        SpecScopeResolver.ResolvedSpecScope scope = SpecScopeResolver.resolve(getProjectRoot().get().getAsFile().toPath(),
+                getSelectedSpecPaths().getOrElse(List.of()), getSpecOptionProvided().getOrElse(false),
+                getSpecDocs().getFiles().stream().map(file -> file.toPath()).toList());
+        validateSelectedBindings(scope, descriptors);
+        warnForSpecAlignment(scope, descriptors);
         writeDefinition(definition);
+        writeScope(scope);
         getLogger().lifecycle("ToppleCat check passed: {} ACs, {} case rows, definition {}.",
                 definition.acceptanceConditions().size(), cases.size(), definition.digest());
+    }
+
+    private void writeScope(SpecScopeResolver.ResolvedSpecScope scope) {
+        Path output = getSelectedSpecScopeFile().get().getAsFile().toPath();
+        try {
+            Files.createDirectories(output.getParent());
+            Files.writeString(output, SelectedSpecScopeJson.write(scope.scope()), StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException exception) {
+            throw new GradleException("Cannot write selected ToppleCat Spec scope " + output + ": "
+                    + exception.getMessage(), exception);
+        }
     }
 
     private void writeDefinition(ContractDefinition definition) {
@@ -110,9 +129,22 @@ public abstract class ToppleCatCheckTask extends DefaultTask {
         }
     }
 
-    private void warnForSpecAlignment(ExternalSpecDocumentReader.ParsedSpecs specDocs,
+    private void validateSelectedBindings(SpecScopeResolver.ResolvedSpecScope scope,
+                                          List<CompilerScenarioDescriptor> descriptors) {
+        if (!scope.scope().selected()) {
+            return;
+        }
+        Set<String> acIds = descriptors.stream().map(CompilerScenarioDescriptor::acId).collect(Collectors.toSet());
+        scope.scope().acceptanceConditionIds().stream().filter(acId -> !acIds.contains(acId)).findFirst().ifPresent(acId -> {
+            throw new ToppleCatException("Selected ToppleCat Spec AC " + acId
+                    + " has no canonical @ToppleTest binding. Add @ToppleTest(\"" + acId + "\") before review.");
+        });
+    }
+
+    private void warnForSpecAlignment(SpecScopeResolver.ResolvedSpecScope scope,
                                       List<CompilerScenarioDescriptor> descriptors) {
-        if (!specDocs.configured()) {
+        ExternalSpecDocumentReader.ParsedSpecs specDocs = scope.parsedSpecs();
+        if (!specDocs.configured() || scope.scope().selected()) {
             return;
         }
         Set<String> acIds = descriptors.stream().map(CompilerScenarioDescriptor::acId).collect(Collectors.toSet());

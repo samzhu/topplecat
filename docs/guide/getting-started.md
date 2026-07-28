@@ -1,6 +1,6 @@
 # Getting started
 
-ToppleCat `0.0.5` is the release described by this guide. A consumer project needs
+ToppleCat `0.0.6` is the release described by this guide. A consumer project needs
 Java 25 and a Gradle version that supports it. The current consumer example uses
 JUnit Jupiter 6.1.1 and the `io.github.samzhu.topplecat` Gradle plugin.
 ToppleCat brings its Jackson dependencies transitively and adds no
@@ -26,19 +26,22 @@ dependencyResolutionManagement {
 ```
 
 Then apply the plugin and add the JUnit integration shown in the root
-[README](../../README.md#install-005). The consumer needs its own Gradle wrapper,
+[README](../../README.md#install-006). The consumer needs its own Gradle wrapper,
 as a normal Gradle project does. See the
-[0.0.5 release notes](../releases/0.0.5.md) for this release's reviewer-report
-and sample-workflow improvements.
+[0.0.6 release notes](../releases/0.0.6.md) for delivery-scoped verification
+and upgrade guidance.
 
 ## Configure the consumer
 
 From the consumer project root, author the contract and inspect it:
 
 ```bash
-./gradlew toppleCatCheck
-./gradlew toppleCatReview
+./gradlew toppleCatCheck --spec specs/023-checkout/spec.md
+./gradlew toppleCatReview --spec specs/023-checkout/spec.md
 ```
+
+Use the same repository-relative Spec selection throughout one delivery.
+Projects that intentionally verify their complete contract can omit `--spec`.
 
 `toppleCatInit` can bootstrap an empty consumer project. It does not overwrite
 files or edit `.gitignore`:
@@ -64,9 +67,9 @@ extra ordinary JUnit test.
 Once public and reviewer contracts exist, run:
 
 ```bash
-./gradlew toppleCatHide
+./gradlew toppleCatHide --spec specs/023-checkout/spec.md
 ./gradlew test
-./gradlew toppleCatVerify
+./gradlew toppleCatVerify --spec specs/023-checkout/spec.md
 ```
 
 `toppleCatHide` moves the reviewer source set into

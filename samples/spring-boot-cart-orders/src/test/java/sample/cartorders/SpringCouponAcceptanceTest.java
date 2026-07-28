@@ -22,17 +22,19 @@ class SpringCouponAcceptanceTest {
     @ToppleTest("AC-CART-COUPON")
     @DisplayName("Spring Boot 套用 SAVE100 折抵訂單小計")
     void appliesCoupon(ToppleCase c) {
-        given.a_cart(c.input("cart", Cart.class));
+        given.a_cart(c.input("cart", Cart.class), c.input("cart", Cart.class).customerId(),
+                c.input("cart", Cart.class).subtotal(), "case-data coupon");
         when.creates_an_order();
-        then.matches_the_contract(c);
+        then.receipt_shows_discount_and_discounted_subtotal(c);
     }
 
     @ToppleTest("AC-CART-NO-COUPON")
     @DisplayName("Spring Boot 未使用優惠券時維持原始小計")
     void createsOrderWithoutCoupon(ToppleCase c) {
-        given.a_cart(c.input("cart", Cart.class));
+        given.a_cart(c.input("cart", Cart.class), c.input("cart", Cart.class).customerId(),
+                c.input("cart", Cart.class).subtotal(), "case-data coupon");
         when.creates_an_order();
-        then.matches_the_contract(c);
+        then.receipt_shows_discount_and_discounted_subtotal(c);
     }
 
     static final class CouponGiven extends ToppleStage<CouponGiven> {
@@ -41,9 +43,9 @@ class SpringCouponAcceptanceTest {
         @ProvidedState
         Cart cart;
 
-        @As("準備顧客 {0} 金額為 {1} 元的購物車")
-        CouponGiven a_cart(Cart cart) {
-            recorded(cart.customerId(), cart.subtotal());
+        @As("準備顧客 {0} 金額為 {1} 元、優惠券 {2} 的購物車")
+        CouponGiven a_cart(Cart cart, String customerId, int subtotal, String couponLabel) {
+            recorded(customerId, subtotal, couponLabel);
             this.service = new OrderService();
             this.cart = cart;
             return self();
@@ -70,8 +72,8 @@ class SpringCouponAcceptanceTest {
         @ExpectedState(required = true)
         OrderReceipt receipt;
 
-        @As("驗證折抵後的訂單結果")
-        CouponThen matches_the_contract(ToppleCase c) {
+        @As("收據顯示折扣與折扣後小計")
+        CouponThen receipt_shows_discount_and_discounted_subtotal(ToppleCase c) {
             recorded();
             c.verify("receipt", receipt);
             return self();

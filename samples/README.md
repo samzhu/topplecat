@@ -2,9 +2,9 @@
 
 These samples are independent Gradle consumers. The demos publish the current
 checkout to Maven Local before running, so they test the code in this repository
-without using project dependencies or an included build. Once `0.0.5` is
+without using project dependencies or an included build. Once `0.0.6` is
 available in Maven Central, regular consumers should use the setup in the root
-[README](../README.md#install-005).
+[README](../README.md#install-006).
 
 > **Demo-only reviewer files:** the samples check in `src/hiddenTest` so a
 > fresh clone can reproduce the complete reviewer flow. A normal project given

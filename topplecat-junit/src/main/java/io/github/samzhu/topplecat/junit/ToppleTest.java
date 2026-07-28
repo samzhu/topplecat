@@ -1,6 +1,7 @@
 package io.github.samzhu.topplecat.junit;
 
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
@@ -15,6 +16,7 @@ import java.lang.annotation.Target;
 @ParameterizedTest(name = "{0}")
 @ArgumentsSource(ToppleCaseSourceProvider.class)
 @ExtendWith(ToppleAcExtension.class)
+@Tag(ToppleJunit.CONTRACT_TAG)
 public @interface ToppleTest {
     /** Stable acceptance-condition identifier. */
     String value();

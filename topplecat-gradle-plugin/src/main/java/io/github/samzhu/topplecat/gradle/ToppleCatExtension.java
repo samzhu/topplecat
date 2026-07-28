@@ -3,6 +3,8 @@ package io.github.samzhu.topplecat.gradle;
 import org.gradle.api.Action;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Nested;
 
 /** Gradle layout convention for the pure Java ToppleCat workflow. */
@@ -15,6 +17,15 @@ public abstract class ToppleCatExtension {
 
     /** Optional external Markdown documents that provide public SDD context for report projections. */
     public abstract ConfigurableFileCollection getSpecDocs();
+
+    /** Invocation-only replacement for fixed {@link #getSpecDocs()} configuration. */
+    public abstract ListProperty<String> getCommandLineSpecPaths();
+
+    /** True only when the current Gradle invocation explicitly supplied {@code --spec}. */
+    public abstract Property<Boolean> getCommandLineSpecProvided();
+
+    /** Runtime-only Verify escalation; this never weakens a sealed hidden scope. */
+    public abstract Property<Boolean> getAllHiddenRequested();
 
     /** Adversarial verification controls. All safeguards are enabled by default. */
     @Nested

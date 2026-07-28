@@ -59,10 +59,32 @@ Topple case <case-id> expected.<key> was declared by <ac-id> but never verified.
 Use `c.verify("<key>", actual)` for every top-level expected key. Reading with
 `c.expected(...)` does not fulfil the obligation.
 
+## A selected Spec cannot bind to the executable contract
+
+Use a repository-relative Markdown file with `--spec`; repeat the option when
+the delivery spans documents. A selected document needs at least one `AC-...`
+identifier and every selected AC needs a canonical public binding. Typical
+diagnostics are:
+
+```text
+ToppleCat --spec must name an existing Markdown file: <path>
+Selected ToppleCat Spec documents contain no AC-... identifiers. Select a Markdown Spec that anchors at least one executable acceptance condition.
+Selected ToppleCat Spec AC <AC> has no canonical @ToppleTest binding. Add @ToppleTest("<AC>") before review.
+```
+
+Correct the selected path or add the canonical Java contract and typed cases.
+Then use that identical `--spec` selection for Hide and Verify. If Verify says
+`CONTRACT_INTEGRITY=FAIL` after the selection changes, that is intentional:
+restore reviewer custody and use Check → Review → UpdateEscrow to seal the new
+scope. Use `--all-hidden` only when the reviewer deliberately wants selected
+delivery verification to run every hidden check.
+
 ## An external spec is not aligned with its tests
 
-External Markdown is optional reading context, not another contract. There is no
-implicit scan: configure `toppleCat.specDocs` explicitly. A missing entry or a
+External Markdown is optional reading context, not another contract. Selected
+`--spec` scope is strict; `toppleCat.specDocs` is the older compatibility-only
+reading-context setting. There is no implicit scan: configure `specDocs`
+explicitly only when warning-only context is wanted. A missing entry or a
 non-Markdown file reports one of these errors:
 
 ```text
@@ -128,6 +150,13 @@ escrow this sequence performs the migration to v2. Until then, JUnit, reviewer
 JUnit, expected consumption, and mutation are recorded as `INCOMPLETE`; no stale
 public Spec bundle is retained.
 
+After upgrading from ToppleCat 0.0.5, the stored contract approval is first
+validated and read as its original full-contract scope. Because the ToppleCat
+version and delivery-scope policy are sealed inputs, an authorized reviewer
+must still Restore, Check, Review, and UpdateEscrow once under 0.0.6. Use the
+same `--spec` selection for Check, Review, UpdateEscrow, and the later Verify;
+omit it consistently when the project intends to keep full-contract scope.
+
 ## Reviewer state is missing after a move or clone
 
 The project key is the SHA-256 of the canonical project root. A moved or cloned
@@ -184,6 +213,16 @@ set into a hidden-test requirement. If hidden Java tests also exist, `hiddenTest
 must pass independently. If neither
 hidden rows nor hidden Java tests exist while retest is enabled, the gate stays
 `INCOMPLETE` rather than becoming an unconditional pass.
+
+## A hidden JUnit test does not appear in evidence
+
+Plain reviewer `@Test` methods are deliberately excluded from ToppleCat
+evidence. Review warns about them. Mark an independent reviewer test with a
+literal `@ToppleAc("AC-...")` (or use a canonical `@ToppleTest`) so it receives
+the `topplecat-contract` tag and can be selected with the delivery. The tagged
+test must actually enter its test body: source comments, strings, and
+`@Disabled` methods do not create reviewer coverage. Ordinary public tests
+remain under `src/test` and always run as part of the full public contract.
 
 ## Delivery hygiene
 

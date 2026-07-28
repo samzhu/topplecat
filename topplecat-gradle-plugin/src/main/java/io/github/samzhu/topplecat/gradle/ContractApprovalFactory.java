@@ -9,6 +9,7 @@ import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.Hashing;
 import io.github.samzhu.topplecat.core.PublicContractEntry;
 import io.github.samzhu.topplecat.core.ReviewerContractApproval;
+import io.github.samzhu.topplecat.core.SelectedSpecScope;
 import io.github.samzhu.topplecat.core.ToppleCatException;
 import io.github.samzhu.topplecat.core.VerificationPolicy;
 
@@ -39,6 +40,17 @@ final class ContractApprovalFactory {
             ContractDefinition definition,
             VerificationPolicy policy
     ) {
+        return create(buildRoot, publicSourceRoots, publicCaseRoot, definition, policy, SelectedSpecScope.empty());
+    }
+
+    static ReviewerContractApproval create(
+            Path buildRoot,
+            Collection<Path> publicSourceRoots,
+            Path publicCaseRoot,
+            ContractDefinition definition,
+            VerificationPolicy policy,
+            SelectedSpecScope selectedSpecScope
+    ) {
         Path root = normalizedRoot(buildRoot);
         Set<Path> files = new HashSet<>();
         for (Path sourceRoot : publicSourceRoots) {
@@ -48,7 +60,7 @@ final class ContractApprovalFactory {
         addGradleLogic(root, files);
         List<PublicContractEntry> entries = files.stream().map(path -> entry(root, path))
                 .sorted().toList();
-        return ReviewerContractApproval.create(entries, publicProjection(definition).digest(), policy);
+        return ReviewerContractApproval.create(entries, publicProjection(definition).digest(), policy, selectedSpecScope);
     }
 
     static ContractIntegrityResult compare(ReviewerContractApproval approved, ReviewerContractApproval current) {
@@ -67,8 +79,9 @@ final class ContractApprovalFactory {
         List<String> changed = after.keySet().stream().filter(before::containsKey)
                 .filter(path -> !after.get(path).equals(before.get(path))).sorted().toList();
         boolean definitionMatches = approved.publicDefinitionDigest().equals(current.publicDefinitionDigest());
+        boolean scopeMatches = approved.selectedSpecScope().equals(current.selectedSpecScope());
         List<String> changedPolicy = changedPolicyFields(approved.verificationPolicy(), current.verificationPolicy());
-        EvidenceVerdict verdict = added.isEmpty() && removed.isEmpty() && changed.isEmpty() && definitionMatches
+        EvidenceVerdict verdict = added.isEmpty() && removed.isEmpty() && changed.isEmpty() && definitionMatches && scopeMatches
                 && changedPolicy.isEmpty() ? EvidenceVerdict.PASS : EvidenceVerdict.FAIL;
         return new ContractIntegrityResult(ContractIntegrityResult.SCHEMA_VERSION, verdict,
                 approved.approvalDigest(), current.approvalDigest(), added, changed, removed, definitionMatches, changedPolicy);

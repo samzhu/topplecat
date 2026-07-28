@@ -6,6 +6,7 @@ import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.report.ReportViews;
+import io.github.samzhu.topplecat.report.DeliveryScope;
 import io.github.samzhu.topplecat.report.ReviewMethod;
 import io.github.samzhu.topplecat.report.ReviewView;
 import io.github.samzhu.topplecat.report.HtmlBundleWriter;
@@ -30,12 +31,15 @@ import java.util.List;
 import java.util.Map;
 
 /** Writes a reviewer-only, no-verdict contract review from the checked ContractDefinition. */
-public abstract class ToppleCatReviewTask extends DefaultTask {
+public abstract class ToppleCatReviewTask extends ToppleCatScopedTask {
     @org.gradle.api.tasks.Internal
     public abstract DirectoryProperty getProjectRoot();
 
     @org.gradle.api.tasks.Internal
     public abstract DirectoryProperty getPublicTestSourceRoot();
+
+    @org.gradle.api.tasks.Internal
+    public abstract DirectoryProperty getHiddenSourceRoot();
 
     @org.gradle.api.tasks.Internal
     public abstract DirectoryProperty getReviewRoot();
@@ -52,19 +56,33 @@ public abstract class ToppleCatReviewTask extends DefaultTask {
     public void review() {
         Path root = getProjectRoot().get().getAsFile().toPath();
         ContractDefinition definition = readDefinition();
-        ExternalSpecDocumentReader.ParsedSpecs specs = ExternalSpecDocumentReader.read(root,
-                getSpecDocs().getFiles().stream().map(file -> file.toPath()).toList());
+        SpecScopeResolver.ResolvedSpecScope scope = SpecScopeResolver.resolve(root, getSelectedSpecPaths().getOrElse(List.of()),
+                getSpecOptionProvided().getOrElse(false), getSpecDocs().getFiles().stream().map(file -> file.toPath()).toList());
+        if (scope.scope().selected()) {
+            definition = ContractDefinition.withComputedDigest(definition.acceptanceConditions().stream()
+                    .filter(contract -> scope.scope().acceptanceConditionIds().contains(contract.acId())).toList());
+        }
         Map<String, String> titles = new LinkedHashMap<>();
         Map<String, ReviewMethod> methods = new LinkedHashMap<>();
+        Map<String, List<io.github.samzhu.topplecat.core.StepTemplate>> templates = new LinkedHashMap<>();
         for (AcceptanceContract contract : definition.acceptanceConditions()) {
             titles.put(contract.acId(), contract.title());
+            templates.put(contract.acId(), contract.scenario().steps());
             methods.put(contract.acId(), new ReviewMethod(ScenarioText.render(contract.scenario().steps()),
                     sourceCode(getPublicTestSourceRoot().get().getAsFile().toPath(),
                             contract.scenario().sourceRef().file(), contract.scenario().sourceRef().line())));
         }
         List<ToppleCaseData> cases = definition.acceptanceConditions().stream().flatMap(contract -> contract.cases().stream())
                 .map(ToppleCatReviewTask::caseData).toList();
-        ReviewView view = ReportViews.review(titles, cases, specs.narratives(), methods, Instant.now());
+        DeliveryScope deliveryScope = DeliveryScope.from(scope.scope(), scope.scope().selected() ? "SELECTED_SPECS" : "ALL",
+                "ALL_CANONICAL_CONTRACTS", 0, 0);
+        if (ReviewerJUnitSourceDetector.hasOrdinaryExecutableJUnitTests(
+                getHiddenSourceRoot().get().getAsFile().toPath().resolve("java"))) {
+            deliveryScope = deliveryScope.withReviewerWarnings(List.of(
+                    "Reviewer-only plain JUnit tests are not ToppleCat evidence. Add @ToppleAc or move the test to src/test."));
+        }
+        ReviewView view = ReportViews.review(titles, cases, scope.parsedSpecs().narratives(), methods, templates, Instant.now(),
+                deliveryScope);
         Path review = getReviewRoot().get().getAsFile().toPath();
         HtmlBundleWriter.review(review, view);
         getLogger().lifecycle("ToppleCat reviewer review written: {}", review.resolve("index.html"));

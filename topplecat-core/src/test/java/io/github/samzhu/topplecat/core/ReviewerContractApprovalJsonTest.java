@@ -1,6 +1,7 @@
 package io.github.samzhu.topplecat.core;
 
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 
@@ -9,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ReviewerContractApprovalJsonTest {
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
     @Test
     void createsADeterministicApprovalDigestAndRoundTripsCanonicalJson() {
         VerificationPolicy policy = new VerificationPolicy("0.0.4", true, true, true, 100,
@@ -22,7 +25,7 @@ class ReviewerContractApprovalJsonTest {
 
         assertEquals(approval, ReviewerContractApprovalJson.read(json));
         assertEquals(approval.approvalDigest(), ReviewerContractApprovalJson.read(json).approvalDigest());
-        assertEquals("topplecat.contract-approval.v1", approval.schemaVersion());
+        assertEquals("topplecat.contract-approval.v2", approval.schemaVersion());
     }
 
     @Test
@@ -46,7 +49,27 @@ class ReviewerContractApprovalJsonTest {
                         new PublicContractEntry("src/test/resources/topplecat/cases/amount.json", "a".repeat(64)),
                         new PublicContractEntry("src/test/java/example/AmountContractTest.java", "b".repeat(64))
                 ),
-                "c".repeat(64), policy, "d".repeat(64)));
+                "c".repeat(64), policy, SelectedSpecScope.empty(), "d".repeat(64)));
+    }
+
+    @Test
+    void readsVersionOneApprovalAsTheEquivalentFullContractScope() {
+        String source = versionOneApprovalJson("a".repeat(64));
+
+        ReviewerContractApproval migrated = ReviewerContractApprovalJson.read(source);
+
+        assertEquals(ReviewerContractApproval.SCHEMA_VERSION, migrated.schemaVersion());
+        assertEquals(SelectedSpecScope.empty(), migrated.selectedSpecScope());
+        assertEquals(List.of(new PublicContractEntry(
+                "src/test/java/example/AmountContractTest.java", "a".repeat(64))), migrated.publicFiles());
+    }
+
+    @Test
+    void rejectsTamperedVersionOneApproval() {
+        String source = versionOneApprovalJson("a".repeat(64))
+                .replaceFirst("\"approvalDigest\"\\s*:\\s*\"", "\"approvalDigest\" : \"f");
+
+        assertThrows(ToppleCatException.class, () -> ReviewerContractApprovalJson.read(source));
     }
 
     private static ReviewerContractApproval approval(String entryDigest, int threshold) {
@@ -54,5 +77,35 @@ class ReviewerContractApprovalJsonTest {
                 new PublicContractEntry("src/test/java/example/AmountContractTest.java", entryDigest)
         ), "c".repeat(64), new VerificationPolicy("0.0.4", true, true, true, threshold,
                 MutationProducerKind.DEFAULT, null));
+    }
+
+    private static String versionOneApprovalJson(String entryDigest) {
+        VerificationPolicy policy = new VerificationPolicy("0.0.5", true, true, true, 100,
+                MutationProducerKind.DEFAULT, null);
+        List<PublicContractEntry> files = List.of(new PublicContractEntry(
+                "src/test/java/example/AmountContractTest.java", entryDigest));
+        VersionOnePayload payload = new VersionOnePayload(
+                "topplecat.contract-approval.v1", files, "c".repeat(64), policy);
+        String digest = Hashing.sha256(JSON.writeValueAsBytes(payload));
+        return JSON.writerWithDefaultPrettyPrinter().writeValueAsString(new VersionOneApproval(
+                payload.schemaVersion(), payload.publicFiles(), payload.publicDefinitionDigest(),
+                payload.verificationPolicy(), digest));
+    }
+
+    private record VersionOnePayload(
+            String schemaVersion,
+            List<PublicContractEntry> publicFiles,
+            String publicDefinitionDigest,
+            VerificationPolicy verificationPolicy
+    ) {
+    }
+
+    private record VersionOneApproval(
+            String schemaVersion,
+            List<PublicContractEntry> publicFiles,
+            String publicDefinitionDigest,
+            VerificationPolicy verificationPolicy,
+            String approvalDigest
+    ) {
     }
 }

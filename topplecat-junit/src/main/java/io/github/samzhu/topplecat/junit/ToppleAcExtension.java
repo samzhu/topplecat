@@ -2,6 +2,8 @@ package io.github.samzhu.topplecat.junit;
 
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
+import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
@@ -11,14 +13,28 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /** Publishes AC metadata and enforces expected-value consumption after each invocation. */
-public final class ToppleAcExtension implements BeforeTestExecutionCallback, AfterTestExecutionCallback, InvocationInterceptor {
+public final class ToppleAcExtension implements BeforeTestExecutionCallback, AfterTestExecutionCallback, InvocationInterceptor,
+        ExecutionCondition {
     private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace.create(ToppleAcExtension.class);
     private static final String INVOCATION_KEY = "invocation";
 
     @Override
+    public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
+        if (!ToppleJunit.shouldFilterContractTests()) {
+            return ConditionEvaluationResult.enabled("ToppleCat contract filtering is not enabled for this test task.");
+        }
+        return ToppleAnnotations.find(context)
+                .filter(binding -> !ToppleJunit.hiddenAcceptanceConditionSelected(binding.acId()))
+                .map(binding -> ConditionEvaluationResult.disabled("AC is outside the selected ToppleCat hidden scope."))
+                .orElseGet(() -> ConditionEvaluationResult.enabled("AC is inside the selected ToppleCat hidden scope."));
+    }
+
+    @Override
     public void beforeTestExecution(ExtensionContext context) {
-        ToppleAnnotations.find(context).ifPresent(binding -> context.publishReportEntry(
-                Map.of(ToppleJunit.AC_ID_ENTRY, binding.acId())));
+        ToppleAnnotations.find(context).ifPresent(binding -> {
+            context.publishReportEntry(Map.of(ToppleJunit.AC_ID_ENTRY, binding.acId()));
+            ToppleJunit.recordReviewerJavaExecution(binding.acId());
+        });
     }
 
     @Override

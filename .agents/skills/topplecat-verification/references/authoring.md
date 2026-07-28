@@ -26,13 +26,15 @@ AC-SPEC-42-02
 Keep the same AC ID in Markdown context, Java annotations, and typed rows.
 Use direct string literals so `toppleCatCheck` can prove the relationship.
 
-If Markdown requirements exist, configure them explicitly:
+Use the delivery scope pinned by `SKILL.md` when running Check:
 
-```kotlin
-toppleCat {
-    specDocs.from("specs")
-}
+```bash
+./gradlew toppleCatCheck --spec specs/SPEC-42/spec.md
 ```
+
+`toppleCat.specDocs.from(...)` remains available only as fixed reading context
+for projects that do not select a delivery at invocation time. An explicit
+`--spec` replaces that configured context for the invocation.
 
 Anchor each requirement with its literal AC ID:
 
@@ -159,6 +161,11 @@ Java tests are present, they remain an independent reviewer requirement.
 
 Bind every reviewer row to an existing public AC. Keep all reviewer material
 under `src/hiddenTest`.
+
+Every AC selected by `--spec` needs current-run reviewer coverage. Coverage is
+an actually executed hidden row or an AC-bound reviewer Java test that entered
+execution. A source comment, string literal, plain `@Test`, or disabled test is
+not evidence.
 
 ## Attachment evidence
 

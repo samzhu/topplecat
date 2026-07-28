@@ -15,6 +15,32 @@ artifacts.
 
 ## Contract boundary
 
+An external SDD, workflow, or task system selects the current Spec or delivery,
+tracks earlier deliveries, and decides who may approve or release work.
+ToppleCat does not manage tasks, Spec lifecycles, delivery history, pull-request
+approval, or organizational sign-off.
+
+ToppleCat starts at the executable acceptance boundary. It connects selected
+acceptance conditions to ordinary Java/JUnit tests and typed case rows, keeps
+the public executable contract handed to the implementation agent identical to
+the contract executed by verification, and checks the agent's done claim.
+People remain responsible for making the selected rules and cases complete.
+ToppleCat does not infer missing business requirements or judge behavior
+outside that executable contract.
+
+The `ReviewerContractApproval` stored with custody is named for its mechanical
+role in the verification protocol. It seals exact public contract inputs and
+the effective verification policy so later changes can be detected. It is not
+evidence that a person or organization approved a task, Spec, pull request, or
+release. `toppleCatReview` likewise produces a reading projection; it cannot
+know whether anyone reviewed or accepted it.
+
+Every generated report is a projection of that checked executable contract.
+Report generation may improve presentation, but it must not add, omit, or
+reinterpret a rule, case, expected value, or compiler-defined scenario step.
+HTML and JSON therefore cannot become an independent authoring surface or an
+input that changes a later verdict.
+
 Public tests and case rows live under `src/test`. Reviewer-only test code and
 case rows live together under `src/hiddenTest`. A hidden row targets an existing
 public acceptance condition; it does not create another public contract.
@@ -91,12 +117,32 @@ producers are left alone: excluding a canonical test produces
 
 ## External spec and delivery boundaries
 
-External Markdown is optional reading context, not another contract. A consumer
-explicitly configures `toppleCat.specDocs`; `AC-...` headings or paragraphs
-anchor reading context to canonical `@ToppleTest` contracts, and
-`toppleCatCheck` warns in either direction only when that configuration is
-present. `toppleCatReview` is the pre-handoff reviewer projection. The public
+External Markdown is optional reading context, not another contract. A delivery
+is selected explicitly with repeatable repository-relative
+`--spec <path>` options on Check, Review, Hide, UpdateEscrow, and Verify.
+Selected `AC-...` headings or paragraphs must each anchor a canonical public
+`@ToppleTest`; the selected paths, document digests, and normalized AC set are
+sealed into reviewer approval. Verification refuses a mismatched selection. It
+runs selected hidden rows and `@ToppleTest`/`@ToppleAc` tagged reviewer checks
+by default, deriving selected-AC reviewer coverage from current-run execution
+evidence rather than reviewer source text. The public contract and mutation remain full-contract;
+`--all-hidden` broadens only that hidden retest. The run writes a scope artifact
+and reviewer projections display the exact scope. Plain reviewer `@Test`
+methods are not ToppleCat evidence and are flagged in Review.
+
+`toppleCat.specDocs` remains a compatibility-only reading-context setting. It
+does not select or seal a delivery and retains warning-only alignment checks.
+`toppleCatReview` is the pre-handoff reviewer projection. The public
 `reports/spec/index.html` appears only after `toppleCatVerify`.
+
+The surrounding workflow decides which Spec documents describe the current
+delivery. ToppleCat does not discover an active Spec from a branch name, migrate
+old delivery state, or force one review process across Spec Kit, Superpowers,
+OpenSpec, or another SDD tool. Its portable integration point is the executable
+AC identity: external context may point to an `AC-...`, and that AC must bind to
+the Java/JUnit contract that ToppleCat can run. The purpose of Spec integration
+is to make acceptance executable, not to turn ToppleCat into a Spec repository
+or task tracker.
 
 Reviewer custody is stored at `~/.topplecat/projects/<sha256-project-key>/escrow/`.
 It is plaintext mechanical state, not encryption, sandboxing, or a security
@@ -106,6 +152,13 @@ history, revisions, audit, lock, and recovery data. A legacy project-local
 removes it after a successful migration. `./gradlew clean` does not remove
 reviewer-local state, and removing `src/hiddenTest` does not erase it from Git
 history.
+
+The approval payload added delivery scope in schema v2. A valid v1 approval
+created by 0.0.5 is verified with its original digest and read as the equivalent
+empty selection, which retains the previous full-contract meaning. This
+compatibility read does not approve the new plugin version or policy; the
+authorized reviewer must use the normal Restore, Check, Review, and
+UpdateEscrow path before verification can pass.
 
 ToppleCat relies on the external workflow to provide a trusted reviewer/CI
 execution boundary. That workflow must hand agents only public source and safe

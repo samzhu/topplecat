@@ -16,13 +16,17 @@ import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ExpectedConsumptionExecution;
 import io.github.samzhu.topplecat.core.Hashing;
 import io.github.samzhu.topplecat.core.NarrativeExecution;
+import io.github.samzhu.topplecat.core.ReviewerJavaExecution;
 import io.github.samzhu.topplecat.core.StepRun;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.core.ToppleEvidence;
 import io.github.samzhu.topplecat.core.ToppleEvidenceJson;
+import io.github.samzhu.topplecat.core.VerificationScope;
+import io.github.samzhu.topplecat.core.VerificationScopeJson;
 import io.github.samzhu.topplecat.core.VerificationRun;
 import io.github.samzhu.topplecat.core.VerificationRunJson;
 import io.github.samzhu.topplecat.report.CaseResultStatus;
+import io.github.samzhu.topplecat.report.DeliveryScope;
 import io.github.samzhu.topplecat.report.ReportJson;
 import io.github.samzhu.topplecat.report.ReportViews;
 import io.github.samzhu.topplecat.report.SpecView;
@@ -34,6 +38,7 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.ListProperty;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
@@ -125,6 +130,15 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     @Input
     public abstract Property<String> getExpectedConsumptionDisabledReason();
 
+    @Input
+    public abstract ListProperty<String> getSelectedSpecPaths();
+
+    @Input
+    public abstract Property<Boolean> getSpecOptionProvided();
+
+    @Input
+    public abstract Property<Boolean> getAllHidden();
+
     @InputFiles
     @Optional
     @PathSensitive(PathSensitivity.RELATIVE)
@@ -135,8 +149,15 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         Path root = getProjectRoot().get().getAsFile().toPath();
         Path runDirectory = getRunDirectory().get().getAsFile().toPath();
         VerificationRunWorkspace.prepare(runDirectory);
-        ExternalSpecDocumentReader.ParsedSpecs specDocs = ExternalSpecDocumentReader.read(root,
+        SpecScopeResolver.ResolvedSpecScope selectedScope = SpecScopeResolver.resolve(root,
+                getSelectedSpecPaths().getOrElse(List.of()), getSpecOptionProvided().getOrElse(false),
                 getSpecDocs().getFiles().stream().map(file -> file.toPath()).toList());
+        boolean allHidden = getAllHidden().getOrElse(false) || !selectedScope.scope().selected();
+        VerificationScope verificationScope = new VerificationScope(VerificationScope.SCHEMA_VERSION,
+                selectedScope.scope(), allHidden ? VerificationScope.HIDDEN_ALL : VerificationScope.HIDDEN_SELECTED_SPECS,
+                VerificationScope.MUTATION_ALL_CANONICAL_CONTRACTS);
+        Path verificationScopeFile = runDirectory.resolve("verification-scope.json");
+        write(verificationScopeFile, VerificationScopeJson.write(verificationScope));
         ContractDefinition publicDefinition = definition(getDefinitionFile(), "public");
         GateOutcome integrity = contractIntegrityVerdict();
         boolean integrityPassed = integrity.verdict() == EvidenceVerdict.PASS;
@@ -147,7 +168,9 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 .filter(testCase -> testCase.visibility() == CaseVisibility.PUBLIC).toList();
         List<ToppleCaseData> verificationCases = reviewerDefinition.acceptanceConditions().stream()
                 .flatMap(contract -> contract.cases().stream()).map(ToppleCatReportTask::caseData)
-                .filter(testCase -> getHiddenRetestEnabled().get() || testCase.visibility() == CaseVisibility.PUBLIC).toList();
+                .filter(testCase -> testCase.visibility() == CaseVisibility.PUBLIC || getHiddenRetestEnabled().get()
+                        && (allHidden || selectedScope.scope().acceptanceConditionIds().contains(testCase.acId())))
+                .toList();
         Map<String, String> publicTitles = publicDefinition.acceptanceConditions().stream().collect(java.util.stream.Collectors.toMap(
                 AcceptanceContract::acId, AcceptanceContract::title, (left, right) -> left, LinkedHashMap::new));
         Map<String, List<String>> publicScenarios = publicDefinition.acceptanceConditions().stream().collect(java.util.stream.Collectors.toMap(
@@ -162,22 +185,22 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         Set<String> definedCaseIds = verificationCases.stream().map(ToppleCaseData::caseId).collect(java.util.stream.Collectors.toSet());
         ExecutionSummary executionSummary = executions(runDirectory, reviewerDefinition.digest(), definedCaseIds);
         Map<String, ReportViews.CaseExecution> executions = executionSummary.executions();
-        boolean reviewerRowsPresent = hasHiddenReviewerRows(reviewerDefinition);
-        boolean hiddenJavaSourcesPresent = ReviewerJUnitSourceDetector.hasJavaSources(
-                getHiddenSourceRoot().get().getAsFile().toPath());
-        boolean hiddenExecutableJUnitPresent = ReviewerJUnitSourceDetector.hasExecutableJUnitTests(
-                getHiddenSourceRoot().get().getAsFile().toPath());
-        boolean hiddenJUnitResultsPresent = executionSummary.reviewerJUnit().testCases() > 0;
-        boolean hiddenJavaCompilationCompleted = VerificationRunArtifacts.completed(
-                runDirectory, VerificationRunArtifacts.REVIEWER_JAVA_COMPILE);
+        Set<String> selectedAcIds = Set.copyOf(selectedScope.scope().acceptanceConditionIds());
+        Set<String> executedHiddenRowAcIds = executedHiddenRowAcceptanceConditions(verificationCases, executions);
+        int executedHiddenRows = (int) verificationCases.stream().filter(testCase -> testCase.visibility() == CaseVisibility.HIDDEN)
+                .filter(testCase -> executions.getOrDefault(testCase.caseId(), ReportViews.CaseExecution.notReported()).status()
+                        != CaseResultStatus.NOT_REPORTED).count();
+        boolean reviewerRowsExecuted = !executedHiddenRowAcIds.isEmpty();
+        Set<String> selectedReviewerCoverage = new java.util.LinkedHashSet<>(executedHiddenRowAcIds);
+        selectedReviewerCoverage.addAll(executionSummary.reviewerJavaAcceptanceConditions());
+        boolean missingSelectedReviewerCoverage = selectedScope.scope().selected()
+                && !selectedReviewerCoverage.containsAll(selectedAcIds);
         Instant generatedAt = Instant.now();
         GateOutcome junit = integrityPassed ? testVerdict(runDirectory, "the public verification", VerificationRunArtifacts.JUNIT,
                 executionSummary.junit()) : GateOutcome.incomplete(INTEGRITY_PRECONDITION);
         GateOutcome reviewer = !integrityPassed ? GateOutcome.incomplete(INTEGRITY_PRECONDITION)
                 : getHiddenRetestEnabled().get()
-                ? reviewerRetestVerdict(runDirectory, reviewerRowsPresent, hiddenJavaSourcesPresent,
-                        hiddenExecutableJUnitPresent, hiddenJUnitResultsPresent,
-                        hiddenJavaCompilationCompleted, executionSummary)
+                ? reviewerRetestVerdict(runDirectory, missingSelectedReviewerCoverage, reviewerRowsExecuted, executionSummary)
                 : GateOutcome.disabled(getHiddenRetestDisabledReason().get());
         GateOutcome expectedConsumption = !integrityPassed ? GateOutcome.incomplete(INTEGRITY_PRECONDITION)
                 : getExpectedConsumptionEnabled().get()
@@ -194,10 +217,12 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 expectedConsumption.asEvidenceGate(VerificationRunArtifacts.EXPECTED_CONSUMPTION),
                 mutation.asEvidenceGate(VerificationRunArtifacts.MUTATION)
         );
-        SpecView spec = ReportViews.spec(publicTitles, publicCases, specDocs.narratives(), publicScenarios, generatedAt);
+        SpecView spec = ReportViews.spec(publicTitles, publicCases, selectedScope.parsedSpecs().narratives(), publicScenarios, generatedAt);
         VerificationView verification = ReportViews.verificationFromTemplates(reviewerTitles, verificationCases, executions,
-                specDocs.narratives(), reviewerScenarioTemplates,
-                getExpectedConsumptionEnabled().get(), reviewerGates, generatedAt);
+                selectedScope.parsedSpecs().narratives(), reviewerScenarioTemplates,
+                getExpectedConsumptionEnabled().get(), reviewerGates, generatedAt,
+                DeliveryScope.from(selectedScope.scope(), verificationScope.hiddenMode(), verificationScope.mutationMode(),
+                        executedHiddenRows, executionSummary.reviewerJUnit().executedTestCases()));
         Path reports = runDirectory.resolve("reports");
         if (integrityPassed) {
             HtmlBundleWriter.spec(reports.resolve("spec"), spec);
@@ -216,7 +241,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 verificationCases.stream().map(testCase -> caseRun(testCase, executions)).toList());
         write(runDirectory.resolve("verification-run.json"), VerificationRunJson.write(executionRun));
         Map<String, String> digests = artifactDigests(root, reports, getMutationResultsFile().get().getAsFile().toPath(),
-                getContractIntegrityResultFile().get().getAsFile().toPath());
+                getContractIntegrityResultFile().get().getAsFile().toPath(), verificationScopeFile);
         ToppleEvidence evidence = ToppleEvidenceJson.create(runId, generatedAt.toString(), verdict,
                 reviewerGates, digests);
         Path evidencePath = runDirectory.resolve("evidence.json");
@@ -274,10 +299,15 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 testCase.expected(), Path.of("contract-definition.json"));
     }
 
-    private static boolean hasHiddenReviewerRows(ContractDefinition definition) {
-        return definition.acceptanceConditions().stream()
-                .flatMap(contract -> contract.cases().stream())
-                .anyMatch(testCase -> testCase.visibility() == CaseVisibility.HIDDEN);
+    private static Set<String> executedHiddenRowAcceptanceConditions(
+            List<ToppleCaseData> cases,
+            Map<String, ReportViews.CaseExecution> executions
+    ) {
+        return cases.stream().filter(testCase -> testCase.visibility() == CaseVisibility.HIDDEN)
+                .filter(testCase -> executions.getOrDefault(testCase.caseId(), ReportViews.CaseExecution.notReported()).status()
+                        != CaseResultStatus.NOT_REPORTED)
+                .map(ToppleCaseData::acId)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     private static CaseRun caseRun(ToppleCaseData testCase, Map<String, ReportViews.CaseExecution> executions) {
@@ -309,11 +339,13 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         TestResults reviewer = readTestResults(runDirectory.resolve("junit/").resolve(VerificationRunArtifacts.REVIEWER_JUNIT), result);
         readNarrativeExecutions(runDirectory.resolve("narrative-executions.jsonl"), result, definitionDigest);
         readExpectedConsumptionExecutions(runDirectory.resolve("expected-consumption-executions.jsonl"), result);
+        Set<String> reviewerJavaAcceptanceConditions = readReviewerJavaExecutions(
+                runDirectory.resolve("reviewer-java-executions.jsonl"));
         result.keySet().stream().filter(caseId -> !definedCaseIds.contains(caseId)).findFirst().ifPresent(caseId -> {
             throw new IllegalStateException("ToppleCat report cannot project execution event for case " + caseId
                     + " because no matching case exists in the run-scoped contract definition " + definitionDigest + ".");
         });
-        return new ExecutionSummary(result, junit, reviewer);
+        return new ExecutionSummary(result, junit, reviewer, reviewerJavaAcceptanceConditions);
     }
 
     private static void readNarrativeExecutions(Path file, Map<String, ReportViews.CaseExecution> result,
@@ -363,6 +395,24 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         }
     }
 
+    private static Set<String> readReviewerJavaExecutions(Path file) {
+        if (!Files.isRegularFile(file)) {
+            return Set.of();
+        }
+        try {
+            Set<String> acceptanceConditions = new java.util.LinkedHashSet<>();
+            for (String line : Files.readAllLines(file)) {
+                if (!line.isBlank()) {
+                    acceptanceConditions.add(JSON.readValue(line, ReviewerJavaExecution.class).acId());
+                }
+            }
+            return Set.copyOf(acceptanceConditions);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Cannot read ToppleCat reviewer Java execution evidence " + file + ": "
+                    + exception.getMessage(), exception);
+        }
+    }
+
     private static TestResults readTestResults(Path directory, Map<String, ReportViews.CaseExecution> result) {
         if (!Files.exists(directory)) {
             return TestResults.NONE;
@@ -370,6 +420,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         boolean foundXml = false;
         boolean failures = false;
         int testCasesCount = 0;
+        int executedTestCasesCount = 0;
         try (Stream<Path> files = Files.list(directory)) {
             for (Path file : files.filter(path -> path.toString().endsWith(".xml")).toList()) {
                 foundXml = true;
@@ -379,11 +430,15 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                     Element testCase = (Element) testCases.item(index);
                     Element failure = failure(testCase);
                     failures |= failure != null;
+                    boolean skipped = skipped(testCase);
+                    if (!skipped) {
+                        executedTestCasesCount++;
+                    }
                     Matcher matcher = CASE_DISPLAY_NAME.matcher(testCase.getAttribute("name"));
                     if (!matcher.find()) {
                         continue;
                     }
-                    result.put(matcher.group(1), failure == null
+                    result.put(matcher.group(1), skipped ? ReportViews.CaseExecution.notReported() : failure == null
                             ? new ReportViews.CaseExecution(CaseResultStatus.PASS, null, List.of())
                             : new ReportViews.CaseExecution(CaseResultStatus.FAIL, failure.getAttribute("message"), List.of()));
                 }
@@ -391,7 +446,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         } catch (IOException | SAXException exception) {
             throw new IllegalStateException("Cannot read JUnit XML results from " + directory + ": " + exception.getMessage(), exception);
         }
-        return new TestResults(foundXml, failures, testCasesCount);
+        return new TestResults(foundXml, failures, testCasesCount, executedTestCasesCount);
     }
 
     /** Gradle can expose a test XML path to a finalizer just before its writer flushes the document. */
@@ -440,6 +495,17 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         return null;
     }
 
+    private static boolean skipped(Element testCase) {
+        NodeList children = testCase.getChildNodes();
+        for (int index = 0; index < children.getLength(); index++) {
+            Node node = children.item(index);
+            if (node instanceof Element element && element.getTagName().equals("skipped")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static GateOutcome testVerdict(Path runDirectory, String taskName, String gate, TestResults results) {
         if (!VerificationRunArtifacts.completed(runDirectory, gate)) {
             return GateOutcome.incomplete(taskName + " did not complete in this verification run.");
@@ -447,7 +513,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         if (!results.foundXml()) {
             return GateOutcome.incomplete(taskName + " completed without JUnit XML results.");
         }
-        if (results.testCases() == 0) {
+        if (results.executedTestCases() == 0) {
             return GateOutcome.incomplete(taskName + " completed without executable JUnit tests.");
         }
         return results.failures() ? GateOutcome.fail() : GateOutcome.pass();
@@ -455,19 +521,18 @@ public abstract class ToppleCatReportTask extends DefaultTask {
 
     private static GateOutcome reviewerRetestVerdict(
             Path runDirectory,
-            boolean reviewerRowsPresent,
-            boolean hiddenJavaSourcesPresent,
-            boolean hiddenExecutableJUnitPresent,
-            boolean hiddenJUnitResultsPresent,
-            boolean hiddenJavaCompilationCompleted,
+            boolean missingSelectedReviewerCoverage,
+            boolean reviewerRowsExecuted,
             ExecutionSummary executionSummary
     ) {
-        boolean hiddenJavaRequiresRetest = hiddenExecutableJUnitPresent || hiddenJUnitResultsPresent
-                || (hiddenJavaSourcesPresent && !hiddenJavaCompilationCompleted);
-        if (!reviewerRowsPresent && !hiddenJavaRequiresRetest) {
+        if (missingSelectedReviewerCoverage) {
+            return GateOutcome.incomplete("the selected executable contract is missing reviewer coverage.");
+        }
+        boolean reviewerJavaExecuted = !executionSummary.reviewerJavaAcceptanceConditions().isEmpty();
+        if (!reviewerRowsExecuted && !reviewerJavaExecuted) {
             return GateOutcome.incomplete("the reviewer retest has no hidden rows or Java tests.");
         }
-        if (!hiddenJavaRequiresRetest && reviewerRowsPresent) {
+        if (!reviewerJavaExecuted && reviewerRowsExecuted) {
             // The public canonical @ToppleTest already ran the restored hidden rows. In
             // this rows-only shape, its JUnit result is the reviewer retest result.
             return testVerdict(runDirectory, "the reviewer row retest", VerificationRunArtifacts.JUNIT,
@@ -478,7 +543,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         // mask a failed hidden row.
         GateOutcome javaTests = testVerdict(runDirectory, "the reviewer retest",
                 VerificationRunArtifacts.REVIEWER_JUNIT, executionSummary.reviewerJUnit());
-        if (!reviewerRowsPresent) {
+        if (!reviewerRowsExecuted) {
             return javaTests;
         }
         GateOutcome rows = testVerdict(runDirectory, "the reviewer row retest", VerificationRunArtifacts.JUNIT,
@@ -555,13 +620,15 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 : GateOutcome.pass();
     }
 
-    private static Map<String, String> artifactDigests(Path root, Path reports, Path mutationResults, Path integrityResult) {
+    private static Map<String, String> artifactDigests(Path root, Path reports, Path mutationResults, Path integrityResult,
+                                                       Path verificationScope) {
         Map<String, String> digests = new LinkedHashMap<>();
         if (Files.isRegularFile(reports.resolve("spec/data.json"))) {
             digest(digests, "spec-data.json", reports.resolve("spec/data.json"));
         }
         digest(digests, "verification-data.json", reports.resolve("verification/data.json"));
         digest(digests, "contract-integrity.json", integrityResult);
+        digest(digests, "verification-scope.json", verificationScope);
         Path manifest = EscrowService.reviewerStatePath(root, EscrowService.defaultReviewerStateRoot()).resolve("manifest.json");
         if (Files.exists(manifest)) {
             digest(digests, "escrow-manifest.json", manifest);
@@ -671,15 +738,17 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     private record ExecutionSummary(
             Map<String, ReportViews.CaseExecution> executions,
             TestResults junit,
-            TestResults reviewerJUnit
+            TestResults reviewerJUnit,
+            Set<String> reviewerJavaAcceptanceConditions
     ) {
         private ExecutionSummary {
             executions = Map.copyOf(executions);
+            reviewerJavaAcceptanceConditions = Set.copyOf(reviewerJavaAcceptanceConditions);
         }
     }
 
-    private record TestResults(boolean foundXml, boolean failures, int testCases) {
-        private static final TestResults NONE = new TestResults(false, false, 0);
+    private record TestResults(boolean foundXml, boolean failures, int testCases, int executedTestCases) {
+        private static final TestResults NONE = new TestResults(false, false, 0, 0);
     }
 
     private record GateOutcome(EvidenceVerdict verdict, String reason) {

@@ -14,5 +14,6 @@ dependencies {
     // Public report case records expose JsonNode values.
     api(libs.jackson.databind)
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.htmlunit)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

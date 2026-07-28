@@ -1,6 +1,7 @@
 package io.github.samzhu.topplecat.report;
 
 import io.github.samzhu.topplecat.core.CaseVisibility;
+import io.github.samzhu.topplecat.core.ArgumentBinding;
 import io.github.samzhu.topplecat.core.EvidenceGate;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.NarrativeStep;
@@ -44,7 +45,6 @@ class ReportViewsTest {
         Path bundle = tempDir.resolve("spec");
         HtmlBundleWriter.spec(bundle, view);
         String html = Files.readString(bundle.resolve("index.html"));
-        String script = Files.readString(bundle.resolve("assets/report.js"));
 
         assertTrue(json.contains("coupon-public"));
         assertTrue(json.contains("Given a public coupon cart"));
@@ -60,10 +60,6 @@ class ReportViewsTest {
         assertTrue(html.contains("id=\"topplecat-report-data\""));
         assertTrue(html.contains("assets/report.js"));
         assertTrue(html.contains("Content-Security-Policy"));
-        assertTrue(script.contains("renderSpecCases"));
-        assertTrue(script.contains("renderReviewCases"));
-        assertTrue(script.contains("renderVerificationCases"));
-        assertFalse(script.contains("ac.publicCases || ac.cases"));
         assertEquals(view, ReportJson.readSpec(json));
 
         ToppleCatException error = assertThrows(ToppleCatException.class,
@@ -143,10 +139,7 @@ class ReportViewsTest {
         Path bundle = tempDir.resolve("source-reference-verification");
         HtmlBundleWriter.verification(bundle, view);
         String data = Files.readString(bundle.resolve("data.json"));
-        String script = Files.readString(bundle.resolve("assets/report.js"));
         assertTrue(data.contains("CouponAcceptanceTest.java"), data);
-        assertTrue(script.contains(
-                "Source: ${e(reference.file)}:${e(reference.line)}:${e(reference.column)}"), script);
     }
 
     @Test
@@ -183,7 +176,6 @@ class ReportViewsTest {
         String html = Files.readString(bundle.resolve("index.html"));
 
         String data = Files.readString(bundle.resolve("data.json"));
-        String script = Files.readString(bundle.resolve("assets/report.js"));
         assertTrue(html.contains("topplecat-report-data"));
         assertTrue(data.contains("window.injected = true"));
         assertFalse(html.contains("<script>window.injected = true</script>"));
@@ -191,12 +183,68 @@ class ReportViewsTest {
         assertTrue(data.contains("700-secret-value"));
         assertTrue(data.indexOf("coupon-public") < data.indexOf("coupon-hidden-800"), data);
         assertTrue(html.contains("assets/report.css"));
-        assertTrue(script.contains("Reviewer-only check"));
-        assertTrue(script.contains("highlightJava"));
-        assertTrue(script.contains("Canonical acceptance method"));
         assertFalse(html.contains(">PASS<"));
         assertFalse(html.contains(">FAIL<"));
         assertEquals(review, ReportJson.readReview(Files.readString(bundle.resolve("data.json"))));
+    }
+
+    @Test
+    void reviewerReviewResolvesEachCaseFromCompilerBindingsWithoutInterpretingJava() throws Exception {
+        ToppleCaseData publicCase = new ToppleCaseData("public-rich", "AC-CART-COUPON", CaseVisibility.PUBLIC,
+                JSON.readTree("""
+                        {"cart":{"customer":"customer-public","amount":500,"lines":[{"sku":"BOOK","quantity":2}]},
+                         "enabled":true,"optional":null}
+                        """), JSON.readTree("{\"receipt\":{\"discount\":100,\"accepted\":true}}"), Path.of("public.json"));
+        ToppleCaseData hiddenCase = new ToppleCaseData("hidden-rich", "AC-CART-COUPON", CaseVisibility.HIDDEN,
+                JSON.readTree("""
+                        {"cart":{"customer":"customer-hidden","amount":800,"lines":["A","B"]},
+                         "enabled":false,"optional":null}
+                        """), JSON.readTree("{\"receipt\":{\"discount\":200,\"accepted\":false}}"), Path.of("hidden.json"));
+        StepTemplate given = template("given", StepPhase.GIVEN, "prepares ", List.of(
+                binding(0, "customer", "/inputs/cart/customer"), binding(1, "amount", "/inputs/cart/amount"),
+                binding(2, "enabled", "/inputs/enabled"), binding(3, "optional", "/inputs/optional"),
+                binding(4, "lines", "/inputs/cart/lines"), binding(5, "receipt", "/expected/receipt"),
+                binding(6, "unbound", ""), binding(7, "missing", "/inputs/no-such-value")));
+        StepTemplate then = template("then", StepPhase.THEN, "expects discount ",
+                List.of(binding(0, "discount", "/expected/receipt/discount")));
+
+        ReviewView review = ReportViews.review(Map.of("AC-CART-COUPON", "Coupon"), List.of(hiddenCase, publicCase),
+                Map.of(), Map.of("AC-CART-COUPON", new ReviewMethod(List.of("Given fallback"), "")),
+                Map.of("AC-CART-COUPON", List.of(given, then)), NOW);
+
+        assertEquals(ReviewView.SCHEMA_VERSION, review.schemaVersion());
+        assertEquals(List.of("public-rich", "hidden-rich"), review.acceptanceConditions().getFirst().cases().stream()
+                .map(ReviewCase::caseId).toList());
+        ReviewCase publicRow = review.acceptanceConditions().getFirst().cases().getFirst();
+        ReviewCase hiddenRow = review.acceptanceConditions().getFirst().cases().get(1);
+        assertEquals("prepares customer-public 500 true null [{\"sku\":\"BOOK\",\"quantity\":2}] {\"discount\":100,\"accepted\":true} <unbound> <missing>",
+                publicRow.scenario().getFirst().sentence());
+        assertEquals("expects discount 100", publicRow.scenario().get(1).sentence());
+        assertEquals("prepares customer-hidden 800 false null [\"A\",\"B\"] {\"discount\":200,\"accepted\":false} <unbound> <missing>",
+                hiddenRow.scenario().getFirst().sentence());
+        assertEquals(StepPhase.GIVEN, publicRow.scenario().getFirst().phase());
+        assertTrue(new ReviewCase(CaseVisibility.PUBLIC, "legacy", publicCase.inputs(), publicCase.expected()).scenario().isEmpty());
+        String json = ReportJson.writeReview(review);
+        assertEquals(review, ReportJson.readReview(json));
+        assertThrows(RuntimeException.class,
+                () -> ReportJson.readReview(json.replace(ReviewView.SCHEMA_VERSION, "topplecat.review-view.v1")));
+    }
+
+    private static StepTemplate template(String id, StepPhase phase, String prefix, List<ArgumentBinding> bindings) {
+        List<StepToken> tokens = new java.util.ArrayList<>();
+        tokens.add(new StepToken(StepTokenKind.PHASE, phase.name()));
+        tokens.add(new StepToken(StepTokenKind.LITERAL, prefix));
+        for (int index = 0; index < bindings.size(); index++) {
+            tokens.add(new StepToken(StepTokenKind.ARGUMENT, String.valueOf(index)));
+            if (index + 1 < bindings.size()) {
+                tokens.add(new StepToken(StepTokenKind.LITERAL, " "));
+            }
+        }
+        return new StepTemplate(id, phase, tokens, bindings, new SourceRef("ReviewFixture.java", 1, 1));
+    }
+
+    private static ArgumentBinding binding(int index, String name, String pointer) {
+        return new ArgumentBinding(index, name, pointer);
     }
 
     private static ToppleCaseData row(String id, CaseVisibility visibility, String subtotal, String total) throws Exception {

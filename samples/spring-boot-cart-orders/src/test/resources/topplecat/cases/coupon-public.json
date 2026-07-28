@@ -15,6 +15,24 @@
     }
   },
   {
+    "caseId": "coupon-public-mixed-cart-500",
+    "acId": "AC-CART-COUPON",
+    "inputs": {
+      "cart": {
+        "customerId": "customer-public-mixed",
+        "lines": [
+          {"sku": "BOOK", "quantity": 1, "unitPrice": 250},
+          {"sku": "GAME", "quantity": 1, "unitPrice": 250}
+        ],
+        "subtotal": 500,
+        "coupon": "SAVE100"
+      }
+    },
+    "expected": {
+      "receipt": {"discount": 100, "discountedSubtotal": 400}
+    }
+  },
+  {
     "caseId": "order-public-no-coupon",
     "acId": "AC-CART-NO-COUPON",
     "inputs": {
@@ -27,6 +45,24 @@
     },
     "expected": {
       "receipt": {"discount": 0, "discountedSubtotal": 60}
+    }
+  },
+  {
+    "caseId": "order-public-no-coupon-nested-cart",
+    "acId": "AC-CART-NO-COUPON",
+    "inputs": {
+      "cart": {
+        "customerId": "customer-4",
+        "lines": [
+          {"sku": "NOTEBOOK", "quantity": 1, "unitPrice": 120},
+          {"sku": "PEN", "quantity": 2, "unitPrice": 40}
+        ],
+        "subtotal": 200,
+        "coupon": null
+      }
+    },
+    "expected": {
+      "receipt": {"discount": 0, "discountedSubtotal": 200}
     }
   }
 ]

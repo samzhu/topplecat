@@ -72,7 +72,7 @@ public final class ReportViews {
                                                 boolean expectedConsumptionEnforced, List<EvidenceGate> gates,
                                                 Instant generatedAt) {
         return verificationWithSources(titles, cases, executions, specNarratives, scenarios, Map.of(),
-                expectedConsumptionEnforced, gates, generatedAt);
+                Map.of(), expectedConsumptionEnforced, gates, generatedAt, null);
     }
 
     /** Builds the reviewer projection from the exact compiler-owned scenario templates. */
@@ -82,15 +82,29 @@ public final class ReportViews {
                                                              Map<String, List<StepTemplate>> scenarios,
                                                              boolean expectedConsumptionEnforced, List<EvidenceGate> gates,
                                                              Instant generatedAt) {
+        return verificationFromTemplates(titles, cases, executions, specNarratives, scenarios, expectedConsumptionEnforced,
+                gates, generatedAt, null);
+    }
+
+    /** Builds the reviewer projection from compiler templates and an explicit delivery-scope projection. */
+    public static VerificationView verificationFromTemplates(Map<String, String> titles, List<ToppleCaseData> cases,
+                                                             Map<String, CaseExecution> executions,
+                                                             Map<String, List<SpecMarkdownBlock>> specNarratives,
+                                                             Map<String, List<StepTemplate>> scenarios,
+                                                             boolean expectedConsumptionEnforced, List<EvidenceGate> gates,
+                                                             Instant generatedAt, DeliveryScope deliveryScope) {
         Map<String, List<String>> templates = new LinkedHashMap<>();
         Map<String, Map<String, SourceRef>> sources = new LinkedHashMap<>();
+        Map<String, Map<String, io.github.samzhu.topplecat.core.StepPhase>> phases = new LinkedHashMap<>();
         scenarios.forEach((acId, steps) -> {
             templates.put(acId, steps.stream().map(ScenarioTemplateRenderer::template).toList());
             sources.put(acId, steps.stream().collect(java.util.stream.Collectors.toMap(
                     StepTemplate::stepId, StepTemplate::sourceRef, (left, right) -> left, LinkedHashMap::new)));
+            phases.put(acId, steps.stream().collect(java.util.stream.Collectors.toMap(
+                    StepTemplate::stepId, StepTemplate::phase, (left, right) -> left, LinkedHashMap::new)));
         });
-        return verificationWithSources(titles, cases, executions, specNarratives, templates, sources,
-                expectedConsumptionEnforced, gates, generatedAt);
+        return verificationWithSources(titles, cases, executions, specNarratives, templates, sources, phases,
+                expectedConsumptionEnforced, gates, generatedAt, deliveryScope);
     }
 
     private static VerificationView verificationWithSources(Map<String, String> titles, List<ToppleCaseData> cases,
@@ -98,8 +112,9 @@ public final class ReportViews {
                                                             Map<String, List<SpecMarkdownBlock>> specNarratives,
                                                             Map<String, List<String>> scenarios,
                                                             Map<String, Map<String, SourceRef>> stepSources,
+                                                            Map<String, Map<String, io.github.samzhu.topplecat.core.StepPhase>> stepPhases,
                                                             boolean expectedConsumptionEnforced, List<EvidenceGate> gates,
-                                                            Instant generatedAt) {
+                                                            Instant generatedAt, DeliveryScope deliveryScope) {
         Map<String, List<ToppleCaseData>> byAc = group(cases);
         List<VerificationAcceptanceCondition> acs = new ArrayList<>();
         for (Map.Entry<String, List<ToppleCaseData>> entry : byAc.entrySet()) {
@@ -118,13 +133,14 @@ public final class ReportViews {
             acs.add(new VerificationAcceptanceCondition(entry.getKey(), title(titles, entry.getKey()),
                     scenarios.getOrDefault(entry.getKey(), List.of()), status, rows,
                     specNarratives.getOrDefault(entry.getKey(), List.of()),
-                    stepSources.getOrDefault(entry.getKey(), Map.of())));
+                    stepSources.getOrDefault(entry.getKey(), Map.of()),
+                    stepPhases.getOrDefault(entry.getKey(), Map.of())));
         }
         acs.sort(Comparator.comparing((VerificationAcceptanceCondition ac) -> ac.status() != CaseResultStatus.FAIL)
                 .thenComparing(VerificationAcceptanceCondition::acId));
         CaseResultStatus verdict = suiteVerdict(acs, gates);
         return new VerificationView(VerificationView.SCHEMA_VERSION, generatedAt, verdict, expectedConsumptionEnforced,
-                gates, acs);
+                gates, acs, deliveryScope);
     }
 
     private static CaseResultStatus suiteVerdict(List<VerificationAcceptanceCondition> acs, List<EvidenceGate> gates) {
@@ -143,6 +159,23 @@ public final class ReportViews {
     public static ReviewView review(Map<String, String> titles, List<ToppleCaseData> cases,
                                     Map<String, List<SpecMarkdownBlock>> specNarratives,
                                     Map<String, ReviewMethod> methods, Instant generatedAt) {
+        return review(titles, cases, specNarratives, methods, Map.of(), generatedAt);
+    }
+
+    /** Builds reviewer-only per-case scenarios from compiler templates and typed row values. */
+    public static ReviewView review(Map<String, String> titles, List<ToppleCaseData> cases,
+                                    Map<String, List<SpecMarkdownBlock>> specNarratives,
+                                    Map<String, ReviewMethod> methods,
+                                    Map<String, List<StepTemplate>> templates, Instant generatedAt) {
+        return review(titles, cases, specNarratives, methods, templates, generatedAt, null);
+    }
+
+    /** Builds reviewer-only per-case scenarios and the selected delivery-scope projection. */
+    public static ReviewView review(Map<String, String> titles, List<ToppleCaseData> cases,
+                                    Map<String, List<SpecMarkdownBlock>> specNarratives,
+                                    Map<String, ReviewMethod> methods,
+                                    Map<String, List<StepTemplate>> templates, Instant generatedAt,
+                                    DeliveryScope deliveryScope) {
         Map<String, List<ToppleCaseData>> byAc = group(cases);
         java.util.TreeSet<String> acIds = new java.util.TreeSet<>();
         acIds.addAll(titles.keySet());
@@ -152,7 +185,8 @@ public final class ReportViews {
         List<ReviewAcceptanceCondition> acceptanceConditions = new ArrayList<>();
         for (String acId : acIds) {
             List<ReviewCase> rows = byAc.getOrDefault(acId, List.of()).stream()
-                    .map(row -> new ReviewCase(row.visibility(), row.caseId(), row.inputs(), row.expected()))
+                    .map(row -> new ReviewCase(row.visibility(), row.caseId(), row.inputs(), row.expected(),
+                            ReviewScenarioResolver.resolve(templates.getOrDefault(acId, List.of()), row.inputs(), row.expected())))
                     .sorted(Comparator
                             .comparing((ReviewCase row) -> row.visibility() != CaseVisibility.PUBLIC)
                             .thenComparing(ReviewCase::caseId))
@@ -160,7 +194,7 @@ public final class ReportViews {
             acceptanceConditions.add(new ReviewAcceptanceCondition(acId, title(titles, acId), rows,
                     specNarratives.getOrDefault(acId, List.of()), methods.getOrDefault(acId, new ReviewMethod(List.of(), ""))));
         }
-        return new ReviewView(ReviewView.SCHEMA_VERSION, generatedAt, acceptanceConditions);
+        return new ReviewView(ReviewView.SCHEMA_VERSION, generatedAt, acceptanceConditions, deliveryScope);
     }
 
     private static Map<String, List<ToppleCaseData>> group(List<ToppleCaseData> cases) {

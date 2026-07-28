@@ -9,6 +9,13 @@ methods. Use `@ToppleAc("AC-...")` for extra JUnit coverage. Only canonical
 `@ToppleTest` methods follow the Stage DSL restriction. `@DisplayName` supplies
 the report title.
 
+Write `@DisplayName` as the business result a reviewer is checking, not as the
+Java method name. Stage method names and `@As` sentences should likewise use
+domain language. One Stage step should express one understandable business
+action. Names such as `matches_the_contract`, `execute_test`, and
+`verify_result` hide the behaviour the review needs to inspect; prefer a name
+such as `receipt_shows_discount_and_discounted_subtotal` instead.
+
 ```java
 @ToppleStageField OrderGiven given;
 @ToppleStageField OrderWhen when;
@@ -19,7 +26,7 @@ the report title.
 void createsOrder(ToppleCase c) {
     given.an_order_request(c.input("request", OrderRequest.class));
     when.submits_it();
-    then.matches_the_contract(c);
+    then.confirms_accepted_order(c);
 }
 ```
 
@@ -32,7 +39,9 @@ and produce a domain sentence. `toppleCatCheck` reports the AC, file, line, and
 repair when this shape is broken.
 
 Each Stage step calls `recorded(...)` as its first executable action, performs
-the work, and ends with `return self();`. Put assertions in a Then step. `input`
+the work, and ends with `return self();`. Record values that help a reviewer
+understand the business action, such as a customer ID, amount, or selected
+option; do not record incidental implementation state. Put assertions in a Then step. `input`
 and `expected` can be nested objects, arrays, maps, and API DTOs; Jackson
 deserializes them directly to the requested Java type.
 
@@ -144,6 +153,12 @@ falls back from malformed source: `toppleCatCheck` first rejects hidden helper
 calls, control flow, unknown stage fields or methods, and steps that violate the
 `recorded(...)`/`self()` contract.
 
+The HTML review resolves compiler-owned argument bindings against the selected
+typed case row, then displays Given/When/Then beside that row's readable inputs
+and expected output. It is a reading projection of the Java/JUnit contract, not
+another specification or authoring format. JGiven is useful design reference for
+that reading experience, but ToppleCat does not add a JGiven dependency.
+
 ## External spec documents
 
 ToppleCat can add public SDD context from Markdown documents to the
@@ -151,15 +166,32 @@ reviewer-only contract review and final report projections. The Markdown is an
 input for human reading, not a second contract: Java acceptance tests and typed
 case rows stay authoritative.
 
-ToppleCat does not scan for Markdown automatically. Configure a repository-root
-`specs/` directory when the project uses external specs:
+The SDD tool or delivery workflow chooses which document is current and handles
+its status, history, and organizational review. ToppleCat does not infer that
+lifecycle. Its concern is narrower: an acceptance condition selected from the
+Spec needs a literal, executable `@ToppleTest` and typed cases. This gives people
+one traceable path from a written requirement to the Java/JUnit code that
+actually accepts or rejects the implementation.
 
-```kotlin
-toppleCat {
-    specDocs.from("specs")
-    // More files or directories may be added with another from(...).
-}
+ToppleCat does not scan for Markdown or guess the active SDD change
+automatically. The surrounding workflow supplies an exact delivery selection at
+the command line; an exact current Spec is easier to review than an accumulated
+directory:
+
+```bash
+./gradlew toppleCatCheck --spec specs/023-checkout/spec.md
+./gradlew toppleCatReview --spec specs/023-checkout/spec.md
+./gradlew toppleCatHide --spec specs/023-checkout/spec.md
+# Repeat --spec for every document in a cross-cutting delivery.
 ```
+
+Use the same repository-relative Markdown path or paths for Check, Review,
+Hide, UpdateEscrow, and Verify. A selected document must contain at least one
+`AC-...` identifier, and every selected AC must have a canonical public
+`@ToppleTest` binding; Check fails otherwise. The selected paths, document
+bytes, and normalized AC set become part of the mechanical approval. Verify
+with a different selection fails contract integrity instead of silently running
+another delivery.
 
 An `AC-...` literal in a Markdown heading or paragraph anchors that section to
 the acceptance condition. A heading anchor runs until the next heading at the
@@ -174,11 +206,12 @@ set to true.
 ```
 
 ToppleCat renders only headings, paragraphs, lists, and inline code from those
-sections. HTML and scripts are shown as escaped text and never execute. When
-`specDocs` is configured, `toppleCatCheck` warns for a Markdown AC with no
-canonical `@ToppleTest` and for a canonical test with no Markdown AC anchor.
-These are warnings: they help maintain reading context without making Markdown
-authoritative.
+sections. HTML and scripts are shown as escaped text and never execute. Selected
+scope makes missing Markdown-to-canonical bindings a static error, but it does
+not make Markdown executable. The older `toppleCat.specDocs` configuration is
+still available for compatibility-only reading context: it warns for a Markdown
+AC with no canonical `@ToppleTest` and for a canonical test with no Markdown AC
+anchor. Those compatibility warnings do not select, filter, or seal a delivery.
 
 The alignment check uses canonical `@ToppleTest` descriptors compiled from
 `src/test/java` only. Supplementary `@ToppleAc` methods and reviewer source do

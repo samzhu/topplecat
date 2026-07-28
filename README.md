@@ -58,6 +58,20 @@ ToppleCat is a delegation verification gate for Java and JUnit. Ordinary Java
 acceptance tests plus typed JSON or YAML case rows are the executable contract.
 Generated JSON and HTML are evidence, never a second source of truth.
 
+People and their SDD, workflow, or task system choose the current Spec, track
+delivery history, and decide any organizational sign-off. ToppleCat does not
+replace those systems. Its job starts at executable acceptance: help connect the
+selected acceptance conditions to ordinary Java/JUnit tests and typed case
+rows, keep the public executable contract handed to the agent identical to the
+one verification runs, and check the agent's done claim. People remain
+responsible for writing complete rules and cases; ToppleCat does not infer
+omitted requirements or certify unspecified behavior.
+
+`toppleCatReview` is a readable projection for checking that executable
+contract. The approval stored with reviewer custody is a mechanical integrity
+seal over contract bytes and verification policy. Neither one proves that a
+person or organization approved a task, Spec, pull request, or release.
+
 Canonical scenarios are ordinary Java written to read like business language.
 [JGiven](https://github.com/TNG/JGiven) is the closest prior art for readable,
 staged Java tests. ToppleCat adds a reviewer boundary around that idea: hidden
@@ -71,7 +85,7 @@ There is no Cucumber, Gherkin, or second executable authoring format.
 | The implementation may be tuned to the visible example. | Reviewer-controlled **hidden retests** with independently chosen business cases. |
 | The test runs but cannot detect broken behavior. | A PIT-backed **mutation gate**. |
 | Expected data was read but never compared with reality. | Enforced **expected consumption**. |
-| The visible contract or verification strength changed after review. | A mandatory, reviewer-sealed **contract-integrity gate**. |
+| The visible contract or verification strength changed after it was sealed. | A mandatory, mechanically sealed **contract-integrity gate**. |
 | Old or partial output is mistaken for current proof. | Run-scoped gates, digests, and an explicit **evidence verdict**. |
 
 Hidden retest and mutation answer different questions. A hidden retest exercises
@@ -150,9 +164,9 @@ PASS / FAIL / INCOMPLETE evidence and human reports
    enabled gates only when that approval still matches. It writes evidence and
    hides the source again in every outcome.
 
-## Install 0.0.5
+## Install 0.0.6
 
-ToppleCat `0.0.5` is the release described here. A consumer project needs Java
+ToppleCat `0.0.6` is the release described here. A consumer project needs Java
 25 and a Gradle version that supports it. Once published, add Maven Central for
 both plugin and library resolution; a released consumer does not need
 `mavenLocal()`.
@@ -174,12 +188,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.5"
+    id("io.github.samzhu.topplecat") version "0.0.6"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.5"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.6"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
@@ -248,12 +262,32 @@ a natural-language runtime.
 Run these commands from the consumer project:
 
 ```bash
-./gradlew toppleCatCheck
-./gradlew toppleCatReview
-./gradlew toppleCatHide
+./gradlew toppleCatCheck --spec specs/023-checkout/spec.md
+./gradlew toppleCatReview --spec specs/023-checkout/spec.md
+./gradlew toppleCatHide --spec specs/023-checkout/spec.md
 ./gradlew test
-./gradlew toppleCatVerify
+./gradlew toppleCatVerify --spec specs/023-checkout/spec.md
 ```
+
+`--spec <repository-relative-markdown-file>` selects the delivery at invocation
+time; repeat it for a cross-cutting delivery. Use the same selection for Check,
+Review, Hide, UpdateEscrow, and Verify. Every selected `AC-...` must bind to a
+canonical public `@ToppleTest`, and the selected paths, document digests, and AC
+set are mechanically sealed with reviewer custody. A different selection makes
+contract integrity fail safely. By default Verify retests only hidden rows and
+tagged reviewer Java checks for those ACs, while public tests and mutation stay
+full-contract. A reviewer can broaden only the hidden retest with
+`./gradlew toppleCatVerify --spec specs/023-checkout/spec.md --all-hidden`.
+Each selected AC needs current-run reviewer coverage: an actually executed
+hidden row or an AC-bound reviewer Java check that entered its test body.
+Comments, strings, and disabled tests do not count; otherwise
+`REVIEWER_JUNIT=INCOMPLETE` with safe feedback.
+
+The reviewer reports and each archived run record the exact delivery scope and
+its digest. Plain reviewer `@Test` methods are not ToppleCat evidence; mark a
+supplementary reviewer check with `@ToppleAc("AC-...")`. Existing
+`toppleCat.specDocs` configuration remains a compatibility-only reading-context
+option and retains its warning-only alignment behavior.
 
 `toppleCatRestore` is a reviewer-only recovery and editing command. It is not
 part of the implementation loop. After an authorized reviewer restores and
@@ -264,7 +298,7 @@ toppleCatRestore
     -> edit src/hiddenTest
     -> toppleCatCheck
     -> toppleCatReview
-    -> reviewer accepts the review
+    -> complete any external review or sign-off the delivery workflow requires
     -> toppleCatUpdateEscrow
 ```
 
@@ -291,8 +325,10 @@ private failures.
 
 The first required gate is `CONTRACT_INTEGRITY`: it compares the current public
 test sources, case data, project-local Gradle logic, semantic definition, and
-effective verification policy with the reviewer approval sealed by Hide or
-UpdateEscrow. The final verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Hidden
+effective verification policy with the mechanical approval snapshot sealed by
+Hide or UpdateEscrow. This snapshot detects contract changes; it does not
+represent organizational sign-off. The final verdict is `PASS`, `FAIL`, or
+`INCOMPLETE`. Hidden
 retest, mutation, and expected-consumption safeguards are enabled by default;
 if a reviewer chooses to disable one, evidence records `DISABLED` instead of
 pretending it passed. Contract integrity itself cannot be disabled.
@@ -348,12 +384,13 @@ commands.
 
 - [Getting started](docs/guide/getting-started.md)
 - [FAQ: why no Cucumber or `.feature` files?](docs/faq.md)
-- [0.0.5 release notes](docs/releases/0.0.5.md)
+- [0.0.6 release notes](docs/releases/0.0.6.md)
 - [Authoring contracts](docs/guide/authoring.md)
 - [Verification and evidence](docs/guide/verification-and-evidence.md)
 - [Troubleshooting](docs/guide/troubleshooting.md)
 - [Architecture](docs/architecture.md)
 - [External validation records](docs/validation/README.md)
+- [Development guide](DEVELOPMENT.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 

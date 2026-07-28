@@ -3,8 +3,11 @@ package io.github.samzhu.topplecat.gradle;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
 import io.github.samzhu.topplecat.core.EscrowService;
+import io.github.samzhu.topplecat.core.SelectedSpecScopeJson;
 import io.github.samzhu.topplecat.core.ToppleEvidence;
 import io.github.samzhu.topplecat.core.ToppleEvidenceJson;
+import io.github.samzhu.topplecat.core.VerificationScope;
+import io.github.samzhu.topplecat.core.VerificationScopeJson;
 import io.github.samzhu.topplecat.core.VerificationRunJson;
 import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
@@ -839,10 +842,11 @@ class ToppleCatPluginFunctionalTest {
                 """);
         writeHiddenJavaTest("ReviewerFailureTest", """
                 package example;
+                import io.github.samzhu.topplecat.junit.ToppleAc;
                 import org.junit.jupiter.api.Test;
                 import static org.junit.jupiter.api.Assertions.fail;
                 class ReviewerFailureTest {
-                    @Test void meaningfulReviewerGuard() { fail("reviewer guard failed"); }
+                    @ToppleAc("AC-CART-COUPON") @Test void meaningfulReviewerGuard() { fail("reviewer guard failed"); }
                 }
                 """);
 
@@ -1791,6 +1795,259 @@ class ToppleCatPluginFunctionalTest {
     }
 
     @Test
+    void selectsOneSpecForReviewerRetestsAndCanEscalateToAllHiddenChecks() throws Exception {
+        verificationProject("""
+                toppleCat { adversarial { mutation { enabled.set(false) } } }
+                """);
+        writeTestSource("""
+                package example;
+                import org.junit.jupiter.api.Test;
+                class DeliveryContractTest {
+                    @ToppleStageField ResultThen then;
+                    @ToppleTest("AC-SHIPPING-001") void ships(ToppleCase c) { then.matches(c); }
+                    @ToppleTest("AC-COUPON-001") void appliesCoupon(ToppleCase c) { then.matches(c); }
+                    @Test void ordinaryPublicRegression() {}
+                    static final class ResultThen extends ToppleStage<ResultThen> {
+                        ResultThen matches(ToppleCase c) { recorded(); c.verify("result", c.input("result", Integer.class)); return self(); }
+                    }
+                }
+                """);
+        writePublicCase("deliveries.json", """
+                [
+                  {"caseId":"shipping-public","acId":"AC-SHIPPING-001","inputs":{"result":1},"expected":{"result":1}},
+                  {"caseId":"coupon-public","acId":"AC-COUPON-001","inputs":{"result":2},"expected":{"result":2}}
+                ]
+                """);
+        writeHiddenRowsOnly("""
+                [
+                  {"caseId":"shipping-hidden","acId":"AC-SHIPPING-001","inputs":{"result":3},"expected":{"result":3}},
+                  {"caseId":"coupon-hidden","acId":"AC-COUPON-001","inputs":{"result":4},"expected":{"result":4}}
+                ]
+                """);
+        writeHiddenJavaTest("ReviewerDeliveryTest", """
+                package example;
+                import io.github.samzhu.topplecat.junit.ToppleAc;
+                import org.junit.jupiter.api.Test;
+                class ReviewerDeliveryTest {
+                    @ToppleAc("AC-SHIPPING-001") @Test void ships() {}
+                    @ToppleAc("AC-COUPON-001") @Test void appliesCoupon() {}
+                    @Test void ordinaryReviewerTestIsNotToppleCatEvidence() { throw new AssertionError("must not run"); }
+                }
+                """);
+        Path specs = project.resolve("specs");
+        Files.createDirectories(specs);
+        Files.writeString(specs.resolve("shipping.md"), "## AC-SHIPPING-001 Ship an order\n");
+        Files.writeString(specs.resolve("coupon.md"), "## AC-COUPON-001 Apply a coupon\n");
+
+        runner("toppleCatCheck", "--spec", "specs/shipping.md", "--spec", "specs/coupon.md").build();
+        assertEquals(List.of("AC-COUPON-001", "AC-SHIPPING-001"), SelectedSpecScopeJson.read(Files.readString(
+                project.resolve("build/topplecat/selected-spec-scope.json"))).acceptanceConditionIds());
+        runner("toppleCatReview", "--spec", "specs/shipping.md").build();
+        assertTrue(Files.readString(project.resolve("build/topplecat/reports/review/data.json"))
+                .contains("plain JUnit tests are not ToppleCat evidence"));
+
+        runner("toppleCatHide", "--spec", "specs/shipping.md").build();
+        runner("toppleCatVerify", "--spec", "specs/coupon.md").buildAndFail();
+        ToppleEvidence mismatchedEvidence = ToppleEvidenceJson.read(Files.readString(project.resolve("build/topplecat/evidence.json")));
+        assertEquals(EvidenceVerdict.FAIL, mismatchedEvidence.verdict());
+        assertEquals(EvidenceVerdict.FAIL, mismatchedEvidence.gates().getFirst().verdict());
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+
+        runner("toppleCatVerify", "--spec", "specs/shipping.md").build();
+
+        ToppleEvidence selectedEvidence = ToppleEvidenceJson.read(Files.readString(project.resolve("build/topplecat/evidence.json")));
+        assertEquals(EvidenceVerdict.PASS, selectedEvidence.verdict());
+        assertTrue(selectedEvidence.artifactDigests().containsKey("verification-scope.json"));
+        Path selectedRun = latestRun();
+        var selectedScope = VerificationScopeJson.read(Files.readString(selectedRun.resolve("verification-scope.json")));
+        assertEquals(VerificationScope.HIDDEN_SELECTED_SPECS, selectedScope.hiddenMode());
+        assertEquals(List.of("AC-SHIPPING-001"), selectedScope.selectedSpecScope().acceptanceConditionIds());
+        String selectedReport = Files.readString(selectedRun.resolve("reports/verification/data.json"));
+        assertTrue(selectedReport.contains("shipping-hidden"), selectedReport);
+        assertTrue(selectedReport.contains("coupon-public"), selectedReport);
+        assertFalse(selectedReport.contains("coupon-hidden"), selectedReport);
+
+        runner("toppleCatVerify", "--spec", "specs/shipping.md", "--all-hidden").build();
+
+        ToppleEvidence allEvidence = ToppleEvidenceJson.read(Files.readString(project.resolve("build/topplecat/evidence.json")));
+        assertEquals(EvidenceVerdict.PASS, allEvidence.verdict());
+        Path allRun = latestRun();
+        assertEquals(VerificationScope.HIDDEN_ALL,
+                VerificationScopeJson.read(Files.readString(allRun.resolve("verification-scope.json"))).hiddenMode());
+        assertTrue(Files.readString(allRun.resolve("reports/verification/data.json")).contains("coupon-hidden"));
+
+        runner("toppleCatRestore").build();
+        runner("toppleCatUpdateEscrow", "--spec", "specs/coupon.md").build();
+        runner("toppleCatVerify", "--spec", "specs/coupon.md").build();
+
+        Path couponRun = latestRun();
+        var couponScope = VerificationScopeJson.read(Files.readString(couponRun.resolve("verification-scope.json")));
+        assertEquals(VerificationScope.HIDDEN_SELECTED_SPECS, couponScope.hiddenMode());
+        assertEquals(List.of("AC-COUPON-001"), couponScope.selectedSpecScope().acceptanceConditionIds());
+        String couponReport = Files.readString(couponRun.resolve("reports/verification/data.json"));
+        assertTrue(couponReport.contains("coupon-hidden"), couponReport);
+        assertFalse(couponReport.contains("shipping-hidden"), couponReport);
+    }
+
+    @Test
+    void rejectsACommandSelectedSpecThatCannotBindEveryAcceptanceCondition() throws Exception {
+        basicProject();
+        writeTestSource("""
+                class DeliveryTest {
+                    @ToppleStageField ResultThen then;
+                    @ToppleTest("AC-PRESENT") void present() { then.matches_contract(); }
+                    static final class ResultThen extends ToppleStage<ResultThen> {
+                        ResultThen matches_contract() { recorded(); return self(); }
+                    }
+                }
+                """);
+        writePublicCase("present.json", """
+                [{"caseId":"present-public","acId":"AC-PRESENT","inputs":{},"expected":{"result":true}}]
+                """);
+        Path missingSpec = project.resolve("specs/missing.md");
+        Files.createDirectories(missingSpec.getParent());
+        Files.writeString(missingSpec, "## AC-MISSING A requirement with no canonical Java binding\n");
+
+        var result = runner("toppleCatCheck", "--spec", "specs/missing.md").buildAndFail();
+
+        assertTrue(result.getOutput().contains("Selected ToppleCat Spec AC AC-MISSING has no canonical @ToppleTest binding"),
+                result.getOutput());
+    }
+
+    @Test
+    void requiresReviewerCoverageForEveryCommandSelectedAcceptanceCondition() throws Exception {
+        verificationProject("""
+                toppleCat { adversarial { mutation { enabled.set(false) } } }
+                """);
+        writeTestSource("""
+                package example;
+                class DeliveryTest {
+                    @ToppleStageField ResultThen then;
+                    @ToppleTest("AC-UNCOVERED") void present(ToppleCase c) { then.matches(c); }
+                    static final class ResultThen extends ToppleStage<ResultThen> {
+                        ResultThen matches(ToppleCase c) { recorded(); c.verify("result", c.input("result", Integer.class)); return self(); }
+                    }
+                }
+                """);
+        writePublicCase("uncovered.json", """
+                [{"caseId":"uncovered-public","acId":"AC-UNCOVERED","inputs":{"result":1},"expected":{"result":1}}]
+                """);
+        writeHiddenJavaTest("OrdinaryReviewerTest", """
+                package example;
+                import org.junit.jupiter.api.Test;
+                class OrdinaryReviewerTest { @Test void ignoredByToppleCat() {} }
+                """);
+        Path spec = project.resolve("specs/uncovered.md");
+        Files.createDirectories(spec.getParent());
+        Files.writeString(spec, "## AC-UNCOVERED A selected requirement without reviewer evidence\n");
+
+        runner("toppleCatHide", "--spec", "specs/uncovered.md").build();
+        runner("toppleCatVerify", "--spec", "specs/uncovered.md").buildAndFail();
+
+        ToppleEvidence evidence = ToppleEvidenceJson.read(Files.readString(project.resolve("build/topplecat/evidence.json")));
+        assertEquals(EvidenceVerdict.INCOMPLETE, evidence.verdict());
+        assertEquals("the selected executable contract is missing reviewer coverage.",
+                evidence.gates().stream().filter(gate -> gate.name().equals("REVIEWER_JUNIT")).findFirst().orElseThrow().reason());
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        assertTrue(feedback.contains("selected executable contract is missing reviewer coverage"), feedback);
+        assertFalse(feedback.contains("AC-UNCOVERED"), feedback);
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
+    void doesNotTreatCommentOnlyReviewerBindingAsExecutedCoverage() throws Exception {
+        verificationProject("""
+                toppleCat { adversarial { mutation { enabled.set(false) } } }
+                """);
+        writeTwoAcDeliveryContract("AC-COVERED", "AC-NOT-IMPLEMENTED");
+        writeHiddenJavaTest("ReviewerCoverageTest", """
+                package example;
+                import io.github.samzhu.topplecat.junit.ToppleAc;
+                import org.junit.jupiter.api.Test;
+                class ReviewerCoverageTest {
+                    @ToppleAc("AC-COVERED") @Test void covered() {}
+                    // @ToppleAc("AC-NOT-IMPLEMENTED")
+                    String staleExample = "@ToppleAc(\\\"AC-NOT-IMPLEMENTED\\\")";
+                }
+                """);
+        writeSpec("comment-only.md", "AC-COVERED", "AC-NOT-IMPLEMENTED");
+
+        runner("toppleCatHide", "--spec", "specs/comment-only.md").build();
+        runner("toppleCatVerify", "--spec", "specs/comment-only.md").buildAndFail();
+
+        assertSelectedCoverageIncomplete("AC-COVERED", "AC-NOT-IMPLEMENTED");
+        String executions = Files.readString(latestRun().resolve("reviewer-java-executions.jsonl"));
+        assertTrue(executions.contains("AC-COVERED"), executions);
+        assertFalse(executions.contains("AC-NOT-IMPLEMENTED"), executions);
+    }
+
+    @Test
+    void doesNotTreatDisabledReviewerJavaTestAsExecutedCoverage() throws Exception {
+        verificationProject("""
+                toppleCat { adversarial { mutation { enabled.set(false) } } }
+                """);
+        writeTestSource("""
+                package example;
+                class DeliveryTest {
+                    @ToppleStageField ResultThen then;
+                    @ToppleTest("AC-DISABLED") void present(ToppleCase c) { then.matches(c); }
+                    static final class ResultThen extends ToppleStage<ResultThen> {
+                        ResultThen matches(ToppleCase c) { recorded(); c.verify("result", c.input("result", Integer.class)); return self(); }
+                    }
+                }
+                """);
+        writePublicCase("disabled.json", """
+                [{"caseId":"disabled-public","acId":"AC-DISABLED","inputs":{"result":1},"expected":{"result":1}}]
+                """);
+        writeHiddenJavaTest("DisabledReviewerTest", """
+                package example;
+                import io.github.samzhu.topplecat.junit.ToppleAc;
+                import org.junit.jupiter.api.Disabled;
+                import org.junit.jupiter.api.Test;
+                class DisabledReviewerTest {
+                    @Disabled @ToppleAc("AC-DISABLED") @Test void disabledReviewerGuard() {}
+                }
+                """);
+        writeSpec("disabled.md", "AC-DISABLED");
+
+        runner("toppleCatHide", "--spec", "specs/disabled.md").build();
+        runner("toppleCatVerify", "--spec", "specs/disabled.md").buildAndFail();
+
+        assertSelectedCoverageIncomplete("AC-DISABLED");
+        assertFalse(Files.exists(latestRun().resolve("reviewer-java-executions.jsonl")));
+    }
+
+    @Test
+    void acceptsExecutedReviewerJavaCoverageForEverySelectedAcceptanceCondition() throws Exception {
+        verificationProject("""
+                toppleCat { adversarial { mutation { enabled.set(false) } } }
+                """);
+        writeTwoAcDeliveryContract("AC-FIRST", "AC-SECOND");
+        writeHiddenJavaTest("ReviewerCoverageTest", """
+                package example;
+                import io.github.samzhu.topplecat.junit.ToppleAc;
+                import org.junit.jupiter.api.Test;
+                class ReviewerCoverageTest {
+                    @ToppleAc("AC-FIRST") @Test void first() {}
+                    @ToppleAc("AC-SECOND") @Test void second() {}
+                }
+                """);
+        writeSpec("executed.md", "AC-FIRST", "AC-SECOND");
+
+        runner("toppleCatHide", "--spec", "specs/executed.md").build();
+        runner("toppleCatVerify", "--spec", "specs/executed.md").build();
+
+        assertEquals(EvidenceVerdict.PASS, evidenceVerdict(project));
+        Path run = latestRun();
+        String executions = Files.readString(run.resolve("reviewer-java-executions.jsonl"));
+        assertTrue(executions.contains("AC-FIRST"), executions);
+        assertTrue(executions.contains("AC-SECOND"), executions);
+        assertTrue(Files.readString(run.resolve("reports/verification/data.json"))
+                .contains("\"executedReviewerJavaTests\" : 2"));
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
+    @Test
     void verifiesHiddenCasesAcrossSeparateGradleInvocationsAndRehidesReviewerSource() throws Exception {
         Files.writeString(project.resolve("settings.gradle"), "rootProject.name = 'consumer'\n");
         Path junit = moduleJar("topplecat-junit");
@@ -2026,8 +2283,9 @@ class ToppleCatPluginFunctionalTest {
         Files.createDirectories(reviewer.getParent());
         Files.writeString(reviewer, """
                 package example;
+                import io.github.samzhu.topplecat.junit.ToppleAc;
                 import org.junit.jupiter.api.Test;
-                class ReviewerTest { @Test void reviewerGuard() {} }
+                class ReviewerTest { @ToppleAc("AC-CART-COUPON") @Test void reviewerGuard() {} }
                 """);
         Path hiddenCases = project.resolve("src/hiddenTest/resources/topplecat/cases/reviewer.yaml");
         Files.createDirectories(hiddenCases.getParent());
@@ -2189,8 +2447,9 @@ class ToppleCatPluginFunctionalTest {
         Files.createDirectories(reviewer.getParent());
         Files.writeString(reviewer, """
                 package example;
+                import io.github.samzhu.topplecat.junit.ToppleAc;
                 import org.junit.jupiter.api.Test;
-                class ReviewerTest { @Test void reviewerGuard() {} }
+                class ReviewerTest { @ToppleAc("AC-CART-COUPON") @Test void reviewerGuard() {} }
                 """);
 
         assertEquals(TaskOutcome.SUCCESS, runner("toppleCatVerify", "--configuration-cache").build()
@@ -2398,8 +2657,9 @@ class ToppleCatPluginFunctionalTest {
         Files.createDirectories(test.getParent());
         Files.writeString(test, """
                 package example;
+                import io.github.samzhu.topplecat.junit.ToppleAc;
                 import org.junit.jupiter.api.Test;
-                class ReviewerTest { @Test void reviewerGuard() {} }
+                class ReviewerTest { @ToppleAc("AC-CART-COUPON") @Test void reviewerGuard() {} }
                 """);
         Path cases = project.resolve("src/hiddenTest/resources/topplecat/cases/coupon-reviewer.yaml");
         Files.createDirectories(cases.getParent());
@@ -2437,8 +2697,9 @@ class ToppleCatPluginFunctionalTest {
         Files.createDirectories(test.getParent());
         Files.writeString(test, """
                 package example;
+                import io.github.samzhu.topplecat.junit.ToppleAc;
                 import org.junit.jupiter.api.Test;
-                class ReviewerTest { @Test void reviewerGuard() {} }
+                class ReviewerTest { @ToppleAc("AC-CART-COUPON") @Test void reviewerGuard() {} }
                 """);
     }
 
@@ -2510,11 +2771,66 @@ class ToppleCatPluginFunctionalTest {
         Files.writeString(cases, source);
     }
 
+    private void writeTwoAcDeliveryContract(String firstAcId, String secondAcId) throws Exception {
+        writeTestSource("""
+                package example;
+                class DeliveryTest {
+                    @ToppleStageField ResultThen then;
+                    @ToppleTest("%s") void first(ToppleCase c) { then.matches(c); }
+                    @ToppleTest("%s") void second(ToppleCase c) { then.matches(c); }
+                    static final class ResultThen extends ToppleStage<ResultThen> {
+                        ResultThen matches(ToppleCase c) { recorded(); c.verify("result", c.input("result", Integer.class)); return self(); }
+                    }
+                }
+                """.formatted(firstAcId, secondAcId));
+        writePublicCase("delivery.json", """
+                [
+                  {"caseId":"first-public","acId":"%s","inputs":{"result":1},"expected":{"result":1}},
+                  {"caseId":"second-public","acId":"%s","inputs":{"result":2},"expected":{"result":2}}
+                ]
+                """.formatted(firstAcId, secondAcId));
+    }
+
+    private void writeSpec(String name, String... acceptanceConditionIds) throws Exception {
+        Path spec = project.resolve("specs").resolve(name);
+        Files.createDirectories(spec.getParent());
+        String content = java.util.Arrays.stream(acceptanceConditionIds)
+                .map(acId -> "## " + acId + " Selected delivery requirement\n")
+                .collect(java.util.stream.Collectors.joining());
+        Files.writeString(spec, content);
+    }
+
+    private void assertSelectedCoverageIncomplete(String... acceptanceConditionIds) throws Exception {
+        ToppleEvidence evidence = ToppleEvidenceJson.read(Files.readString(project.resolve("build/topplecat/evidence.json")));
+        assertEquals(EvidenceVerdict.INCOMPLETE, evidence.verdict());
+        assertEquals("the selected executable contract is missing reviewer coverage.",
+                evidence.gates().stream().filter(gate -> gate.name().equals("REVIEWER_JUNIT")).findFirst().orElseThrow().reason());
+        String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+        assertTrue(feedback.contains("selected executable contract is missing reviewer coverage"), feedback);
+        for (String acceptanceConditionId : acceptanceConditionIds) {
+            assertFalse(feedback.contains(acceptanceConditionId), feedback);
+        }
+        assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    }
+
     private Path reviewerStateRoot() {
         try {
             return project.toRealPath().resolve(".topplecat-state");
         } catch (java.io.IOException exception) {
             throw new IllegalStateException("Cannot resolve canonical reviewer state root for " + project, exception);
+        }
+    }
+
+    private Path latestRun() throws Exception {
+        try (Stream<Path> runs = Files.list(project.resolve("build/topplecat/runs"))) {
+            return runs.filter(Files::isDirectory).filter(path -> !path.getFileName().toString().equals("current"))
+                    .max(Comparator.comparing(path -> {
+                        try {
+                            return Files.getLastModifiedTime(path).toMillis();
+                        } catch (java.io.IOException exception) {
+                            throw new IllegalStateException(exception);
+                        }
+                    })).orElseThrow();
         }
     }
 

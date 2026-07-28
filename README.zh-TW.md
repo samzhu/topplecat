@@ -56,6 +56,17 @@ ToppleCat 是 Java/JUnit 委派工作的驗證關卡。一般 Java 驗收測試�
 JSON/YAML 案例資料列才是可執行合約；產生的 JSON 與 HTML 是證據，不是
 另一份事實來源。
 
+人類與外部的 SDD、工作流或任務平台負責選定本次 Spec、記錄交付歷史，
+並決定組織需要哪些簽核。ToppleCat 不取代這些系統。它從可執行驗收開始
+工作：協助把選定的驗收條件接到一般 Java/JUnit 測試與有型別的案例資料，
+確保交給代理的公開可執行合約和最後驗證時執行的是同一份，再檢查代理的
+完成宣稱。人類仍要負責把規則與案例寫完整；ToppleCat 不會自行推測遺漏
+的需求，也不會替沒有定義的行為判斷對錯。
+
+`toppleCatReview` 只是方便人類核對可執行合約的閱讀頁面。審閱資料保管區
+裡的 approval 只是公開合約位元組與驗證政策的防竄改封存。兩者都不能證明
+某個人或組織已經核准任務、Spec、Pull Request 或版本發布。
+
 主要驗收情境是讀起來像業務流程的一般 Java 程式碼。
 [JGiven](https://github.com/TNG/JGiven) 是最接近的先行專案。ToppleCat
 在這個做法外再加一層審閱邊界，用隱藏案例重測、突變測試證據與安全回饋，
@@ -69,7 +80,7 @@ Gherkin，也沒有第二套可執行規格格式。
 | 實作可能只針對看得見的範例調整。 | 由審閱者控制、依不同業務情境設計的**隱藏案例重測**。 |
 | 測試有執行，卻無法察覺壞掉的行為。 | 由 PIT 執行的**突變測試關卡**。 |
 | 預期結果已讀取，卻沒有和實際結果比較。 | 強制檢查**預期結果是否真的被驗證**。 |
-| 審閱後公開合約或驗證強度被改變。 | 強制執行、由審閱者封存的**合約完整性關卡**。 |
+| 封存後公開合約或驗證強度被改變。 | 強制執行、以機械方式封存的**合約完整性關卡**。 |
 | 舊的或不完整的輸出被誤認為本次證明。 | 每次執行各自保存關卡結果、摘要值與明確判定。 |
 
 隱藏案例重測與突變測試回答的是不同問題。隱藏案例重測會用實作代理沒看過的
@@ -144,9 +155,9 @@ PASS / FAIL / INCOMPLETE 證據與人類可讀報告
    完全相符；只有相符時，才暫時還原審閱者原始碼並執行已啟用的關卡。無論
    結果如何，都會寫出證據並重新隱藏原始碼。
 
-## 安裝 0.0.5
+## 安裝 0.0.6
 
-ToppleCat `0.0.5` 是本文件說明的版本。使用端專案需要 Java 25，以及支援它的
+ToppleCat `0.0.6` 是本文件說明的版本。使用端專案需要 Java 25，以及支援它的
 Gradle 版本。正式發佈後，Gradle 外掛與函式庫都能從 Maven Central 取得；
 使用正式版本的專案不需要 `mavenLocal()`。
 
@@ -167,12 +178,12 @@ dependencyResolutionManagement {
 // build.gradle.kts
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.5"
+    id("io.github.samzhu.topplecat") version "0.0.6"
 }
 
 dependencies {
     testImplementation(
-        "io.github.samzhu.topplecat:topplecat-junit:0.0.5"
+        "io.github.samzhu.topplecat:topplecat-junit:0.0.6"
     )
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
@@ -238,12 +249,25 @@ ToppleCat 支援 JSON 與 YAML，不支援 CSV，也不需要自然語言執行�
 請在使用端專案執行以下指令：
 
 ```bash
-./gradlew toppleCatCheck
-./gradlew toppleCatReview
-./gradlew toppleCatHide
+./gradlew toppleCatCheck --spec specs/023-checkout/spec.md
+./gradlew toppleCatReview --spec specs/023-checkout/spec.md
+./gradlew toppleCatHide --spec specs/023-checkout/spec.md
 ./gradlew test
-./gradlew toppleCatVerify
+./gradlew toppleCatVerify --spec specs/023-checkout/spec.md
 ```
+
+`--spec <專案內的 Markdown 路徑>` 用來指定本次交付；如果一次交付包含多份
+Spec，可以重複指定。Check、Review、Hide、UpdateEscrow 與 Verify 必須使用
+同一組路徑。每個選定的 `AC-...` 都要對應一個主要的公開 `@ToppleTest`。
+ToppleCat 會封存 Spec 路徑、文件摘要值與 AC 清單；交付後只要換了題目或改了
+內容，合約完整性檢查就會失敗。
+
+Verify 預設只重跑這些 AC 的隱藏資料列，以及有標記 AC 的審閱者 Java 測試；
+公開測試與突變測試仍會檢查完整合約。審閱者若想多跑所有已綁定 AC 的隱藏
+檢查，可以執行
+`./gradlew toppleCatVerify --spec specs/023-checkout/spec.md --all-hidden`。
+每個選定的 AC 都要有本次實際執行的審閱證據。註解、字串、停用的測試或一般
+`@Test` 都不算；額外的審閱者 Java 測試請使用 `@ToppleAc("AC-...")`。
 
 `toppleCatRestore` 是審閱者檢查或修改隱藏原始碼時使用的還原指令，
 不屬於平常的實作流程。授權審閱者還原並修改既有案例組後，必須依照下面的
@@ -254,7 +278,7 @@ toppleCatRestore
     -> 修改 src/hiddenTest
     -> toppleCatCheck
     -> toppleCatReview
-    -> 審閱者確認審閱內容
+    -> 完成外部交付工作流要求的審查或簽核
     -> toppleCatUpdateEscrow
 ```
 
@@ -279,8 +303,9 @@ Gradle 工作會安全地失敗。
 
 第一個必要關卡是 `CONTRACT_INTEGRITY`。它會把目前的公開測試原始碼、案例資料、
 專案內的 Gradle 建置邏輯、語意定義與有效的驗證政策，和執行 Hide 或
-UpdateEscrow 時由審閱者封存的核准內容逐一比對。最終判定是 `PASS`、`FAIL`
-或 `INCOMPLETE`。隱藏案例重測、突變測試與預期結果使用檢查預設都會啟用。
+UpdateEscrow 時留下的機械封存逐一比對。這份封存用來找出合約是否被改動，
+不代表組織已經完成簽核。最終判定是 `PASS`、`FAIL` 或 `INCOMPLETE`。
+隱藏案例重測、突變測試與預期結果使用檢查預設都會啟用。
 若審閱者明確停用其中一項，證據會記錄 `DISABLED`，不會假裝它已經通過。
 合約完整性本身不能停用。
 
@@ -330,7 +355,7 @@ ToppleCat 不控制 OS 權限、沙箱、CI 身分，也不限制同一個 Gradl
 
 - [開始使用](docs/guide/getting-started.md)
 - [常見問題：為什麼不用 Cucumber 或 `.feature`？](docs/faq.zh-TW.md)
-- [0.0.5 發佈說明](docs/releases/0.0.5.zh-TW.md)
+- [0.0.6 發佈說明](docs/releases/0.0.6.zh-TW.md)
 - [撰寫合約](docs/guide/authoring.md)
 - [驗證與證據](docs/guide/verification-and-evidence.md)
 - [疑難排解](docs/guide/troubleshooting.md)

@@ -13,3 +13,36 @@
     receipt:
       discount: 100
       discountedSubtotal: 700
+- caseId: coupon-hidden-1200-mixed-cart
+  acId: AC-CART-COUPON
+  inputs:
+    cart:
+      customerId: customer-hidden-mixed
+      lines:
+        - sku: GAME
+          quantity: 2
+          unitPrice: 400
+        - sku: BOOK
+          quantity: 1
+          unitPrice: 400
+      subtotal: 1200
+      coupon: SAVE100
+  expected:
+    receipt:
+      discount: 100
+      discountedSubtotal: 1100
+- caseId: order-hidden-no-coupon-null
+  acId: AC-CART-NO-COUPON
+  inputs:
+    cart:
+      customerId: customer-hidden-null
+      lines:
+        - sku: PEN
+          quantity: 1
+          unitPrice: 40
+      subtotal: 40
+      coupon: null
+  expected:
+    receipt:
+      discount: 0
+      discountedSubtotal: 40

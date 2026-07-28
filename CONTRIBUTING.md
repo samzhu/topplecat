@@ -3,6 +3,9 @@
 Small, focused changes are easiest to review. Bug fixes, tests, and
 documentation should support ToppleCat's Java/JUnit delegation gate.
 
+For the repository map, task-specific design documents, and implementation
+workflows, see the [development guide](DEVELOPMENT.md).
+
 ## Local setup
 
 - JDK 25

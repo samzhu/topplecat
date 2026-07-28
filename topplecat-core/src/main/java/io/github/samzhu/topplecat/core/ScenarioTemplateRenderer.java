@@ -8,7 +8,12 @@ public final class ScenarioTemplateRenderer {
     }
 
     public static String render(StepTemplate step, List<String> values) {
-        StringBuilder result = new StringBuilder(phase(step.phase()));
+        return (phase(step.phase()) + renderSentence(step, values)).trim();
+    }
+
+    /** Renders the compiler-owned business sentence without its presentation phase label. */
+    public static String renderSentence(StepTemplate step, List<String> values) {
+        StringBuilder result = new StringBuilder();
         for (StepToken token : step.tokens()) {
             if (token.kind() == StepTokenKind.PHASE) {
                 continue;

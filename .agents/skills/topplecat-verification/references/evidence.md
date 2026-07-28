@@ -13,10 +13,10 @@ outputs.
 
 ## Verification command
 
-Run:
+Run Verify with the delivery scope pinned by `SKILL.md`:
 
 ```bash
-./gradlew toppleCatVerify
+./gradlew toppleCatVerify --spec specs/SPEC-42/spec.md
 ```
 
 By default the task:
@@ -45,6 +45,9 @@ When reviewer custody contains only hidden rows, the public canonical
 `@ToppleTest` execution is also the reviewer-row retest evidence. A passing row
 set can therefore make `REVIEWER_JUNIT` pass without a placeholder hidden Java
 class; any hidden Java tests still require their own passing `hiddenTest` result.
+For a selected delivery, every selected AC must have current-run evidence from
+an executed hidden row or an executed AC-bound reviewer Java test. Source text,
+plain JUnit, and disabled tests do not satisfy this gate.
 
 ## Safeguard roles
 
@@ -74,6 +77,9 @@ exists.
 Read the verdict from `build/topplecat/evidence.json` written by the
 just-completed verification. Archived runs below `build/topplecat/runs/` are
 diagnostic history; never use an older run to fill a gap in current evidence.
+The archived current run also contains `verification-scope.json`, which records
+the selected Spec paths and digests, AC set, hidden mode, and full mutation
+scope.
 
 The gate order is `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
 `EXPECTED_CONSUMPTION`, then `MUTATION`. Contract integrity cannot be disabled.

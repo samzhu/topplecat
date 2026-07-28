@@ -1,5 +1,6 @@
 package io.github.samzhu.topplecat.core;
 
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /** JSON codec for the stable escrow manifest. */
@@ -17,7 +18,11 @@ public final class EscrowManifestJson {
     }
 
     public static EscrowManifest read(String source) {
-        return JSON.readValue(source, EscrowManifest.class);
+        RawPayload payload = JSON.readValue(source, RawPayload.class);
+        ReviewerContractApproval approval = payload.approval() == null
+                ? null
+                : ReviewerContractApprovalJson.read(payload.approval().toString());
+        return new EscrowManifest(payload.schemaVersion(), payload.state(), payload.entries(), approval);
     }
 
     private record VersionOnePayload(String schemaVersion, EscrowState state, java.util.List<EscrowEntry> entries) {
@@ -28,6 +33,14 @@ public final class EscrowManifestJson {
             EscrowState state,
             java.util.List<EscrowEntry> entries,
             ReviewerContractApproval approval
+    ) {
+    }
+
+    private record RawPayload(
+            String schemaVersion,
+            EscrowState state,
+            java.util.List<EscrowEntry> entries,
+            JsonNode approval
     ) {
     }
 }

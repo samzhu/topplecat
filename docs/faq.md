@@ -48,6 +48,12 @@ that contract, not another specification to edit.
 The important part is that a report cannot say one thing while JUnit silently
 executes another interpretation of the same sentence.
 
+People still have to write complete rules and cases. ToppleCat does not discover
+an omitted requirement or decide what an unspecified input should do. It keeps
+the public task given to the agent, the executable contract approved by the
+reviewer, and the contract run during verification aligned, and it requires
+reports to preserve that contract without changing its meaning.
+
 ## How does “DSLs Enable Reliable Use of LLMs” relate to ToppleCat?
 
 In
@@ -84,7 +90,7 @@ The responsibilities are separate:
   PIT run, reads that report, attributes mutants to canonical ACs, applies the
   required threshold, and records the current verdict.
 
-ToppleCat 0.0.5 uses the PIT Gradle plugin 1.19.0, PIT 1.25.5, and the PIT
+ToppleCat 0.0.6 uses the PIT Gradle plugin 1.19.0, PIT 1.25.5, and the PIT
 JUnit 5 plugin 1.2.3. These are implementation versions, not new ToppleCat
 authoring APIs. A project can configure a custom mutation producer instead;
 in that case, the custom producer is responsible for running mutation testing

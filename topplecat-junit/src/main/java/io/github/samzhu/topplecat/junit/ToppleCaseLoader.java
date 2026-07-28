@@ -27,6 +27,8 @@ final class ToppleCaseLoader {
         }
         List<ToppleCase> result = ToppleCaseReader.readAll(sources).stream()
                 .filter(testCase -> acId.equals(testCase.acId()))
+                .filter(testCase -> testCase.visibility() != CaseVisibility.HIDDEN
+                        || ToppleJunit.hiddenAcceptanceConditionSelected(testCase.acId()))
                 .map(ToppleCase::new)
                 .toList();
         if (result.isEmpty()) {

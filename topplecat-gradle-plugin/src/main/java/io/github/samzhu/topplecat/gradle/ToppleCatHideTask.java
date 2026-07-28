@@ -8,7 +8,7 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 
 /** Moves reviewer-only source to local hidden storage before implementation work. */
-public abstract class ToppleCatHideTask extends DefaultTask implements ToppleCatApprovalInputs {
+public abstract class ToppleCatHideTask extends ToppleCatScopedTask implements ToppleCatApprovalInputs {
     @Internal
     public abstract DirectoryProperty getProjectRoot();
 
