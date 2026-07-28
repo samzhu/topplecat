@@ -1,6 +1,7 @@
 # ToppleCat 專案頁 PageSpeed 改善工作計劃
 
-狀態：實作與本機 production 驗收完成；正式 HTTPS 的部署後量測待發布授權
+狀態：已發布並完成正式 HTTPS 的六次 Lighthouse 冷快取驗收；Google PageSpeed
+Insights API 的匿名日配額為 0，直接 PSI 複測無法執行，詳見發布後結果。
 日期：2026-07-28
 範圍：`site/` 的 Vite／React 專案頁；不變更 ToppleCat 的 Java 模組、GitHub Pages 網域或部署方式。
 
@@ -83,6 +84,42 @@ preload、CSS 與 JavaScript 均正確改寫為該 base path 下的 fingerprinte
 `cache-control: max-age=600`。由於現有 Pages 工作流沒有安全、可驗證的自訂 header
 表面，本輪不加入 service worker、redirect、CDN 或 DNS 變更；長期 immutable cache
 需作為獨立的 hosting 決策。
+
+## 發布後正式 HTTPS 驗收
+
+`fe74fdc` 已推送至 `main`，GitHub Pages 的 **Deploy project page** workflow 成功完成。
+正式站已確認回應新版 cat AVIF preload、fingerprinted JS/CSS、SVG favicon 和
+`robots.txt`。
+
+以下是 Lighthouse 13 直接對 `https://topplecat.samzhu.dev/` 的三次獨立冷快取測量。
+每次都由新的 Chrome 執行個體清除 origin data 與 cache；中位數採三次排序的中間值，
+不使用最佳單次。
+
+| 指標 | Mobile 三次（中位數） | Desktop 三次（中位數） |
+| --- | ---: | ---: |
+| Performance | 89 / 66 / 79 (**79**) | 86 / 85 / 61 (**85**) |
+| FCP | 1.45 / 1.43 / 1.67 秒 (**1.45 秒**) | 0.77 / 1.11 / 1.44 秒 (**1.11 秒**) |
+| LCP | 2.72 / 10.71 / 4.06 秒 (**4.06 秒**) | 1.66 / 1.30 / 7.72 秒 (**1.66 秒**) |
+| TBT | 0 / 0 / 0 ms (**0 ms**) | 0 / 0 / 0 ms (**0 ms**) |
+| CLS | 0.000038（每次相同） | 0.000140（每次相同） |
+| 傳輸量 | 355 / 355 / 355 KB (**355 KB**) | 334 / 334 / 335 KB (**334 KB**) |
+| Accessibility / Best Practices / SEO | 100 / 100 / 100 | 100 / 100 / 100 |
+
+與發布前正式 HTTPS 中位數相比，Mobile 傳輸量由 3.14 MB 降至 355 KB（約 89%），
+LCP 由 8.12 秒降至 4.06 秒；Desktop 傳輸量降至 334 KB，LCP 由 3.21 秒降至
+1.66 秒，達成 2.5 秒目標。Mobile 沒有達到 2.5 秒目標，但已明確改善；三次中有
+一次 10.71 秒的長網路延遲，保留在中位數計算中而未剔除。
+
+新的 request waterfall 已沒有 Fontshare 的 render-blocking 項目；唯一的 blocking
+項目是本地 fingerprinted CSS，浪費時間為 0 ms。Mobile 的圖片傳送建議僅剩 tipped
+cup AVIF 約 12.8 KB，這是 640px 候選圖在高像素密度裝置的清晰度取捨，並非原始
+PNG 傳輸。LCP breakdown 顯示餘下的波動主要是正式站 TTFB 與網路資源載入時間，並非
+JavaScript blocking。
+
+Google PSI REST endpoint 對匿名 consumer 回傳 HTTP 429：`Queries per day` quota
+limit 為 0。因此本次不能誠實地宣稱為 PSI 伺服器端測量；上述數據是對同一正式 HTTPS
+URL 的可重現 Lighthouse 冷快取驗收。若日後提供已啟用的 PSI API key，可用相同三次
+Mobile／Desktop 程序補上 Google 伺服器端報告。
 
 ## 不可違反的素材保留規則
 
