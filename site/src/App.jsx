@@ -1,17 +1,19 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { useGSAP } from "@gsap/react";
-import { gsap } from "gsap";
-import { Flip } from "gsap/Flip";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import argyleBackgroundTile from "./assets/backgrounds/argyle-tile.png";
-import motionCatSprite from "./assets/characters/cat-action-sprite.png";
 import coasterLayer from "./assets/props/coaster.svg";
-import motionSideTippedCup from "./assets/props/cup-tipped.png";
-import motionUprightCup from "./assets/props/cup-upright.png";
+import tippedCup320Avif from "./assets/props/cup-tipped-320.avif";
+import tippedCup640Avif from "./assets/props/cup-tipped-640.avif";
+import tippedCup960Avif from "./assets/props/cup-tipped-960.avif";
+import tippedCup320Webp from "./assets/props/cup-tipped-320.webp";
+import tippedCup640Webp from "./assets/props/cup-tipped-640.webp";
+import tippedCup960Webp from "./assets/props/cup-tipped-960.webp";
+import uprightCup320Avif from "./assets/props/cup-upright-320.avif";
+import uprightCup640Avif from "./assets/props/cup-upright-640.avif";
+import uprightCup960Avif from "./assets/props/cup-upright-960.avif";
+import uprightCup320Webp from "./assets/props/cup-upright-320.webp";
+import uprightCup640Webp from "./assets/props/cup-upright-640.webp";
+import uprightCup960Webp from "./assets/props/cup-upright-960.webp";
 import stageFloorLayer from "./assets/scene/tabletop.svg";
-
-gsap.registerPlugin(Flip, ScrollTrigger);
 
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 
@@ -58,24 +60,55 @@ function Arrow() {
   return <span aria-hidden="true" className="arrow">↗</span>;
 }
 
+function Cup({ className, avifSources, webpSources, fallback }) {
+  return (
+    <picture className={className}>
+      <source type="image/avif" srcSet={avifSources} sizes="(max-width: 700px) 52vw, 23vw" />
+      <source type="image/webp" srcSet={webpSources} sizes="(max-width: 700px) 52vw, 23vw" />
+      <img src={fallback} width="960" height="960" alt="" />
+    </picture>
+  );
+}
+
+const cupSources = {
+  upright: {
+    avif: `${uprightCup320Avif} 320w, ${uprightCup640Avif} 640w, ${uprightCup960Avif} 960w`,
+    webp: `${uprightCup320Webp} 320w, ${uprightCup640Webp} 640w, ${uprightCup960Webp} 960w`,
+    fallback: uprightCup960Webp,
+  },
+  tipped: {
+    avif: `${tippedCup320Avif} 320w, ${tippedCup640Avif} 640w, ${tippedCup960Avif} 960w`,
+    webp: `${tippedCup320Webp} 320w, ${tippedCup640Webp} 640w, ${tippedCup960Webp} 960w`,
+    fallback: tippedCup960Webp,
+  },
+};
+
 function App() {
   const scope = useRef(null);
+  const motion = useRef({ Flip: null });
   const [activeAccordion, setActiveAccordion] = useState(0);
   const [copied, setCopied] = useState(false);
 
-  useGSAP(
-    () => {
+  useEffect(() => {
+    let cancelled = false;
+    let context;
+    const startMotion = async () => {
+      const [{ gsap }, { Flip }, { ScrollTrigger }] = await Promise.all([
+        import("gsap"),
+        import("gsap/Flip"),
+        import("gsap/ScrollTrigger"),
+      ]);
+      if (cancelled) return;
+
+      gsap.registerPlugin(Flip, ScrollTrigger);
+      motion.current = { Flip };
+      context = gsap.context(() => {
       const media = gsap.matchMedia();
       const q = gsap.utils.selector(scope);
 
       media.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.from(q(".hero-art"), {
-          opacity: 0,
-          duration: 0.72,
-          ease: "power3.out",
-          delay: 0.08,
-        });
-
+        // Keep the cat, cup, and verdict as three atomic states.
+        // See site/ANIMATION.md before changing this timeline.
         const catTimeline = gsap.timeline({
           delay: 0.95,
           repeat: -1,
@@ -182,9 +215,18 @@ function App() {
       });
 
       return () => media.revert();
-    },
-    { scope },
-  );
+      }, scope);
+    };
+
+    const timer = window.setTimeout(() => {
+      void startMotion();
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      context?.revert();
+    };
+  }, []);
 
   const changeAccordion = (index) => {
     if (index === activeAccordion) return;
@@ -194,6 +236,11 @@ function App() {
       return;
     }
 
+    const { Flip } = motion.current;
+    if (!Flip) {
+      setActiveAccordion(index);
+      return;
+    }
     const panels = scope.current?.querySelectorAll(".accordion-panel");
     const state = panels ? Flip.getState(panels) : null;
     flushSync(() => setActiveAccordion(index));
@@ -219,7 +266,7 @@ function App() {
 
   return (
     <main className="page-shell" ref={scope}>
-      <div className="page-background-layer" style={{ "--argyle-tile-image": `url(${argyleBackgroundTile})` }} aria-hidden="true" />
+      <div className="page-background-layer" aria-hidden="true" />
       <div className="ambient-orb orb-one" />
       <div className="ambient-orb orb-two" />
 
@@ -241,12 +288,22 @@ function App() {
       <section className="hero hero-cinematic" id="top">
         <h1 className="visually-hidden">ToppleCat turns a shaky done claim into evidence.</h1>
         <div className="hero-art">
-          <div className="hero-scene hero-stage" style={{ "--cat-sprite-image": `url(${motionCatSprite})` }} role="img" aria-label="A ToppleCat watches a PASS label on a coffee mug, reaches for it, then tips the mug so the label becomes FAKE.">
+          <div className="hero-scene hero-stage" role="img" aria-label="A ToppleCat watches a PASS label on a coffee mug, reaches for it, then tips the mug so the label becomes FAKE.">
             <img className="stage-floor" src={stageFloorLayer} alt="" aria-hidden="true" />
             <img className="motion-coaster" src={coasterLayer} alt="" aria-hidden="true" />
             <div className="motion-frame motion-cat motion-cat-sprite" aria-hidden="true" />
-            <img className="motion-frame motion-cup motion-upright-cup motion-rest-cup" src={motionUprightCup} alt="" />
-            <img className="motion-frame motion-cup motion-fake-cup" src={motionSideTippedCup} alt="" />
+            <Cup
+              className="motion-frame motion-cup motion-upright-cup motion-rest-cup"
+              avifSources={cupSources.upright.avif}
+              webpSources={cupSources.upright.webp}
+              fallback={cupSources.upright.fallback}
+            />
+            <Cup
+              className="motion-frame motion-cup motion-fake-cup"
+              avifSources={cupSources.tipped.avif}
+              webpSources={cupSources.tipped.webp}
+              fallback={cupSources.tipped.fallback}
+            />
             <span className="sprite-label sprite-label--pass" aria-hidden="true">PASS</span>
             <span className="sprite-label sprite-label--fake" aria-hidden="true">FAKE</span>
           </div>

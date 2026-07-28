@@ -12,6 +12,12 @@ npm run build
 The deployment workflow uploads `site/dist` as a GitHub Pages artifact. It does
 not create or maintain a `gh-pages` branch.
 
+## Hero animation
+
+Read [`ANIMATION.md`](ANIMATION.md) before changing the hero artwork, sprite,
+layer positions, or GSAP timeline. It records the three-state contract and the
+visual checks required to keep the cat, cup, coaster, and verdict synchronized.
+
 ## Assets
 
 Production artwork is grouped by role under `src/assets`. See

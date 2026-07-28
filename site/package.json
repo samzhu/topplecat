@@ -6,16 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "optimize:assets": "node scripts/optimize-assets.mjs",
+    "verify:assets": "node scripts/optimize-assets.mjs --verify"
   },
   "dependencies": {
-    "@gsap/react": "^2.1.2",
     "gsap": "^3.13.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.2",
+    "sharp": "0.35.3",
     "vite": "^7.1.3"
   }
 }
