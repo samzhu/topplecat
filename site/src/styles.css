@@ -182,10 +182,10 @@ button { font: inherit; }
 .card-line-art span { display: block; width: 16px; background: #e8a14a; transform-origin: bottom; }
 .card-line-art span:nth-child(1) { height: 27px; transform: rotate(16deg); }.card-line-art span:nth-child(2) { height: 58px; transform: rotate(16deg); }.card-line-art span:nth-child(3) { height: 94px; transform: rotate(16deg); }
 .mutation { grid-column: span 1; grid-row: span 2; display: flex; flex-direction: column; background: #e9a34b; color: #143330; }
-.mutation p { color: rgba(20, 51, 48, 0.7); }.mutation .card-topline { color: rgba(20, 51, 48, 0.65); }
+.mutation p, .mutation .card-topline { color: #143330; }
 .mutation-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: auto; }
 .mutation-grid b { aspect-ratio: 1; display: block; border: 1px solid rgba(20, 51, 48, 0.55); background: #d68637; }.mutation-grid b:nth-child(2), .mutation-grid b:nth-child(5), .mutation-grid b:nth-child(7) { background: #143330; }
-.expected { grid-column: span 1; grid-row: span 2; display: flex; flex-direction: column; background: #f0ede5; color: #133331; }.expected p, .expected .card-topline { color: rgba(19, 51, 49, 0.67); }
+.expected { grid-column: span 1; grid-row: span 2; display: flex; flex-direction: column; background: #f0ede5; color: #133331; }.expected p, .expected .card-topline { color: #133331; }
 .expected-underline { width: 100%; height: 4px; margin-top: auto; background: repeating-linear-gradient(90deg, #dc8134 0 18px, transparent 18px 30px); }
 .integrity { grid-column: span 4; grid-row: span 1; display: grid; grid-template-columns: 1.4fr 1fr auto; align-items: end; gap: 24px; background: #123d3a; }.integrity h3 { margin-bottom: 0; max-width: 630px; }
 .integrity-seal { display: grid; place-items: center; width: 80px; height: 80px; border: 1px solid #e8a14a; border-radius: 50%; color: #e8a14a; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.1em; transform: rotate(-13deg); }
