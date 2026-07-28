@@ -1,8 +1,9 @@
 # ToppleCat 專案頁 PageSpeed 改善工作計劃
 
-狀態：已發布並完成正式 HTTPS 的六次 Lighthouse 冷快取驗收；Google PageSpeed
-Insights API 的匿名日配額為 0，直接 PSI 複測無法執行。PSI UI 的後續診斷已定位
-到首屏繪製與初始 JavaScript 關鍵鏈，第二輪修正待部署後正式量測確認。
+狀態：已發布。完成正式 HTTPS 的本機 Lighthouse 冷快取驗收，並在 Google
+PageSpeed Insights（PSI）UI 完成三次 Mobile、三次 Desktop 的獨立正式站測量。
+最新修正已消除 PSI 指出的卡片文字對比問題；Mobile LCP 已大幅改善，但 2.5 秒
+中位數目標尚未穩定達成，保留為後續工作。
 日期：2026-07-28
 範圍：`site/` 的 Vite／React 專案頁；不變更 ToppleCat 的 Java 模組、GitHub Pages 網域或部署方式。
 
@@ -52,10 +53,10 @@ Mobile 測量的中位數驗證 LCP 朝 2.5 秒目標改善。若網路條件或
   約 121 KB gzip 降為約 28 KB gzip。後續 PSI 診斷顯示 Flip 仍落在初始關鍵鏈，故
   第二輪改為第一次 accordion 點擊才載入 Flip。CSS/GSAP 仍保留三個原子動畫狀態和
   reduced-motion 的靜態 FAKE 終態。
-- Lighthouse 具體定位到原正式站的 Accessibility 96：桌面導覽列與 evidence
-  accordion 的索引文字對比不足。兩者已改為不透明的既有深綠／淺色 token；本機
-  production 的 Mobile 和 Desktop Accessibility 均為 100，`color-contrast` 為
-  通過。
+- PSI 具體定位到正式站的 Accessibility 96：`#gates` 內 mutation／expected 卡片的
+  索引、標籤與說明文字使用半透明顏色，對比不足。`62c4738` 將它們改為既有、完全
+  不透明的深綠 token（分別為 `#143330` 與 `#133331`）；對比為 6.34:1 與 11.61:1，
+  最新 PSI 的 Mobile 和 Desktop Accessibility 均為 100。
 - 加入最小的 `public/robots.txt` 與無外部相依的 `favicon.svg`。原正式站缺少
   `robots.txt`，而本機預覽會請求不存在的預設 favicon；最新 production 測量的
   Mobile 和 Desktop Best Practices、SEO 均為 100，且沒有 console error。
@@ -129,21 +130,49 @@ GMT+8；Moto G Power、Slow 4G、initial page load、Lighthouse 13.4.0）：Perf
 Google PSI 單次證據，與上述三次正式 HTTPS Lighthouse 結果的改善方向一致；它不是
 三次中位數，因而不取代表格中的正式冷快取驗收資料。
 
-同一批 PSI UI 診斷顯示 cat sprite LCP 的組成為 TTFB 0 ms、資源載入延遲 140 ms、
+同一批 PSI UI 診斷顯示原 cat sprite LCP 的組成為 TTFB 0 ms、資源載入延遲 140 ms、
 資源載入 330 ms、**元素繪製延遲 3,910 ms**。LCP 節點是
 `.motion-frame.motion-cat-sprite`；其後的 `background-position` 寫入會讓瀏覽器重新
 繪製這個候選。診斷也將初始 `Flip` chunk 列為 33 KiB 未使用 JavaScript，並記錄一次
-63 ms 主執行緒工作／54 ms forced reflow。因此第二輪維持同一張 3-frame sprite、素材
-尺寸、狀態時間表與可存取性語意，但改用初始 HTML/CSS 的 `<img>` strip 加合成層
+63 ms 主執行緒工作／54 ms forced reflow。因此 `319cbfe` 維持同一張 3-frame sprite、
+素材尺寸、狀態時間表與可存取性語意，但改用初始 HTML/CSS 的 `<img>` strip 加合成層
 `translateX`、`steps(1, end)` 離散切換；不再讓 hero 依賴 GSAP。GSAP/ScrollTrigger 只在
-使用者接近 manifesto 時才下載，Flip 則延至第一次 accordion 點擊。此修改尚未經部署後
-量測，不把預期效益當成已驗收的結果。
+使用者接近 manifesto 時才下載，Flip 則延至第一次 accordion 點擊。這個修改與隨後的
+`62c4738` 對比修正都已部署，正式 PSI 結果見下一節。
 
 PSI 也顯示唯一 render-blocking 資源為本機 6.2 KiB CSS（150 ms），CLS 為 0，DOM 僅
 226 個元素（最大深度 9、最多子節點 44）。Fontshare 為約 79 KiB 的第三方字型請求，
 主執行緒時間為 0 ms；在不造成 CLS 或阻塞繪製的前提下，本輪不為分數犧牲字體設計。
 第一方 fingerprinted 資產的 GitHub Pages cache TTL 仍為 10 分鐘，影響回訪而非初訪
 LCP；現有 Pages 部署表面無法安全設定 immutable header，維持為獨立 hosting 決策。
+
+### 最終 Google PageSpeed Insights 驗收（`62c4738`）
+
+`62c4738` 的 **Deploy project page** workflow 成功後，直接在 PSI UI 對正式 HTTPS
+站執行三次 Mobile 與三次 Desktop 測量。PSI 會在短時間內重用同一 URL 的已完成報告；
+為確保每次是新的實驗室測量，測試輸入只附加了互不相同的 `?psi=62c4738-{m,d}N`
+查詢字串。它不會改變 React 頁面、資產 URL 或伺服器回應內容，且每份報告都標示為
+「初次載入網頁」；正式 canonical URL 仍為 `https://topplecat.samzhu.dev/`。
+
+| 指標 | Mobile 三次（中位數） | Desktop 三次（中位數） |
+| --- | ---: | ---: |
+| Performance | 89 / 97 / 93 (**93**) | 100 / 100 / 100 (**100**) |
+| FCP | 2.7 / 1.2 / 1.2 秒 (**1.2 秒**) | 0.3 / 0.3 / 0.3 秒 (**0.3 秒**) |
+| LCP | 3.2 / 2.5 / 3.2 秒 (**3.2 秒**) | 0.8 / 0.6 / 0.6 秒 (**0.6 秒**) |
+| TBT | 0 / 0 / 0 ms (**0 ms**) | 0 / 0 / 0 ms (**0 ms**) |
+| CLS | 0 / 0 / 0 (**0**) | 0 / 0 / 0 (**0**) |
+| Speed Index | 2.7 / 1.5 / 1.3 秒 (**1.5 秒**) | 0.4 / 0.5 / 0.5 秒 (**0.5 秒**) |
+| Accessibility / Best Practices / SEO | 100 / 100 / 100（每次） | 100 / 100 / 100（每次） |
+
+報告建立時間依序為 Mobile 14:49、14:50、14:51 與 Desktop 14:52、14:53、14:54
+（GMT+8，Lighthouse 13.4.0）。可重查報告為 [Mobile 1](https://pagespeed.web.dev/analysis/https-topplecat-samzhu-dev/wrcd8n31r2?form_factor=mobile)、[Mobile 2](https://pagespeed.web.dev/analysis/https-topplecat-samzhu-dev/0u8cewc53r?form_factor=mobile)、[Mobile 3](https://pagespeed.web.dev/analysis/https-topplecat-samzhu-dev/svvw12nfp2?form_factor=mobile)，以及 [Desktop 1](https://pagespeed.web.dev/analysis/https-topplecat-samzhu-dev/mmgpexq1uk?form_factor=desktop)、[Desktop 2](https://pagespeed.web.dev/analysis/https-topplecat-samzhu-dev/o752l5buyk?form_factor=desktop)、[Desktop 3](https://pagespeed.web.dev/analysis/https-topplecat-samzhu-dev/cah0xqdft8?form_factor=desktop)。
+
+這份中位數使 Mobile LCP 從發布前正式 HTTPS 的 8.12 秒降至 3.2 秒（約 61%），
+Desktop LCP 從 3.21 秒降至 0.6 秒，且 CLS、Best Practices 與 SEO 沒有退步。Mobile
+2.5 秒的目標沒有穩定達成，不能宣稱通過；其餘可安全改善點是 Pages 的 10 分鐘快取
+TTL（PSI 估計約 205 KiB 回訪可省）與 cat sprite 的可用尺寸縮減。前者需要獨立的
+hosting／header 決策；後者必須先以高 DPI 視覺品質為前提，不能為單次分數改變三格
+sprite 的素材與定位契約。
 
 ## 不可違反的素材保留規則
 
