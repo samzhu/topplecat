@@ -1,6 +1,6 @@
 ---
 name: topplecat-release
-description: Prepare ToppleCat releases as an open-source Java framework. Use when organizing the repository for release, pruning release-facing docs, deciding whether the site must change, drafting developer-focused release notes after approval, validating the release commit, creating an authorized local tag, or preparing the maintainer's GitHub and Maven publication handoff.
+description: Prepare ToppleCat releases as an open-source Java framework. Use when organizing the repository for release, pruning release-facing docs, deciding whether the site must change, drafting developer-focused release notes after approval, validating the release commit, creating and pushing an authorized tag, or preparing the maintainer's GitHub and Maven publication handoff.
 ---
 
 # ToppleCat release
@@ -106,15 +106,17 @@ version and commit.
 Complete this step only when all checks pass and the user has received the
 release notes and confirmed the release identity.
 
-## 6. Create the authorized local tag
+## 6. Create and push the authorized tag
 
 Read [the maintainer handoff](references/maintainer-publishing.md) immediately
-before acting. Create and verify the signed annotated `X.Y.Z` tag without a
-`v` prefix on the confirmed release commit that matches `origin/main`.
+before acting. Create and verify the annotated `X.Y.Z` tag without a `v` prefix
+on the confirmed release commit that matches `origin/main`. Do not require a
+GPG signature. Push the verified tag to `origin`.
 
-Stop at the local boundary. Give the maintainer the verified tag, GitHub
-Release title/body, and publication checklist. The maintainer pushes the tag,
-publishes Maven Central, and publishes the GitHub Release.
+Stop at the remote-tag boundary. Give the maintainer the verified remote tag,
+GitHub Release title/body, and publication checklist. The maintainer publishes
+Maven Central and the GitHub Release.
 
-Complete this step only when the local tag verifies and the handoff identifies
-every remaining external action without performing it.
+Complete this step only when the remote tag resolves to the confirmed release
+commit and the handoff identifies every remaining external action without
+performing it.

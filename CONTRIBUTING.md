@@ -34,15 +34,14 @@ GitHub Release:       ToppleCat 0.0.3
 
 The release tag has no `v` prefix. `scripts/publish-central.sh` reads the
 Gradle project version, requires the matching `X.Y.Z` tag on `HEAD`, and
-publishes artifacts with that same value. Keep published tags and GitHub
-Releases unchanged; `docs/releases/` keeps only the current repository release
-notes while GitHub preserves the public release history.
+publishes artifacts with that same value. Keep published tags, GitHub Releases,
+and the matching historical notes under `docs/releases/` unchanged.
 
 Use the
 [`topplecat-release` skill](.agents/skills/topplecat-release/SKILL.md) to
 organize and validate the repository for release. After explicit authorization,
-it prepares the release notes and verified local tag; the maintainer pushes the
-tag and publishes Maven Central and the GitHub Release.
+it prepares the release notes and creates and pushes the verified annotated
+tag; the maintainer publishes Maven Central and the GitHub Release.
 
 ## Change rules
 

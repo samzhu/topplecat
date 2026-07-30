@@ -36,7 +36,9 @@ ToppleCat 不管理任務、Spec 生命週期、組織簽核、CI 隔離或作�
 ```
 
 一般 `test` 不會依賴 Check、Review、Seal、保管、報告或正式證據。每次
-`toppleCatVerify` 都會重新執行正式的公開驗收工作，再判定各項已啟用功能。
+`toppleCatVerify` 都會重新執行正式的公開驗收工作，再判定每一項已啟用的獨立防線。
+合約完整性通過後，一道防線的失敗會留下自己的結果，但不會阻擋後續防線；證據、報告、
+安全回饋與重新隱藏完成後，才以一個整體失敗結束。
 
 ## 工作流程
 
@@ -132,18 +134,18 @@ toppleCat {
 `EXPECTED_CONSUMPTION`、`PROPERTY` 與 `MUTATION`。整體結果為 `PASS`、`FAIL`
 或 `INCOMPLETE`；只有本次執行的 `PASS` 才能接受完成宣稱。
 
-## 安裝 0.0.7
+## 安裝 0.0.8
 
 ToppleCat 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.7"
+    id("io.github.samzhu.topplecat") version "0.0.8"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.7")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.8")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -159,7 +161,7 @@ tasks.test { useJUnitPlatform() }
 - [文件索引](docs/README.md)
 - [共同語言](CONTEXT.md)
 - [架構](docs/architecture.md)
-- [0.0.7 release notes](docs/releases/0.0.7.md)
+- [0.0.8 release notes](docs/releases/0.0.8.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

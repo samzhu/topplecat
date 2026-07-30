@@ -26,6 +26,11 @@ parameter, one `forAll(...).check(...)`, bounded generators, and valid trial,
 discard, shrink, and coverage limits. A filter that exhausts its discard budget
 or a failed coverage requirement is `INCOMPLETE`, not a passing assertion.
 
+An actual counterexample is different: it is `PROPERTY=FAIL` and Verify still
+runs the later Mutation safeguard. `PROPERTY=INCOMPLETE` instead means the
+Property task did not complete, or its current events/JUnit evidence was
+missing or damaged. Do not inspect an earlier run as a replacement.
+
 ## Mutation evidence is missing or fails
 
 The managed PIT producer targets public acceptance classes. A missing or
@@ -34,16 +39,25 @@ an acceptance method is `FAIL`. Configure a custom producer with
 `mutationTesting { producerTask.set(...); reportFile.set(...) }` only when it
 still writes a full current report.
 
+A surviving mutant is `MUTATION=FAIL`; Verify writes reports, safe feedback,
+and re-hides reviewer source before returning that aggregate failure. A producer
+that was interrupted is `INCOMPLETE`; a task that completed without a usable
+current report is also `INCOMPLETE`. Verify removes the configured producer
+report before Gradle evaluates producer skip conditions, so stale mutation
+evidence cannot be reused.
+
 ## Contract integrity failed
 
 The sealed acceptance source closure, public rows, selected scope, Gradle logic,
 semantic definition, or policy changed. Restore reviewer custody, make the
 intended change, then Check, Review, and Reseal. Do not edit sealed public
-contract inputs in the implementation handoff.
+contract inputs in the implementation handoff. If Verify says an existing
+Mechanical Seal is missing, run `toppleCatSeal`; Verify never replaces approval
+on its own.
 
 ## Custody cannot be restored
 
-The 0.0.7 custody state is reviewer-local under
+The 0.0.8 custody state is reviewer-local under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`. The project must be opened
 at the same resolved path and with the reviewer state available. Prior-format
 custody is not migrated; create a new sealed reviewer state.

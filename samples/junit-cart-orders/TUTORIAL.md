@@ -18,7 +18,9 @@ passing Verify after the fix. Cleanup restores the service and reviewer source.
 
 The public acceptance class uses `@ToppleAcceptanceTest` and typed rows. Its
 Property runs separately and contributes only to `PROPERTY`. Reviewer rows are
-the only evidence for `REVIEWER_JUNIT`.
+the only evidence for `REVIEWER_JUNIT`. The receipt is projected and verified
+once with `c.verify("receipt", receipt)`, which keeps Expected Consumption a
+single complete assertion obligation.
 
 After Verify, inspect:
 

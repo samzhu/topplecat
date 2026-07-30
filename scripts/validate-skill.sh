@@ -160,8 +160,10 @@ for required in \
   'generated notes' \
   'docs/validation/README.md' \
   'explicitly authorizes the release' \
-  'signed annotated' \
-  'Stop at the local boundary' \
+  'annotated `X.Y.Z` tag' \
+  'Do not require a' \
+  'Push the verified tag to `origin`' \
+  'Stop at the remote-tag boundary' \
   'Maven Central' \
   'GitHub Release'; do
   grep -Fq -- "$required" "$release_path" \

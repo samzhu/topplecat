@@ -46,12 +46,14 @@ and never enters mutation targeting. Properties are public declarations under
 | Mutation Testing | Public acceptance methods and producer report | mutation producer + `toppleCatMutationGate` | `MUTATION` |
 | Property-Based Testing | `@ToppleProperty` declarations, generators, current events | dedicated Property task | `PROPERTY` |
 
-The three capabilities share only scope, integrity, reports, and the aggregate
-verdict. Reviewer custody is used only for Hidden Tests. A Property result
-cannot supply Hidden Test coverage. A mutation result cannot supply Property
-evidence. `REVIEWER_JUNIT` is `PASS` only when current-run hidden typed rows
-executed. When enabled but those rows are missing it is `INCOMPLETE`; an
-explicit policy decision is `DISABLED`.
+The three capabilities are Independent Safeguards: they share only scope,
+integrity, reports, and the aggregate verdict. Reviewer custody is used only
+for Hidden Tests. A Property result cannot supply Hidden Test coverage. A
+mutation result cannot supply Property evidence. Once contract integrity
+passes, each enabled safeguard produces its own current-run result even if an
+earlier safeguard fails. `REVIEWER_JUNIT` is `PASS` only when current-run
+hidden typed rows executed. When enabled but those rows are missing it is
+`INCOMPLETE`; an explicit policy decision is `DISABLED`.
 
 ## Scope and custody
 
@@ -63,7 +65,7 @@ Mutation Testing remains full-contract.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.7 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.8 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
@@ -76,9 +78,10 @@ not invalidate it.
 
 ## Evidence and information boundary
 
-Every formal run starts below `build/topplecat/runs/current/`, gets a new UUID,
-and is archived after reports are written. Stable copies are diagnostic only;
-they cannot supply missing current evidence. Gates are recorded in this order:
+Every formal run starts below `build/topplecat/runs/current/`, discards any
+unarchived active workspace, gets a new UUID, and is archived after reports are
+written. Stable copies are diagnostic only; they cannot supply missing current
+evidence. Gates are recorded in this order:
 
 ```text
 CONTRACT_INTEGRITY
@@ -89,8 +92,14 @@ PROPERTY
 MUTATION
 ```
 
-`CONTRACT_INTEGRITY` cannot be disabled. A mismatch prevents downstream work
-and marks it `FAIL`; absent or incomplete current proof is `INCOMPLETE`.
+`CONTRACT_INTEGRITY` cannot be disabled. It first runs the current Check to
+rebuild the compiler definition. A mismatch prevents downstream work and marks
+it `FAIL`; absent or incomplete current proof is `INCOMPLETE`.
+When it passes, formal Verify runs public acceptance, hidden typed rows,
+Properties, and Mutation Testing in that order, then aggregates expected-value
+consumption and writes reports before its one aggregate Gradle failure exit.
+Verify reuses an existing Mechanical Seal through an internal custody check; it
+does not run Review, Seal, or update approval.
 
 - Contract Review is reviewer-only and precedes handoff.
 - Public Spec is a safe post-Verify projection under `reports/public/`.

@@ -1,5 +1,6 @@
 package io.github.samzhu.topplecat.junit;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -52,6 +53,34 @@ class ToppleCaseTest {
         assertThrows(AssertionError.class, () -> testCase.verify("discount", 99));
 
     assertEquals(true, error.getMessage().contains("expected.discount"));
+  }
+
+  @Test
+  void failedVerificationIsAssertedButLaterUnreachedValuesStayUntouched() throws Exception {
+    ToppleCase testCase = testCase("{}", "{\"discount\":100,\"total\":900}");
+
+    assertThrows(
+        AssertionError.class,
+        () -> {
+          testCase.verify("discount", 99);
+          testCase.verify("total", 900);
+        });
+
+    assertEquals(ExpectedConsumption.ASSERTED, testCase.expectedConsumption().get("discount"));
+    assertEquals(ExpectedConsumption.UNTOUCHED, testCase.expectedConsumption().get("total"));
+  }
+
+  @Test
+  void assertAllLetsIndependentVerificationsRecordEveryAttempt() throws Exception {
+    ToppleCase testCase = testCase("{}", "{\"discount\":100,\"total\":900}");
+
+    assertThrows(
+        AssertionError.class,
+        () ->
+            assertAll(() -> testCase.verify("discount", 99), () -> testCase.verify("total", 899)));
+
+    assertEquals(ExpectedConsumption.ASSERTED, testCase.expectedConsumption().get("discount"));
+    assertEquals(ExpectedConsumption.ASSERTED, testCase.expectedConsumption().get("total"));
   }
 
   @Test

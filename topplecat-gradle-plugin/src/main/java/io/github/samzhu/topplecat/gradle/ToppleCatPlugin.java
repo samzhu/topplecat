@@ -309,7 +309,10 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                 });
     restore.configure(
         task -> {
-          task.mustRunAfter(acquireCustody, hide);
+          // Public contract checking reads the hidden-root path to reject unsupported reviewer
+          // declarations. Restore only after that public check so Gradle sees one deliberate
+          // custody transition rather than competing producers for src/hiddenTest.
+          task.mustRunAfter(acquireCustody, hide, check, validateReviewerSource);
           task.usesService(custodyService);
           task.getOutputs().upToDateWhen(ignored -> false);
           task.getOutputs()
@@ -382,7 +385,10 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                   task.getProjectRoot().set(project.getLayout().getProjectDirectory());
                   task.getResultFile().set(runDirectory.file("contract-integrity.json"));
                   configureApprovalInputs(task, project, test, extension);
-                  task.dependsOn(prepareRun, hide);
+                  // Verify reuses an existing Mechanical Seal. It must never schedule the public
+                  // Seal workflow, because that would make an implementation run look like a new
+                  // reviewer approval.
+                  task.dependsOn(prepareRun, check);
                   task.getOutputs().upToDateWhen(ignored -> false);
                   task.getOutputs()
                       .doNotCacheIf(
@@ -390,7 +396,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                 });
     contractIntegrity.configure(
         task -> {
-          task.mustRunAfter(acquireCustody, hide);
+          task.mustRunAfter(acquireCustody);
           task.usesService(custodyService);
         });
 
@@ -514,7 +520,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         task -> {
           task.dependsOn(contractIntegrity);
           task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
-          task.mustRunAfter(acquireCustody, verificationTest);
+          task.mustRunAfter(acquireCustody, verificationTest, hiddenTest);
           task.usesService(custodyService);
           configureSelectedAcceptanceScope(task, extension, project, false);
         });
@@ -544,7 +550,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                   task.getProducerTaskName().set(extension.getMutationTesting().getProducerTask());
                   task.getProducerAvailable().convention(false);
                   task.dependsOn(prepareRun, contractIntegrity);
-                  task.mustRunAfter(verificationTest, hiddenTest);
+                  task.mustRunAfter(verificationTest, hiddenTest, propertyTest);
                   task.usesService(custodyService);
                 });
     mutationGate.configure(
@@ -590,6 +596,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     propertyTest.configure(task -> task.finalizedBy(report));
     mutationGate.configure(task -> task.finalizedBy(report));
     hiddenTest.configure(task -> task.mustRunAfter(verificationTest));
+    restore.configure(task -> task.mustRunAfter(verificationTest));
     rehide.configure(
         task -> {
           task.mustRunAfter(acquireCustody, report);
@@ -858,16 +865,49 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             task.dependsOn(propertyTest);
           });
     }
+    configureFormalVerifyFailureDeferral(project, verificationTest, verify);
+    configureFormalVerifyFailureDeferral(project, hiddenTest, verify);
+    configureFormalVerifyFailureDeferral(project, propertyTest, verify);
+    restore.configure(
+        task ->
+            task.onlyIf(
+                ignored ->
+                    !project.getGradle().getTaskGraph().hasTask(verify.get())
+                        || ToppleCatContractIntegrityTask.passed(contractIntegrityResult)));
+    mutationGate.configure(
+        task ->
+            task.doFirst(
+                ignored ->
+                    task.getContinueAfterFailure()
+                        .set(project.getGradle().getTaskGraph().hasTask(verify.get()))));
     report.configure(task -> task.finalizedBy(rehide));
     configureMutationGate(
         project,
         extension,
         configuration,
+        contractIntegrity,
+        verificationTest,
+        hiddenTest,
+        propertyTest,
         mutationGate,
         report,
         verify,
         contractIntegrityResult,
         compileContracts);
+  }
+
+  /**
+   * A direct diagnostic task preserves ordinary Gradle failure behavior. Inside the formal Verify
+   * graph, assertion failures are evidence inputs rather than the aggregate failure exit.
+   */
+  private static void configureFormalVerifyFailureDeferral(
+      Project project, TaskProvider<Test> gate, TaskProvider<ToppleCatVerifyTask> verify) {
+    gate.configure(
+        task ->
+            task.doFirst(
+                ignored ->
+                    task.setIgnoreFailures(
+                        project.getGradle().getTaskGraph().hasTask(verify.get()))));
   }
 
   private static void configureApprovalInputs(
@@ -935,6 +975,10 @@ public final class ToppleCatPlugin implements Plugin<Project> {
       Project project,
       ToppleCatExtension extension,
       VerificationConfiguration configuration,
+      TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity,
+      TaskProvider<Test> verificationTest,
+      TaskProvider<Test> hiddenTest,
+      TaskProvider<Test> propertyTest,
       TaskProvider<ToppleCatMutationGateTask> mutationGate,
       TaskProvider<ToppleCatReportTask> report,
       TaskProvider<ToppleCatVerifyTask> verify,
@@ -979,6 +1023,26 @@ public final class ToppleCatPlugin implements Plugin<Project> {
           }
         });
     if (producer != null) {
+      // Task ordering is not inherited by dependencies. The producer is the Mutation Testing
+      // execution itself, so it must observe the same independent-safeguard sequence as the
+      // gate that reads its report. Its Integrity onlyIf must not race a missing current-run
+      // integrity result in a parallel Gradle build.
+      producer.mustRunAfter(contractIntegrity, verificationTest, hiddenTest, propertyTest);
+      producer
+          .getOutputs()
+          .upToDateWhen(ignored -> !project.getGradle().getTaskGraph().hasTask(verify.get()));
+      producer
+          .getOutputs()
+          .doNotCacheIf(
+              "ToppleCat Verify requires current-run mutation producer evidence.",
+              ignored -> project.getGradle().getTaskGraph().hasTask(verify.get()));
+      project
+          .getTasks()
+          .named("toppleCatPrepareRun", ToppleCatPrepareRunTask.class)
+          .configure(
+              task ->
+                  task.getMutationProducerReportFile()
+                      .set(extension.getMutationTesting().getReportFile()));
       producer.onlyIf(
           ignored ->
               !project.getGradle().getTaskGraph().hasTask(verify.get())

@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.samzhu.topplecat.core.ContractIntegrityResultJson;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ToppleEvidence;
 import io.github.samzhu.topplecat.core.ToppleEvidenceJson;
+import io.github.samzhu.topplecat.pitest.PitMutationAssessment;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -125,7 +127,7 @@ class ToppleCatPluginFunctionalTest {
     writeHiddenCustodyMarker();
 
     runner("toppleCatSeal").build();
-    runner("toppleCatVerify", "--continue").buildAndFail();
+    runner("toppleCatVerify").buildAndFail();
 
     assertEquals(EvidenceVerdict.INCOMPLETE, gate("REVIEWER_JUNIT"));
     assertEquals(EvidenceVerdict.PASS, gate("PROPERTY"));
@@ -153,30 +155,36 @@ class ToppleCatPluginFunctionalTest {
 
   @Test
   void propertyFailureDoesNotChangeTheHiddenTypedRowGate() throws Exception {
-    writeProject("toppleCat { mutationTesting { enabled.set(false) } }");
+    writeProject(mutationFixtureConfiguration(true));
+    writeProductionClass();
     writeAcceptanceWithFailingProperty();
     writePublicCase("coupon-public", "AC-COUPON", 100);
     writeHiddenCase("coupon-hidden", "AC-COUPON", 100);
 
     runner("toppleCatSeal").build();
-    runner("toppleCatVerify", "--continue").buildAndFail();
+    runner("toppleCatVerify").buildAndFail();
 
     assertEquals(EvidenceVerdict.PASS, gate("REVIEWER_JUNIT"));
     assertEquals(EvidenceVerdict.FAIL, gate("PROPERTY"));
+    assertEquals(EvidenceVerdict.PASS, gate("MUTATION"));
   }
 
   @Test
   void hiddenTypedRowFailureDoesNotChangeThePropertyGate() throws Exception {
-    writeProject("toppleCat { mutationTesting { enabled.set(false) } }");
+    writeProject(mutationFixtureConfiguration(true));
+    writeProductionClass();
     writeAcceptance("100", true);
     writePublicCase("coupon-public", "AC-COUPON", 100);
     writeHiddenCaseWithSecretInput("coupon-hidden", "AC-COUPON", 99);
 
     runner("toppleCatSeal").build();
-    runner("toppleCatVerify", "--continue").buildAndFail();
+    var verify = runner("toppleCatVerify").buildAndFail();
 
     assertEquals(EvidenceVerdict.FAIL, gate("REVIEWER_JUNIT"));
     assertEquals(EvidenceVerdict.PASS, gate("PROPERTY"));
+    assertEquals(EvidenceVerdict.PASS, gate("MUTATION"));
+    assertCurrentRunCompleted("PROPERTY_PUBLIC", "MUTATION");
+    assertEquals(TaskOutcome.SUCCESS, verify.task(":toppleCatPropertyTest").getOutcome());
     assertFalse(
         Files.readString(project.resolve("build/topplecat/agent-feedback.json"))
             .contains("coupon-hidden"));
@@ -198,10 +206,49 @@ class ToppleCatPluginFunctionalTest {
     writePublicCase("coupon-public", "AC-COUPON", 100);
 
     runner("toppleCatSeal").build();
-    runner("toppleCatVerify", "--continue").buildAndFail();
+    runner("toppleCatVerify").buildAndFail();
 
     assertEquals(EvidenceVerdict.FAIL, gate("JUNIT"));
     assertEquals(EvidenceVerdict.FAIL, gate("EXPECTED_CONSUMPTION"));
+  }
+
+  @Test
+  void directPublicVerificationTaskStillFailsAtTheDiagnosticTask() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeAcceptance("99", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    runner("toppleCatSeal").build();
+    var failure = runner("toppleCatVerificationTest").buildAndFail();
+
+    assertTrue(failure.getOutput().contains("There were failing tests"));
+    assertEquals(EvidenceVerdict.FAIL, gate("JUNIT"));
+  }
+
+  @Test
+  void verifyWithoutAnExistingSealIsIncompleteAndDoesNotCreateApproval() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    var failure = runner("toppleCatVerify").buildAndFail();
+
+    assertTrue(failure.getOutput().contains("Run toppleCatSeal before Verify"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("CONTRACT_INTEGRITY"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, evidence().verdict());
+    assertFalse(Files.exists(project.resolve("src/hiddenTest")));
   }
 
   @Test
@@ -266,6 +313,324 @@ class ToppleCatPluginFunctionalTest {
   }
 
   @Test
+  void publicFailureStillRunsEveryEnabledSafeguardBeforeTheAggregateFailure() throws Exception {
+    writeProject(mutationFixtureConfiguration(true));
+    writeProductionClass();
+    writeAcceptance("99", true);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+    writeHiddenCase("coupon-hidden", "AC-COUPON", 99);
+
+    runner("toppleCatSeal").build();
+    var verify = runner("toppleCatVerify").buildAndFail();
+
+    assertTrue(
+        Files.isRegularFile(project.resolve("build/topplecat/evidence.json")), verify.getOutput());
+    assertEquals(EvidenceVerdict.FAIL, gate("JUNIT"));
+    assertEquals(EvidenceVerdict.PASS, gate("REVIEWER_JUNIT"));
+    assertEquals(EvidenceVerdict.PASS, gate("PROPERTY"));
+    assertEquals(EvidenceVerdict.PASS, gate("MUTATION"));
+    assertEquals(EvidenceVerdict.FAIL, evidence().verdict());
+    assertEquals(TaskOutcome.SUCCESS, verify.task(":toppleCatPropertyTest").getOutcome());
+    assertEquals(TaskOutcome.SUCCESS, verify.task(":toppleCatMutationGate").getOutcome());
+    assertCurrentRunCompleted("JUNIT", "REVIEWER_JUNIT", "PROPERTY_PUBLIC", "MUTATION");
+  }
+
+  @Test
+  void survivingMutantsStillProduceReportFeedbackAndRehide() throws Exception {
+    writeProject(mutationFixtureConfiguration(false));
+    writeProductionClass();
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+    writeHiddenCustodyMarker();
+
+    runner("toppleCatSeal").build();
+    var verify = runner("toppleCatVerify").buildAndFail();
+
+    assertEquals(TaskOutcome.SUCCESS, verify.task(":toppleCatMutationGate").getOutcome());
+    assertEquals(EvidenceVerdict.FAIL, gate("MUTATION"));
+    assertTrue(
+        Files.isRegularFile(project.resolve("build/topplecat/reports/verification/index.html")));
+    assertTrue(Files.isRegularFile(project.resolve("build/topplecat/agent-feedback.json")));
+    assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+  }
+
+  @Test
+  void missingMutationReportIsIncompleteAndCannotReuseAStaleProducerArtifact() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting {
+                producerTask.set("writeNothing")
+                reportFile.set(layout.buildDirectory.file("reports/pitest/mutations.xml"))
+            }
+        }
+        tasks.register("writeNothing")
+        """);
+    writeProductionClass();
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+    Path stale = project.resolve("build/reports/pitest/mutations.xml");
+    Files.createDirectories(stale.getParent());
+    Files.writeString(
+        stale,
+        """
+        <mutations>
+          <mutation detected="true" status="KILLED">
+            <mutatedClass>example.CouponService</mutatedClass>
+            <coveringTests>example.CouponAcceptanceTest</coveringTests>
+          </mutation>
+        </mutations>
+        """);
+
+    runner("toppleCatSeal").build();
+    var verify = runner("toppleCatVerify").buildAndFail();
+
+    assertTrue(
+        Files.isRegularFile(project.resolve("build/topplecat/evidence.json")), verify.getOutput());
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("MUTATION"));
+    assertFalse(Files.exists(stale));
+    assertCurrentRunCompleted("MUTATION");
+  }
+
+  @Test
+  void interruptedMutationProducerRunsAfterEarlierSafeguardsAndStillReportsAndRehides()
+      throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            mutationTesting {
+                producerTask.set("interruptPitFixture")
+                reportFile.set(layout.buildDirectory.file("reports/pitest/mutations.xml"))
+            }
+        }
+        tasks.register("interruptPitFixture") {
+            doLast {
+                def gates = layout.buildDirectory.file("topplecat/runs/current/gates").get().asFile
+                if (!new File(gates, "JUNIT.completed").isFile() ||
+                    !new File(gates, "REVIEWER_JUNIT.completed").isFile() ||
+                    !new File(gates, "PROPERTY_PUBLIC.completed").isFile()) {
+                    throw new GradleException("Mutation producer ran before its prerequisite safeguards")
+                }
+                throw new GradleException("simulated mutation producer interruption")
+            }
+        }
+        tasks.register("assertMutationProducerOrdering") {
+            doLast {
+                def producer = tasks.named("interruptPitFixture").get()
+                def prerequisiteNames = producer.mustRunAfter.getDependencies(producer)*.name as Set
+                def required = [
+                    "toppleCatContractIntegrity",
+                    "toppleCatVerificationTest",
+                    "toppleCatHiddenTest",
+                    "toppleCatPropertyTest"
+                ] as Set
+                if (!prerequisiteNames.containsAll(required)) {
+                    throw new GradleException("Mutation producer does not declare every prerequisite safeguard")
+                }
+            }
+        }
+        """);
+    writeProductionClass();
+    writeAcceptance("100", true);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+    writeHiddenCase("coupon-hidden", "AC-COUPON", 100);
+    writeHiddenCustodyMarker();
+
+    runner("assertMutationProducerOrdering").build();
+    runner("toppleCatSeal").build();
+    var verify = runner("toppleCatVerify").buildAndFail();
+
+    assertEquals(TaskOutcome.FAILED, verify.task(":interruptPitFixture").getOutcome());
+    assertTrue(
+        Files.isRegularFile(project.resolve("build/topplecat/evidence.json")), verify.getOutput());
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("MUTATION"));
+    assertTrue(Files.isRegularFile(project.resolve("build/topplecat/agent-feedback.json")));
+    assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+    assertCurrentRunCompleted("JUNIT", "REVIEWER_JUNIT", "PROPERTY_PUBLIC");
+  }
+
+  @Test
+  void formalVerifyRerunsADeclaredOutputMutationProducerForEachRun() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting {
+                producerTask.set("writeDeclaredPitFixture")
+                reportFile.set(layout.buildDirectory.file("reports/pitest/mutations.xml"))
+            }
+        }
+        tasks.register("writeDeclaredPitFixture") {
+            def report = layout.buildDirectory.file("reports/pitest/mutations.xml")
+            outputs.file(report)
+            doLast {
+                def reportFile = report.get().asFile
+                reportFile.parentFile.mkdirs()
+                reportFile.text = '''
+                <mutations>
+                  <mutation detected="true" status="KILLED">
+                    <mutatedClass>example.CouponService</mutatedClass>
+                    <coveringTests>example.CouponAcceptanceTest.[engine:junit-jupiter]/[class:example.CouponAcceptanceTest]/[test-template:appliesCoupon(io.github.samzhu.topplecat.junit.ToppleCase,io.github.samzhu.topplecat.junit.ToppleScenario,example.CouponAcceptanceTest$CouponStage)]/[test-template-invocation:#1]</coveringTests>
+                  </mutation>
+                </mutations>
+                '''
+                def invocations = layout.buildDirectory.file("producer-invocations.txt").get().asFile
+                invocations << "run\\n"
+            }
+        }
+        """);
+    writeProductionClass();
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    runner("toppleCatSeal").build();
+    var first = runner("toppleCatVerify").build();
+    var second = runner("toppleCatVerify").build();
+
+    assertEquals(TaskOutcome.SUCCESS, first.task(":writeDeclaredPitFixture").getOutcome());
+    assertEquals(TaskOutcome.SUCCESS, second.task(":writeDeclaredPitFixture").getOutcome());
+    assertEquals(
+        2,
+        Files.readAllLines(project.resolve("build/producer-invocations.txt")).stream()
+            .filter(line -> line.equals("run"))
+            .count());
+    assertEquals(EvidenceVerdict.PASS, gate("MUTATION"));
+    assertCurrentRunCompleted("MUTATION");
+  }
+
+  @Test
+  void integrityRechecksTheCurrentDefinitionBeforeComparingTheSeal() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    runner("toppleCatSeal").build();
+    writeIndependentPublicProperty();
+
+    var integrity = runner("toppleCatContractIntegrity").build();
+
+    assertEquals(TaskOutcome.SUCCESS, integrity.task(":toppleCatCheck").getOutcome());
+    assertEquals(
+        EvidenceVerdict.FAIL,
+        ContractIntegrityResultJson.read(
+                Files.readString(
+                    project.resolve("build/topplecat/runs/current/contract-integrity.json")))
+            .verdict());
+  }
+
+  @Test
+  void skippedMutationProducerCannotReuseItsReportFromBeforeTheRun() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting {
+                producerTask.set("skipPitFixture")
+                reportFile.set(layout.buildDirectory.file("reports/pitest/mutations.xml"))
+            }
+        }
+        tasks.register("skipPitFixture") {
+            onlyIf { false }
+        }
+        """);
+    writeProductionClass();
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+    Path stale = project.resolve("build/reports/pitest/mutations.xml");
+    Files.createDirectories(stale.getParent());
+    Files.writeString(stale, killedMutationFixture());
+
+    runner("toppleCatSeal").build();
+    var verify = runner("toppleCatVerify").buildAndFail();
+
+    assertTrue(
+        Files.isRegularFile(project.resolve("build/topplecat/evidence.json")), verify.getOutput());
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("MUTATION"));
+    assertFalse(Files.exists(stale));
+    assertCurrentRunCompleted("MUTATION");
+  }
+
+  @Test
+  void missingNarrativeSidecarMakesTheJUnitEvidenceIncomplete() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        tasks.named("toppleCatReport") {
+            doFirst {
+                layout.buildDirectory.file("topplecat/runs/current/narrative-executions.jsonl").get().asFile.delete()
+            }
+        }
+        """);
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    runner("toppleCatSeal").build();
+    var verify = runner("toppleCatVerify").buildAndFail();
+
+    assertTrue(
+        Files.isRegularFile(project.resolve("build/topplecat/evidence.json")), verify.getOutput());
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("JUNIT"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("EXPECTED_CONSUMPTION"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, evidence().verdict());
+  }
+
+  @Test
+  void abandonedActiveWorkspaceCannotSupplyMutationEvidenceToTheNextVerify() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting {
+                producerTask.set("writeNothing")
+                reportFile.set(layout.buildDirectory.file("reports/pitest/mutations.xml"))
+            }
+        }
+        tasks.register("writeNothing")
+        """);
+    writeProductionClass();
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    runner("toppleCatSeal").build();
+    Path abandoned = project.resolve("build/topplecat/runs/current");
+    Files.createDirectories(abandoned.resolve("gates"));
+    Files.writeString(abandoned.resolve(".active"), "active\n");
+    Files.writeString(abandoned.resolve("run-id"), "abandoned-run\n");
+    Files.writeString(abandoned.resolve("gates/MUTATION.completed"), "completed\n");
+    Files.writeString(
+        abandoned.resolve("mutation-results.json"),
+        MutationGateResults.write(
+            new MutationGateResults(
+                MutationGateResults.SCHEMA_VERSION,
+                List.of(
+                    new PitMutationAssessment(
+                        "AC-COUPON",
+                        List.of("example.CouponAcceptanceTest"),
+                        100,
+                        1,
+                        1,
+                        100,
+                        EvidenceVerdict.PASS)))));
+
+    var verify = runner("toppleCatVerify").buildAndFail();
+
+    assertTrue(
+        Files.isRegularFile(project.resolve("build/topplecat/evidence.json")), verify.getOutput());
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("MUTATION"));
+    assertCurrentRunCompleted("MUTATION");
+  }
+
+  @Test
   void specSelectionScopesFormalAcceptanceAndTheHiddenExpansionOptionHasNoLegacyAlias()
       throws Exception {
     writeProject(
@@ -324,8 +689,14 @@ class ToppleCatPluginFunctionalTest {
     assertEquals(EvidenceVerdict.PASS, gate("CONTRACT_INTEGRITY"));
 
     writeAcceptance("99", false);
-    runner("toppleCatVerify", "--continue").buildAndFail();
+    runner("toppleCatVerify").buildAndFail();
     assertEquals(EvidenceVerdict.FAIL, gate("CONTRACT_INTEGRITY"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("JUNIT"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("REVIEWER_JUNIT"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("EXPECTED_CONSUMPTION"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("PROPERTY"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("MUTATION"));
+    assertFalse(Files.exists(project.resolve("src/hiddenTest")));
   }
 
   @Test
@@ -353,7 +724,7 @@ class ToppleCatPluginFunctionalTest {
         }
         """);
 
-    runner("toppleCatVerify", "--continue").buildAndFail();
+    runner("toppleCatVerify").buildAndFail();
 
     assertEquals(EvidenceVerdict.FAIL, gate("CONTRACT_INTEGRITY"));
   }
@@ -383,6 +754,52 @@ class ToppleCatPluginFunctionalTest {
     assertFalse(
         Files.readString(project.resolve("build/topplecat/reports/public/data.json"))
             .contains("onlyBHasAProperty"));
+  }
+
+  private static String mutationFixtureConfiguration(boolean detected) {
+    return """
+    toppleCat {
+        mutationTesting {
+            enabled.set(true)
+            threshold.set(100)
+            producerTask.set("writePitFixture")
+            reportFile.set(layout.buildDirectory.file("reports/pitest/mutations.xml"))
+        }
+    }
+    tasks.register("writePitFixture") {
+        doLast {
+            def report = layout.buildDirectory.file("reports/pitest/mutations.xml").get().asFile
+            report.parentFile.mkdirs()
+            report.text = '''
+            <mutations>
+              <mutation detected="%s" status="%s">
+                <mutatedClass>example.CouponService</mutatedClass>
+                <coveringTests>example.CouponAcceptanceTest.[engine:junit-jupiter]/[class:example.CouponAcceptanceTest]/[test-template:appliesCoupon(io.github.samzhu.topplecat.junit.ToppleCase,io.github.samzhu.topplecat.junit.ToppleScenario,example.CouponAcceptanceTest$CouponStage)]/[test-template-invocation:#1]</coveringTests>
+              </mutation>
+            </mutations>
+            '''
+        }
+    }
+    """
+        .formatted(detected, detected ? "KILLED" : "SURVIVED");
+  }
+
+  private static String killedMutationFixture() {
+    return """
+    <mutations>
+      <mutation detected="true" status="KILLED">
+        <mutatedClass>example.CouponService</mutatedClass>
+        <coveringTests>example.CouponAcceptanceTest.[engine:junit-jupiter]/[class:example.CouponAcceptanceTest]/[test-template:appliesCoupon(io.github.samzhu.topplecat.junit.ToppleCase,io.github.samzhu.topplecat.junit.ToppleScenario,example.CouponAcceptanceTest$CouponStage)]/[test-template-invocation:#1]</coveringTests>
+      </mutation>
+    </mutations>
+    """;
+  }
+
+  private void assertCurrentRunCompleted(String... gates) throws Exception {
+    Path archive = project.resolve("build/topplecat/runs").resolve(evidence().runId());
+    for (String gate : gates) {
+      assertTrue(Files.isRegularFile(archive.resolve("gates").resolve(gate + ".completed")));
+    }
   }
 
   private void writeProject(String configuration) throws Exception {
@@ -474,6 +891,25 @@ class ToppleCatPluginFunctionalTest {
         }
         """
             .formatted(propertyMethod, actualDiscount));
+  }
+
+  private void writeIndependentPublicProperty() throws Exception {
+    Path source = project.resolve("src/test/java/example/AdditionalCouponProperty.java");
+    Files.createDirectories(source.getParent());
+    Files.writeString(
+        source,
+        """
+        package example;
+        import io.github.samzhu.topplecat.junit.property.Generators;
+        import io.github.samzhu.topplecat.junit.property.PropertyTrials;
+        import io.github.samzhu.topplecat.junit.property.ToppleProperty;
+        class AdditionalCouponProperty {
+            @ToppleProperty("AC-COUPON")
+            void separatelyAddedRule(PropertyTrials trials) {
+                trials.forAll(Generators.integers(0, 5)).check(value -> {});
+            }
+        }
+        """);
   }
 
   private void writeAcceptanceUsingLowerCaseHelper() throws Exception {

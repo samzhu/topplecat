@@ -61,6 +61,24 @@ enabled. JSON numeric equality is mathematical: `200`, `200.0`, and `200.00`
 compare equal. Use a string or another explicit field when presentation scale
 is itself a rule.
 
+Prefer projecting a complete receipt into one top-level expected value and
+verifying it once, for example `c.verify("receipt", receipt)`. That records one
+complete observable result and avoids a partial chain of assertions. When
+separate top-level values are genuinely needed, give each one a chance to run:
+
+```java
+assertAll(
+    () -> c.verify("subtotal", receipt.subtotal()),
+    () -> c.verify("total", receipt.total()));
+```
+
+`verify()` marks the key `ASSERTED` before comparing it. Therefore a mismatched
+first value is truthfully `ASSERTED`, while a later `verify()` never reached
+because that assertion threw remains `UNTOUCHED`. An Expected Consumption
+failure beside a JUnit failure is not necessarily duplicate reporting: it can
+show exactly which later declared values did not receive a verification
+attempt. ToppleCat does not provide a `verifyAll` API.
+
 ## Property-Based Testing
 
 Use `@ToppleProperty` for a human-approved invariant that examples alone do

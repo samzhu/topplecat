@@ -49,31 +49,50 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
   @Input
   public abstract Property<Boolean> getProducerAvailable();
 
+  /** Internal Verify-only switch: direct diagnostic execution still fails at this task. */
+  @Internal
+  public abstract Property<Boolean> getContinueAfterFailure();
+
   @TaskAction
   public void evaluateMutationGate() {
     String producer = getProducerTaskName().get();
     if (!getProducerAvailable().get()) {
-      throw new GradleException(
+      deferOrThrow(
           "ToppleCat mutation is enabled, but producer task '"
               + producer
               + "' was not found. ToppleCat configures PIT automatically for the default 'pitest'"
               + " task; otherwise set toppleCat.mutationTesting.producerTask to a task that writes"
               + " mutations.xml.");
+      return;
     }
     Path report = getPitReportFile().get().getAsFile().toPath();
     if (!Files.isRegularFile(report)) {
-      throw new GradleException(
+      VerificationRunArtifacts.markCompleted(
+          getRunDirectory().get().getAsFile().toPath(), VerificationRunArtifacts.MUTATION);
+      deferOrThrow(
           "ToppleCat mutation producer '"
               + producer
               + "' did not write PIT mutations.xml at "
               + report
               + ". Enable PIT fullMutationMatrix=true and configure"
               + " toppleCat.mutationTesting.reportFile if needed.");
+      return;
     }
     Map<String, Set<String>> testsByAc = canonicalMethodsByAc();
-    List<PitMutationAssessment> assessments =
-        PitMutationAttributor.assess(
-            new PitMutationParser().parse(report), testsByAc, getThreshold().get());
+    List<PitMutationAssessment> assessments;
+    try {
+      assessments =
+          PitMutationAttributor.assess(
+              new PitMutationParser().parse(report), testsByAc, getThreshold().get());
+    } catch (RuntimeException exception) {
+      VerificationRunArtifacts.markCompleted(
+          getRunDirectory().get().getAsFile().toPath(), VerificationRunArtifacts.MUTATION);
+      deferOrThrow(
+          "ToppleCat mutation producer '"
+              + producer
+              + "' wrote an unusable current-run PIT mutations.xml report.");
+      return;
+    }
     Path output = getResultsFile().get().getAsFile().toPath();
     try {
       Files.createDirectories(output.getParent());
@@ -92,14 +111,23 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
             .map(PitMutationAssessment::acId)
             .toList();
     if (!failed.isEmpty()) {
-      throw new GradleException(
+      deferOrThrow(
           "ToppleCat mutation gate failed for "
               + String.join(", ", failed)
               + ". Inspect "
               + output
               + " for the per-AC mutation score and test attribution.");
+      return;
     }
     getLogger().lifecycle("ToppleCat mutation gate passed for {} ACs.", assessments.size());
+  }
+
+  private void deferOrThrow(String message) {
+    if (getContinueAfterFailure().getOrElse(false)) {
+      getLogger().lifecycle("{}", message);
+      return;
+    }
+    throw new GradleException(message);
   }
 
   private Map<String, Set<String>> canonicalMethodsByAc() {

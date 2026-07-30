@@ -31,7 +31,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.7 custody and approval schemas are current-only. A prior schema is not
+The 0.0.8 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -59,6 +59,26 @@ The managed PIT producer uses public acceptance classes only. Consumer-owned
 does not cover a public acceptance method is `MUTATION=FAIL`; missing,
 malformed, or interrupted mutation output is `MUTATION=INCOMPLETE`.
 
+Contract integrity is the only precondition. Verify first runs the current Check
+to rebuild the compiler definition it compares with the Mechanical Seal. If it
+is `PASS`, Verify runs public acceptance, hidden typed-row retest,
+Property-Based Testing, and Mutation
+Testing in that fixed order. A completed safeguard that finds a problem is
+`FAIL`, not a reason to skip later safeguards. JUnit-like tasks retain XML,
+sidecars, and completion markers after assertion failures; the mutation task
+writes usable findings before the aggregate failure exit. The report waits for
+all enabled safeguards or their explicit interruption, aggregates expected
+consumption, writes evidence, reports, and safe feedback, re-hides reviewer
+source, and only then fails Gradle for an aggregate `FAIL` or `INCOMPLETE`.
+
+An interrupted task is `INCOMPLETE`; a completed task with missing or malformed
+current-run evidence (including JUnit runtime sidecars) is also `INCOMPLETE`.
+Each run discards an unarchived active workspace before it starts. Stable copies
+and archives are never inputs to a later verdict. Property feedback distinguishes a discovered
+counterexample from an incomplete task or damaged evidence. Mutation feedback
+likewise distinguishes surviving mutants from an incomplete task or missing /
+damaged producer evidence.
+
 ## Gates and verdicts
 
 Every formal run records this fixed gate order:
@@ -85,8 +105,10 @@ Contract integrity seals the compiler-derived acceptance source closure, public
 typed rows, project Gradle logic, semantic definition, selected scope, and
 effective verification policy. It excludes production source and unrelated
 ordinary tests. An approval mismatch is `FAIL`; missing current approval is
-`INCOMPLETE`. Downstream gates then do not run and are recorded `INCOMPLETE`;
-no earlier artifact fills a gap.
+`INCOMPLETE`. Verify uses only an existing Mechanical Seal and records that its
+approval was not updated. If none exists, run `toppleCatSeal` before Verify;
+Verify never creates approval. Downstream gates then do not run and are
+recorded `INCOMPLETE`; no earlier artifact fills a gap.
 
 ## Reports and information boundary
 

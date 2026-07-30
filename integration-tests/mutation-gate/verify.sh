@@ -71,6 +71,10 @@ rm -rf "$project/build"
 
 "$gradle" publishToMavenLocal
 
+# Verify deliberately reuses an existing Mechanical Seal. Create that seal in the same temporary
+# reviewer state as the red-team attack; otherwise Integrity correctly blocks the mutation gate.
+"$gradle" -p "$project" -Dtopplecat.stateRoot="$state_root" toppleCatSeal
+
 mutation="$project/build/topplecat/mutation-results.json"
 evidence="$project/build/topplecat/evidence.json"
 feedback="$project/build/topplecat/agent-feedback.json"

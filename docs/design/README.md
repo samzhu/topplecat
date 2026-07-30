@@ -24,9 +24,11 @@ it should not repeat the whole design.
 
 ## Status
 
-Every retained design record starts with **Implemented**. A new decision belongs
-here only when it is decision-complete; once implemented, its lasting
-conclusions belong in the formal record and current-product documentation.
+Every retained design record is decision-complete before implementation. A new
+decision starts as **Accepted** while its implementation is in progress. Change
+it to **Implemented** only after the code, tests, architecture, guides, and
+other current-product documentation have been synchronized. Do not describe an
+Accepted-only record as supported current behavior.
 
 ## Required structure
 
@@ -61,5 +63,6 @@ This structure follows three complementary practices:
 - [Executable acceptance boundary](executable-acceptance-boundary.md)
 - [Property-Based Testing safeguard](property-based-testing.md)
 - [ToppleScenario authoring](topple-scenario-authoring.md)
+- [Independent safeguard results](independent-safeguard-results.md)
 
 Use the root [context glossary](../../CONTEXT.md) for shared terms.

@@ -43,6 +43,6 @@ class ReviewerContractApprovalJsonTest {
                 "src/test/java/example/AmountAcceptanceTest.java", entryDigest)),
         "c".repeat(64),
         new VerificationPolicy(
-            "0.0.7", true, true, true, true, threshold, MutationProducerKind.DEFAULT, null));
+            "0.0.8", true, true, true, true, threshold, MutationProducerKind.DEFAULT, null));
   }
 }

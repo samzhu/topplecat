@@ -17,6 +17,10 @@ applies the fixed service and verifies again.
 ## What to inspect
 
 Public acceptance and PBT run separately from reviewer-owned hidden rows.
+The receipt is projected and verified once with `c.verify("receipt", receipt)`
+so one complete receipt is one Expected Consumption obligation. When a contract
+must verify independent top-level values, use JUnit `assertAll` so each
+`verify` gets an attempt.
 Inspect `evidence.json`, safe feedback, the public report at
 `reports/public/index.html`, and the reviewer-only Verification Evidence report
 under `reports/verification/index.html`.

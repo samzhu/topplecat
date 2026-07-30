@@ -1,7 +1,8 @@
 # Maintainer publication handoff
 
-The agent prepares this checklist after release verification. The maintainer
-performs every remote and Maven action.
+The agent prepares this checklist after release verification and, when
+authorized, pushes the verified release tag. The maintainer performs Maven and
+GitHub Release actions.
 
 ## Preflight
 
@@ -11,20 +12,24 @@ performs every remote and Maven action.
 3. Confirm the `X.Y.Z` tag and GitHub Release do not exist remotely.
 4. Confirm Maven Central does not already serve the candidate version.
 
-ToppleCat tags have no `v` prefix. After the authorized local tag has been
-created, verify it again before any push:
+ToppleCat tags have no `v` prefix. The agent creates an annotated tag; a GPG
+signature is not required. Verify that its target is the candidate commit,
+then push and resolve the remote tag:
 
 ```bash
-git tag -v X.Y.Z
+git show --no-patch --format=fuller X.Y.Z
+git rev-list -n 1 X.Y.Z
 git push origin X.Y.Z
+git ls-remote --tags origin refs/tags/X.Y.Z refs/tags/X.Y.Z^{}
 ```
 
-Stop if verification fails and resolve the local tag before pushing.
+Stop if the annotation or target commit is wrong, or if the remote tag does not
+resolve to the candidate commit.
 
 ## Stage the public release
 
-After pushing the tag, create a GitHub Release draft bound to that existing
-remote tag. With GitHub CLI:
+After the agent pushes the tag, create a GitHub Release draft bound to that
+existing remote tag. With GitHub CLI:
 
 ```bash
 gh release create X.Y.Z \
@@ -67,7 +72,6 @@ Primary references:
 
 - [Managing releases](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
 - [Automatically generated release notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes)
-- [Signing tags](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-tags)
 - [Immutable releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
 - [`gh release create`](https://cli.github.com/manual/gh_release_create)
 - [Semantic Versioning](https://semver.org/)

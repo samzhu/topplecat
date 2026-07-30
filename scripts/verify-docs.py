@@ -27,8 +27,9 @@ ACTIVE_TERMINOLOGY_PATHS = (
     "docs/design/executable-acceptance-boundary.md",
     "docs/design/property-based-testing.md",
     "docs/design/topple-scenario-authoring.md",
-    "docs/releases/0.0.7.md",
-    "docs/releases/0.0.7.zh-TW.md",
+    "docs/design/independent-safeguard-results.md",
+    "docs/releases/0.0.8.md",
+    "docs/releases/0.0.8.zh-TW.md",
     "samples",
     ".agents/skills",
     "site/src",
@@ -44,13 +45,13 @@ LEGACY_TERMS = {
     r"toppleCat\.adversarial": "use individual safeguard DSL blocks",
     r"--all-hidden(?!-tests)\b": "use --all-hidden-tests",
     r"reports/spec": "use reports/public",
-    r"\btoppleCatMigrateEscrow\b": "0.0.7 does not migrate custody",
+    r"\btoppleCatMigrateEscrow\b": "0.0.8 does not migrate custody",
     r"@ToppleStageField\b": "use the single ToppleScenario API",
     r"@ProvidedState\b|@ExpectedState\b": "keep cross-Step state in a capability Stage",
     r"\brecorded\s*\(": "compiler-described Steps do not use runtime recording",
     r"\bself\s*\(": "Stage Steps are ordinary void methods",
     r"\bToppleStageSentence\b": "compiler descriptors render Step sentences",
-    r"\bToppleStage\s*<": "ToppleStage is non-generic in 0.0.7",
+    r"\bToppleStage\s*<": "ToppleStage is non-generic in 0.0.8",
     r"\b[Hh]idden[ -][Pp]ropert(?:y|ies)\b": "Property-Based Testing has no hidden variant",
     r"\breviewer[- ]only propert(?:y|ies)\b": "Property-Based Testing has no reviewer-only variant",
     r"\bhiddenProperty(?:Test|Mode|ies)?\b": "Property-Based Testing has one independent execution path",
@@ -68,8 +69,10 @@ EXPECTED_DESIGN_FILES = {
     "executable-acceptance-boundary.md",
     "property-based-testing.md",
     "topple-scenario-authoring.md",
+    "independent-safeguard-results.md",
 }
-EXPECTED_RELEASE_FILES = {"0.0.7.md", "0.0.7.zh-TW.md"}
+CURRENT_RELEASE_FILES = {"0.0.8.md", "0.0.8.zh-TW.md"}
+RELEASE_NOTE = re.compile(r"^(\d+\.\d+\.\d+)(\.zh-TW)?\.md$")
 CONTEXT_TERMS = (
     "Acceptance Condition",
     "Acceptance Method",
@@ -80,6 +83,7 @@ CONTEXT_TERMS = (
     "Hidden Tests",
     "Mutation Testing",
     "Property-Based Testing",
+    "Independent Safeguard",
     "Delivery Scope",
     "Mechanical Seal",
     "Reviewer Custody",
@@ -208,8 +212,21 @@ def main() -> int:
     release_dir = ROOT / "docs/releases"
     if release_dir.is_dir():
         release_files = {path.name for path in release_dir.iterdir() if path.is_file()}
-        if release_files != EXPECTED_RELEASE_FILES:
-            failures.append("docs/releases: only 0.0.7 English and Traditional-Chinese notes may remain")
+        release_versions: dict[str, set[str]] = {}
+        for name in release_files:
+            match = RELEASE_NOTE.fullmatch(name)
+            if match is None:
+                failures.append(f"docs/releases: release note has an unsupported name: {name}")
+                continue
+            language = "zh-TW" if match.group(2) else "en"
+            release_versions.setdefault(match.group(1), set()).add(language)
+        if not CURRENT_RELEASE_FILES.issubset(release_files):
+            failures.append("docs/releases: missing 0.0.8 English or Traditional-Chinese notes")
+        for version, languages in sorted(release_versions.items()):
+            if languages != {"en", "zh-TW"}:
+                failures.append(
+                    f"docs/releases: {version} must have both English and Traditional-Chinese notes"
+                )
 
     for document in public_documents:
         text = document.read_text(encoding="utf-8")
@@ -249,7 +266,7 @@ def main() -> int:
                 anchor
                 and target.is_file()
                 and target.suffix.lower() == ".md"
-                and not (relative.parts[:2] == ("docs", "releases") and relative.name not in {"0.0.7.md", "0.0.7.zh-TW.md"})
+                and not (relative.parts[:2] == ("docs", "releases") and relative.name not in CURRENT_RELEASE_FILES)
             ):
                 if anchor not in markdown_anchors(target):
                     failures.append(f"{relative}: dead Markdown anchor {destination}")
@@ -268,18 +285,18 @@ def main() -> int:
             if re.search(pattern, text):
                 failures.append(f"{relative}: uses replaced terminology matching {pattern}; {replacement}")
 
-    english_release = ROOT / "docs/releases/0.0.7.md"
-    chinese_release = ROOT / "docs/releases/0.0.7.zh-TW.md"
+    english_release = ROOT / "docs/releases/0.0.8.md"
+    chinese_release = ROOT / "docs/releases/0.0.8.zh-TW.md"
     if english_release.is_file() and chinese_release.is_file():
         release_markers = (
-            (english_release, ("ToppleScenario", "Property-Based Testing", "toppleCatSeal", "toppleCatReseal", "current-run evidence", "topplecat-acceptance")),
-            (chinese_release, ("ToppleScenario", "性質導向測試", "toppleCatSeal", "toppleCatReseal", "本次執行證據", "topplecat-acceptance")),
+            (english_release, ("Independent Safeguard", "Property-Based Testing", "toppleCatSeal", "toppleCatReseal", "current-run evidence", "assertAll")),
+            (chinese_release, ("獨立防線", "性質導向測試", "toppleCatSeal", "toppleCatReseal", "本次執行證據", "assertAll")),
         )
         for release, markers in release_markers:
             text = release.read_text(encoding="utf-8")
             for marker in markers:
                 if marker not in text:
-                    failures.append(f"{release.relative_to(ROOT)}: missing synchronized 0.0.7 change {marker}")
+                    failures.append(f"{release.relative_to(ROOT)}: missing synchronized 0.0.8 change {marker}")
 
     if failures:
         print("Documentation validation failed:", file=sys.stderr)

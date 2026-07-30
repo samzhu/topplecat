@@ -4,6 +4,7 @@ import io.github.samzhu.topplecat.core.ContractIntegrityResult;
 import io.github.samzhu.topplecat.core.ContractIntegrityResultJson;
 import io.github.samzhu.topplecat.core.EscrowManifest;
 import io.github.samzhu.topplecat.core.EscrowService;
+import io.github.samzhu.topplecat.core.EscrowState;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ReviewerContractApproval;
 import java.io.IOException;
@@ -32,15 +33,23 @@ public abstract class ToppleCatContractIntegrityTask extends DefaultTask
   public void verifyIntegrity() {
     ContractIntegrityResult result;
     try {
-      ReviewerContractApproval current = currentApproval();
       EscrowManifest manifest =
           new EscrowService().manifest(getProjectRoot().get().getAsFile().toPath());
+      if (manifest.state() != EscrowState.HIDDEN) {
+        throw new IllegalStateException(
+            "Reviewer source is not hidden in its existing Mechanical Seal custody state.");
+      }
+      ReviewerContractApproval current = currentApproval();
       result = ContractApprovalFactory.compare(manifest.approval(), current);
+      getLogger()
+          .lifecycle(
+              "ToppleCat Verify custody check reused the existing Mechanical Seal; reviewer "
+                  + "source is hidden and approval was not updated.");
     } catch (RuntimeException exception) {
       getLogger()
           .warn(
-              "ToppleCat could not establish current reviewer approval integrity: {}",
-              exception.getMessage());
+              "ToppleCat Verify could not use an existing Mechanical Seal. Run toppleCatSeal "
+                  + "before Verify; Verify did not create or update reviewer approval.");
       result =
           new ContractIntegrityResult(
               ContractIntegrityResult.SCHEMA_VERSION,

@@ -21,16 +21,23 @@ final class VerificationRunWorkspace {
     if (Files.isRegularFile(workspace.resolve(ACTIVE_MARKER))) {
       return;
     }
+    start(workspace);
+  }
+
+  /** Starts a new run and discards any unarchived workspace from an earlier invocation. */
+  static void start(Path workspace) {
     Path runsDirectory = workspace.getParent();
     try {
       Files.createDirectories(runsDirectory);
+      // A remaining .active marker means a prior run did not reach archival. Nothing under it
+      // is current-run evidence for the next Verify, so discard it before any producer or gate.
       deleteTree(workspace);
       pruneArchivedRuns(runsDirectory, RETAINED_ARCHIVES - 1);
       Files.createDirectories(workspace);
       Files.writeString(workspace.resolve(ACTIVE_MARKER), "active\n");
     } catch (IOException exception) {
       throw new GradleException(
-          "Cannot prepare ToppleCat verification run workspace "
+          "Cannot start ToppleCat verification run workspace "
               + workspace
               + ". Clean the project's build/topplecat/runs directory and retry.",
           exception);

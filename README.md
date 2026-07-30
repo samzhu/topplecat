@@ -41,7 +41,10 @@ and decide sign-off.
 
 The ordinary `test` task must not depend on Check, Review, Seal, custody,
 reports, or formal evidence. `toppleCatVerify` always runs the formal public
-acceptance task freshly, then evaluates the independent enabled safeguards.
+acceptance task freshly, then evaluates every enabled Independent Safeguard.
+After contract integrity passes, a failed safeguard records its own result but
+does not stop later safeguards; the one aggregate failure comes after evidence,
+reports, safe feedback, and rehide.
 
 ## Workflow
 
@@ -146,18 +149,18 @@ Every formal run records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
 `PASS`, `FAIL`, or `INCOMPLETE`; accept a done claim only when the current run
 is `PASS`.
 
-## Install 0.0.7
+## Install 0.0.8
 
 ToppleCat requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.7"
+    id("io.github.samzhu.topplecat") version "0.0.8"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.7")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.8")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -173,7 +176,7 @@ tasks.test { useJUnitPlatform() }
 - [Documentation index](docs/README.md)
 - [Context glossary](CONTEXT.md)
 - [Architecture](docs/architecture.md)
-- [0.0.7 release notes](docs/releases/0.0.7.md)
+- [0.0.8 release notes](docs/releases/0.0.8.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 

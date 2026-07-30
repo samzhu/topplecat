@@ -1,6 +1,6 @@
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.7"
+    id("io.github.samzhu.topplecat") version "0.0.8"
 }
 
 java {
@@ -10,7 +10,7 @@ java {
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.7")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.8")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }

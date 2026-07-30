@@ -1,6 +1,7 @@
 package io.github.samzhu.topplecat.gradle;
 
 import io.github.samzhu.topplecat.core.EscrowService;
+import java.nio.file.Files;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.tasks.Internal;
@@ -13,6 +14,15 @@ public abstract class ToppleCatRehideTask extends DefaultTask {
 
   @TaskAction
   public void rehide() {
-    new EscrowService().rehide(getProjectRoot().get().getAsFile().toPath());
+    var root = getProjectRoot().get().getAsFile().toPath();
+    var manifest =
+        EscrowService.reviewerStatePath(root, EscrowService.defaultReviewerStateRoot())
+            .resolve("manifest.json");
+    if (!Files.isRegularFile(manifest)) {
+      getLogger()
+          .lifecycle("ToppleCat rehide skipped because Verify found no existing Mechanical Seal.");
+      return;
+    }
+    new EscrowService().rehide(root);
   }
 }

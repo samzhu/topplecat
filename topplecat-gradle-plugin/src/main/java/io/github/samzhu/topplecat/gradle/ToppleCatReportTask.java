@@ -83,13 +83,23 @@ public abstract class ToppleCatReportTask extends DefaultTask {
   private static final String CONTRACT_CHANGED =
       "The public executable contract or verification policy changed after reviewer approval.";
   private static final String APPROVAL_MISSING =
-      "Reviewer approval evidence is missing; an authorized reviewer must review and reseal the"
-          + " contract.";
+      "An existing Mechanical Seal is missing or reviewer custody is not ready; run "
+          + "toppleCatSeal before Verify. Verify did not update approval.";
   private static final String INTEGRITY_PRECONDITION =
       "The contract-integrity gate did not permit downstream verification in this run.";
-  private static final String PROPERTY_SAFE_REASON =
-      "Property-Based Testing found a counterexample or did not produce trustworthy current-run"
-          + " evidence. Review the approved public contract and implement the rule generally.";
+  private static final String PROPERTY_COUNTEREXAMPLE =
+      "Property-Based Testing found a counterexample in this run. Review the approved public "
+          + "contract and implement the rule generally.";
+  private static final String PROPERTY_TASK_INCOMPLETE =
+      "Property-Based Testing did not complete in this verification run.";
+  private static final String PROPERTY_EVIDENCE_INCOMPLETE =
+      "Property-Based Testing current-run evidence was missing or could not be read.";
+  private static final String MUTATION_TASK_INCOMPLETE =
+      "Mutation Testing did not complete in this verification run.";
+  private static final String MUTATION_EVIDENCE_INCOMPLETE =
+      "Mutation Testing current-run evidence was missing or could not be read.";
+  private static final String MUTATION_SURVIVOR =
+      "Mutation Testing found one or more surviving mutants in this run.";
 
   @Internal
   public abstract DirectoryProperty getProjectRoot();
@@ -293,7 +303,8 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 runDirectory,
                 "the public verification",
                 VerificationRunArtifacts.JUNIT,
-                executionSummary.junit())
+                executionSummary.junit(),
+                executionSummary.narrativeEvidenceUsable())
             : GateOutcome.incomplete(INTEGRITY_PRECONDITION);
     GateOutcome reviewer =
         !integrityPassed
@@ -309,7 +320,12 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         !integrityPassed
             ? GateOutcome.incomplete(INTEGRITY_PRECONDITION)
             : getExpectedConsumptionEnabled().get()
-                ? expectedConsumptionVerdict(junit, reviewer, verificationCases, executions)
+                ? expectedConsumptionVerdict(
+                    junit,
+                    reviewer,
+                    verificationCases,
+                    executions,
+                    executionSummary.expectedConsumptionEvidenceUsable())
                 : GateOutcome.disabled(getExpectedConsumptionDisabledReason().get());
     GateOutcome mutation =
         !integrityPassed
@@ -458,10 +474,15 @@ public abstract class ToppleCatReportTask extends DefaultTask {
       return new PropertyCollection(List.of(), List.of(), GateOutcome.notApplicable());
     }
     Map<String, List<PropertyExecutionEvent>> events = new LinkedHashMap<>();
-    readPropertyEvents(runDirectory.resolve("public-property-events.jsonl"), events);
     Map<String, PropertyJUnitResult> junit = new LinkedHashMap<>();
-    readPropertyJUnitResults(
-        runDirectory.resolve("junit").resolve(VerificationRunArtifacts.PROPERTY_PUBLIC), junit);
+    try {
+      readPropertyEvents(runDirectory.resolve("public-property-events.jsonl"), events);
+      readPropertyJUnitResults(
+          runDirectory.resolve("junit").resolve(VerificationRunArtifacts.PROPERTY_PUBLIC), junit);
+    } catch (RuntimeException exception) {
+      return new PropertyCollection(
+          effective, List.of(), GateOutcome.incomplete(PROPERTY_EVIDENCE_INCOMPLETE));
+    }
 
     List<PropertyResult> results = new ArrayList<>();
     boolean incomplete =
@@ -521,9 +542,13 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     }
     GateOutcome gate =
         failed
-            ? GateOutcome.fail(PROPERTY_SAFE_REASON)
+            ? GateOutcome.fail(PROPERTY_COUNTEREXAMPLE)
             : incomplete || results.size() != effective.size()
-                ? GateOutcome.incomplete(PROPERTY_SAFE_REASON)
+                ? GateOutcome.incomplete(
+                    VerificationRunArtifacts.completed(
+                            runDirectory, VerificationRunArtifacts.PROPERTY_PUBLIC)
+                        ? PROPERTY_EVIDENCE_INCOMPLETE
+                        : PROPERTY_TASK_INCOMPLETE)
                 : GateOutcome.pass();
     return new PropertyCollection(effective, results, gate);
   }
@@ -811,21 +836,31 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         readTestResults(
             runDirectory.resolve("junit/").resolve(VerificationRunArtifacts.REVIEWER_JUNIT),
             result);
-    readNarrativeExecutions(
-        runDirectory.resolve("narrative-executions.jsonl"), result, definitionDigestsByCaseId);
-    readExpectedConsumptionExecutions(
-        runDirectory.resolve("expected-consumption-executions.jsonl"), result);
-    result.keySet().stream()
-        .filter(caseId -> !definedCaseIds.contains(caseId))
-        .findFirst()
-        .ifPresent(
-            caseId -> {
-              throw new IllegalStateException(
-                  "ToppleCat report cannot project execution event for case "
-                      + caseId
-                      + " because no matching case exists in the run-scoped contract definition.");
-            });
-    return new ExecutionSummary(result, junit, reviewer);
+    boolean narrativeEvidenceUsable = true;
+    boolean expectedConsumptionEvidenceUsable = true;
+    try {
+      readNarrativeExecutions(
+          runDirectory.resolve("narrative-executions.jsonl"), result, definitionDigestsByCaseId);
+    } catch (RuntimeException exception) {
+      narrativeEvidenceUsable = false;
+      expectedConsumptionEvidenceUsable = false;
+    }
+    try {
+      readExpectedConsumptionExecutions(
+          runDirectory.resolve("expected-consumption-executions.jsonl"), result);
+    } catch (RuntimeException exception) {
+      expectedConsumptionEvidenceUsable = false;
+    }
+    Set<String> unknownCaseIds =
+        result.keySet().stream()
+            .filter(caseId -> !definedCaseIds.contains(caseId))
+            .collect(java.util.stream.Collectors.toSet());
+    if (!unknownCaseIds.isEmpty()) {
+      expectedConsumptionEvidenceUsable = false;
+      unknownCaseIds.forEach(result::remove);
+    }
+    return new ExecutionSummary(
+        result, junit, reviewer, narrativeEvidenceUsable, expectedConsumptionEvidenceUsable);
   }
 
   private static void readNarrativeExecutions(
@@ -833,7 +868,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
       Map<String, ReportViews.CaseExecution> result,
       Map<String, String> definitionDigestsByCaseId) {
     if (!Files.isRegularFile(file)) {
-      return;
+      throw new IllegalStateException("ToppleCat runtime narrative sidecar is missing: " + file);
     }
     try {
       for (String line : Files.readAllLines(file)) {
@@ -868,7 +903,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
   private static void readExpectedConsumptionExecutions(
       Path file, Map<String, ReportViews.CaseExecution> result) {
     if (!Files.isRegularFile(file)) {
-      return;
+      throw new IllegalStateException("ToppleCat expected-consumption sidecar is missing: " + file);
     }
     try {
       for (String line : Files.readAllLines(file)) {
@@ -933,12 +968,10 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                           CaseResultStatus.FAIL, failure.getAttribute("message"), List.of()));
         }
       }
-    } catch (IOException | SAXException exception) {
-      throw new IllegalStateException(
-          "Cannot read JUnit XML results from " + directory + ": " + exception.getMessage(),
-          exception);
+    } catch (IOException | SAXException | RuntimeException exception) {
+      return TestResults.unusable();
     }
-    return new TestResults(foundXml, failures, testCasesCount, executedTestCasesCount);
+    return new TestResults(foundXml, failures, testCasesCount, executedTestCasesCount, true);
   }
 
   /**
@@ -1005,9 +1038,20 @@ public abstract class ToppleCatReportTask extends DefaultTask {
   }
 
   private static GateOutcome testVerdict(
-      Path runDirectory, String taskName, String gate, TestResults results) {
+      Path runDirectory,
+      String taskName,
+      String gate,
+      TestResults results,
+      boolean narrativeEvidenceUsable) {
     if (!VerificationRunArtifacts.completed(runDirectory, gate)) {
       return GateOutcome.incomplete(taskName + " did not complete in this verification run.");
+    }
+    if (!narrativeEvidenceUsable) {
+      return GateOutcome.incomplete(taskName + " completed without usable current-run sidecars.");
+    }
+    if (!results.usable()) {
+      return GateOutcome.incomplete(
+          taskName + " current-run JUnit XML was missing or could not be read.");
     }
     if (!results.foundXml()) {
       return GateOutcome.incomplete(taskName + " completed without JUnit XML results.");
@@ -1034,20 +1078,21 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         runDirectory,
         "the hidden typed-row retest",
         VerificationRunArtifacts.REVIEWER_JUNIT,
-        executionSummary.reviewerJUnit());
+        executionSummary.reviewerJUnit(),
+        executionSummary.narrativeEvidenceUsable());
   }
 
   private GateOutcome mutationVerdict(Path runDirectory) {
     String incompleteReason = getMutationIncompleteReason().getOrElse("").trim();
     if (!incompleteReason.isEmpty()) {
-      return GateOutcome.incomplete(incompleteReason);
+      return GateOutcome.incomplete("Mutation Testing did not run: " + incompleteReason);
     }
     if (!VerificationRunArtifacts.completed(runDirectory, VerificationRunArtifacts.MUTATION)) {
-      return GateOutcome.incomplete("the mutation gate did not complete in this verification run.");
+      return GateOutcome.incomplete(MUTATION_TASK_INCOMPLETE);
     }
     Path results = getMutationResultsFile().get().getAsFile().toPath();
     if (!Files.isRegularFile(results)) {
-      return GateOutcome.incomplete("the mutation gate completed without mutation results.");
+      return GateOutcome.incomplete(MUTATION_EVIDENCE_INCOMPLETE);
     }
     try {
       MutationGateResults mutationResults = MutationGateResults.read(Files.readString(results));
@@ -1064,10 +1109,9 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                       && assessment.totalMutations() == 0)) {
         return GateOutcome.fail(MUTATION_COVERAGE_MISSING);
       }
-      return GateOutcome.fail();
-    } catch (IOException exception) {
-      throw new IllegalStateException(
-          "Cannot read ToppleCat mutation results " + results, exception);
+      return GateOutcome.fail(MUTATION_SURVIVOR);
+    } catch (IOException | RuntimeException exception) {
+      return GateOutcome.incomplete(MUTATION_EVIDENCE_INCOMPLETE);
     }
   }
 
@@ -1075,7 +1119,8 @@ public abstract class ToppleCatReportTask extends DefaultTask {
       GateOutcome junit,
       GateOutcome reviewer,
       List<ToppleCaseData> cases,
-      Map<String, ReportViews.CaseExecution> executions) {
+      Map<String, ReportViews.CaseExecution> executions,
+      boolean currentRunSidecarsUsable) {
     if (junit.verdict() == EvidenceVerdict.INCOMPLETE) {
       return GateOutcome.incomplete(
           "the public verification did not complete expected-consumption tracking.");
@@ -1083,6 +1128,10 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     if (reviewer.verdict() == EvidenceVerdict.INCOMPLETE) {
       return GateOutcome.incomplete(
           "the hidden tests did not complete expected-consumption tracking.");
+    }
+    if (!currentRunSidecarsUsable) {
+      return GateOutcome.incomplete(
+          "Expected-consumption sidecar data was missing or could not be read.");
     }
     boolean unasserted = false;
     boolean unknown = false;
@@ -1243,15 +1292,21 @@ public abstract class ToppleCatReportTask extends DefaultTask {
   private record ExecutionSummary(
       Map<String, ReportViews.CaseExecution> executions,
       TestResults junit,
-      TestResults reviewerJUnit) {
+      TestResults reviewerJUnit,
+      boolean narrativeEvidenceUsable,
+      boolean expectedConsumptionEvidenceUsable) {
     private ExecutionSummary {
       executions = Map.copyOf(executions);
     }
   }
 
   private record TestResults(
-      boolean foundXml, boolean failures, int testCases, int executedTestCases) {
-    private static final TestResults NONE = new TestResults(false, false, 0, 0);
+      boolean foundXml, boolean failures, int testCases, int executedTestCases, boolean usable) {
+    private static final TestResults NONE = new TestResults(false, false, 0, 0, true);
+
+    private static TestResults unusable() {
+      return new TestResults(false, false, 0, 0, false);
+    }
   }
 
   private record PropertyCollection(

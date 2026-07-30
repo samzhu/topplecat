@@ -2,7 +2,7 @@
 name: topplecat-acceptance
 description: Author ToppleCat executable Java/JUnit acceptance contracts from SDD Specs. Use when a Java delivery needs Acceptance Conditions, public or reviewer-owned Typed Case Rows, or Property-Based Testing declarations.
 metadata:
-  topplecat-version: "0.0.7"
+  topplecat-version: "0.0.8"
 ---
 
 # ToppleCat acceptance
@@ -46,8 +46,15 @@ and approved public rows. Add reviewer-owned rows for independently chosen
 examples. Add a bounded `@ToppleProperty` only when a confirmed invariant
 deserves generated coverage.
 
+Prefer one `c.verify("receipt", projection)` for a complete observable receipt.
+When a contract genuinely has several independent top-level expected values,
+place the `verify` calls in JUnit `assertAll` so a mismatch in one still gives
+the others a verification attempt. A failed `verify` remains `ASSERTED`; a
+later call never reached remains `UNTOUCHED`. Do not invent a `verifyAll` API.
+
 Complete this step only when every selected AC maps one-to-one to a Java method,
-every row targets an existing AC, and every expected output is asserted.
+every row targets an existing AC, and every expected output has an assertion
+opportunity.
 
 ## 3. Design the safeguards
 

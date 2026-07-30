@@ -16,7 +16,7 @@ class EscrowManifestJsonTest {
                     "src/test/java/example/AmountAcceptanceTest.java", "b".repeat(64))),
             "c".repeat(64),
             new VerificationPolicy(
-                "0.0.7", true, true, true, true, 100, MutationProducerKind.DEFAULT, null));
+                "0.0.8", true, true, true, true, 100, MutationProducerKind.DEFAULT, null));
     EscrowManifest manifest =
         new EscrowManifest(
             EscrowManifest.SCHEMA_VERSION_V2,

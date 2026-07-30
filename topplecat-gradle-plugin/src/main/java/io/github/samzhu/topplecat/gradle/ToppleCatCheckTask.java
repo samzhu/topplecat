@@ -72,9 +72,11 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
 
   @TaskAction
   public void check() {
-    deleteReview(getReviewRoot().get().getAsFile().toPath());
-    deleteReview(
-        getReviewRoot().get().getAsFile().toPath().getParent().getParent().resolve("review"));
+    if (!formalVerifyRequested()) {
+      deleteReview(getReviewRoot().get().getAsFile().toPath());
+      deleteReview(
+          getReviewRoot().get().getAsFile().toPath().getParent().getParent().resolve("review"));
+    }
     Path publicCases = getPublicCaseRoot().get().getAsFile().toPath();
     Path hiddenSource = getHiddenSourceRoot().get().getAsFile().toPath();
     validateCaseFileExtensions(publicCases);
@@ -136,6 +138,14 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
             cases.size(),
             publicProperties.size(),
             definition.digest());
+  }
+
+  /** Verify rechecks the current public contract but must not erase the prior reviewer handoff. */
+  private boolean formalVerifyRequested() {
+    return getProject().getGradle().getTaskGraph().getAllTasks().stream()
+        .anyMatch(
+            task ->
+                task.getProject().equals(getProject()) && task.getName().equals("toppleCatVerify"));
   }
 
   private void writeScope(SpecScopeResolver.ResolvedSpecScope scope) {

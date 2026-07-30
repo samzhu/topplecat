@@ -50,6 +50,13 @@ The safeguard that exercises a human-approved invariant with bounded generated
 inputs. It is testing evidence, not proof and not a hidden variant.
 _Avoid_: a reviewer-specific generated invariant
 
+**Independent Safeguard／獨立防線**:
+A safeguard whose current-run evidence answers only its own question and cannot
+be replaced by another safeguard's evidence. After contract integrity passes,
+every enabled Independent Safeguard produces its own result even when an
+earlier safeguard fails.
+_Avoid_: a passing gate used as coverage for a different gate
+
 ## Delivery and evidence
 
 **Delivery Scope／交付範圍**:
