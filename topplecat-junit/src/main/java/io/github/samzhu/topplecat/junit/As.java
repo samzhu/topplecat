@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface As {
-    /** Zero-based placeholders such as {@code {0}} insert recorded arguments. */
-    String value();
+  /** Zero-based placeholders such as {@code {0}} insert recorded arguments. */
+  String value();
 }

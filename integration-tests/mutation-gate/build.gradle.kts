@@ -1,6 +1,6 @@
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.6"
+    id("io.github.samzhu.topplecat") version "0.0.7"
 }
 
 java {
@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.6")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.7")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -25,13 +25,11 @@ tasks.test {
 }
 
 toppleCat {
-    adversarial {
-        mutation {
-            enabled.set(true)
-            threshold.set(100)
-            producerTask.set("writePitFixture")
-            reportFile.set(layout.buildDirectory.file("reports/pitest/mutations.xml"))
-        }
+    mutationTesting {
+        enabled.set(true)
+        threshold.set(100)
+        producerTask.set("writePitFixture")
+        reportFile.set(layout.buildDirectory.file("reports/pitest/mutations.xml"))
     }
 }
 

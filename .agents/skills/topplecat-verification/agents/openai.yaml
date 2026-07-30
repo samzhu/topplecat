@@ -1,4 +1,0 @@
-interface:
-  display_name: "ToppleCat Verification"
-  short_description: "Gate Java done claims with executable contracts"
-  default_prompt: "Use $topplecat-verification to find and complete the first unmet gate for this Java task without crossing reviewer custody."

@@ -2,18 +2,19 @@ package io.github.samzhu.topplecat.core;
 
 import tools.jackson.databind.json.JsonMapper;
 
-/** JSON codec for the selected executable Spec scope shared between Gradle and JUnit runtime tasks. */
+/**
+ * JSON codec for the selected executable Spec scope shared between Gradle and JUnit runtime tasks.
+ */
 public final class SelectedSpecScopeJson {
-    private static final JsonMapper JSON = JsonMapper.builder().build();
+  private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    private SelectedSpecScopeJson() {
-    }
+  private SelectedSpecScopeJson() {}
 
-    public static String write(SelectedSpecScope scope) {
-        return JSON.writerWithDefaultPrettyPrinter().writeValueAsString(scope) + "\n";
-    }
+  public static String write(SelectedSpecScope scope) {
+    return JSON.writerWithDefaultPrettyPrinter().writeValueAsString(scope) + "\n";
+  }
 
-    public static SelectedSpecScope read(String source) {
-        return JSON.readValue(source, SelectedSpecScope.class);
-    }
+  public static SelectedSpecScope read(String source) {
+    return JSON.readValue(source, SelectedSpecScope.class);
+  }
 }

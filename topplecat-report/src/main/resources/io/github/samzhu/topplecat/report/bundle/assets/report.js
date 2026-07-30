@@ -161,11 +161,29 @@
     </table></div></section>`;
   };
   const canonicalMethod = method => method?.sourceCode ? `<details class="source method-panel">
-    <summary>View matching <code>@ToppleTest</code></summary><p class="panel-help">Only the canonical method bound to this AC is shown.</p>
+    <summary>View matching <code>@ToppleAcceptanceTest</code></summary><p class="panel-help">Only the acceptance method bound to this AC is shown.</p>
     <pre class="java"><code>${highlightJava(method.sourceCode)}</code></pre></details>` : '';
   const counts = ac => {
     const rows = caseRows(ac); const publicCount = rows.filter(row => row.visibility === 'PUBLIC').length;
-    return `<span>${publicCount} public</span><span>${rows.length - publicCount} reviewer</span>`;
+    return `<span>${publicCount} public cases</span><span>${rows.length - publicCount} reviewer cases</span><span>${(ac.properties || []).length} properties</span>`;
+  };
+  const propertyLabel = () => '<span class="badge PUBLIC">Property-Based Testing</span>';
+  const propertyStatic = property => `<p class="meta"><code>${e(property.methodIdentity)}</code> · ${e(property.tries)} trials · max discards ${e(property.maxDiscards)} · max shrinks ${e(property.maxShrinks)}
+    ${property.sourceFile ? ` · ${e(property.sourceFile)}:${e(property.sourceLine)}` : ''}</p>`;
+  const counterexample = (heading, value) => value ? `<section class="counterexample"><h5>${heading}</h5><pre class="json">${e(value.choicesJson)}</pre>
+    ${value.shrinkPath?.length ? `<p class="meta">Shrink path: ${e(value.shrinkPath.join(', '))}</p>` : ''}</section>` : '';
+  const verificationProperty = property => `<article class="property-card ${e(property.status)}">
+    <div class="case-detail-heading"><div><h4>${e(property.title)}</h4>${propertyLabel()}</div>${status(property.status)}</div>
+    ${propertyStatic(property)}<p class="meta">Completed ${e(property.completedTrials)}/${e(property.requestedTrials)} trials · edges ${e(property.edgeTrials)} · random ${e(property.randomTrials)} · discards ${e(property.discards)} · seed <code>${e(property.seed)}</code> · replay ${property.replayVerified ? 'verified' : 'not verified'}</p>
+    ${(property.classifications || []).length ? `<div class="table-scroll"><table class="case-matrix"><thead><tr><th>Classification</th><th>Count</th><th>Percent</th><th>Required</th></tr></thead><tbody>${property.classifications.map(item => `<tr><td>${e(item.label)}</td><td>${e(item.count)}</td><td>${e(item.percent.toFixed(2))}%</td><td>${item.minimumPercent == null ? '—' : `${e(item.minimumPercent)}%`}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${counterexample('Original counterexample', property.originalCounterexample)}${counterexample('Shrunk counterexample', property.shrunkCounterexample)}
+    ${property.replayToken ? `<p class="meta">Replay token <code>${e(property.replayToken)}</code></p>` : ''}${property.incompleteReason ? `<p class="gate-notice INCOMPLETE">${e(property.incompleteReason)}</p>` : ''}
+  </article>`;
+  const propertyCards = ac => {
+    const properties = ac.properties || []; if (!properties.length) return '';
+    if (projection === 'verification') return `<section class="property-section"><h3>Property-Based Testing results</h3>${properties.map(verificationProperty).join('')}</section>`;
+    if (projection === 'review') return `<section class="property-section"><h3>Property-Based Testing</h3><p class="panel-help">Properties are supplementary safeguards and do not replace typed acceptance examples.</p>${properties.map(property => `<article class="property-card"><h4>${e(property.title)} ${propertyLabel()}</h4>${propertyStatic(property)}${property.sourceCode ? `<details class="source method-panel"><summary>View matching <code>@ToppleProperty</code></summary><pre class="java"><code>${highlightJava(property.sourceCode)}</code></pre></details>` : ''}</article>`).join('')}</section>`;
+    return `<section class="property-section"><h3>Property-Based Testing</h3>${properties.map(property => `<article class="property-card"><h4>${e(property.title)}</h4>${propertyStatic(property)}</article>`).join('')}</section>`;
   };
   const title = projection === 'review' ? 'Contract review' : projection === 'verification' ? 'Verification evidence' : 'Public contract';
   document.getElementById('title').textContent = title;
@@ -192,14 +210,14 @@
       <p>AC set digest: <code>${e(scope.acceptanceConditionSetDigest)}</code></p>
       <ul>${documents}</ul>
       ${(scope.reviewerWarnings || []).map(warning => `<p class="gate-notice INCOMPLETE">${e(warning)}</p>`).join('')}
-      ${projection === 'verification' ? `<p>Hidden mode: <strong>${e(scope.hiddenMode)}</strong> · reviewer rows executed: <strong>${e(scope.executedHiddenRows)}</strong> · reviewer Java checks executed: <strong>${e(scope.executedReviewerJavaTests)}</strong> · mutation: <strong>${e(scope.mutationMode)}</strong></p>` : ''}
+      ${projection === 'verification' ? `<p>Hidden Tests: <strong>${e(scope.hiddenMode)}</strong> (${e(scope.executedHiddenRows)} rows) · Property-Based Testing: <strong>${e(scope.publicPropertyMode)}</strong> (${e(scope.executedPublicProperties)} properties) · Mutation Testing: <strong>${e(scope.mutationMode)}</strong></p>` : ''}
     </section>`;
   };
   const render = () => {
     const query = document.getElementById('query').value.trim().toLowerCase();
     const visible = acceptanceConditions.filter(ac => {
       const rows = caseRows(ac);
-      const textMatches = !query || `${ac.acId} ${ac.title} ${rows.map(row => row.caseId).join(' ')}`.toLowerCase().includes(query);
+      const textMatches = !query || `${ac.acId} ${ac.title} ${rows.map(row => row.caseId).join(' ')} ${(ac.properties || []).map(property => `${property.title} ${property.methodIdentity} ${(property.classifications || []).map(item => item.label).join(' ')}`).join(' ')}`.toLowerCase().includes(query);
       const statusMatches = !enabledStatuses.size || enabledStatuses.has(ac.status) || rows.some(row => enabledStatuses.has(row.status));
       return textMatches && statusMatches;
     });
@@ -213,7 +231,7 @@
         <span><span class="eyebrow">${e(ac.acId)}</span><strong>${e(ac.title)}</strong></span><span class="ac-counts">${counts(ac)}</span>
       </summary><div class="ac-body">
         ${(ac.specNarrative || []).length ? `<section class="section external"><h3>External spec narrative</h3>${markdown(ac.specNarrative)}</section>` : ''}
-        ${selector(ac, current)}${caseDetail(ac, current)}${matrix(ac)}${projection === 'review' ? canonicalMethod(ac.method) : ''}
+        ${selector(ac, current)}${caseDetail(ac, current)}${matrix(ac)}${projection === 'review' ? canonicalMethod(ac.method) : ''}${propertyCards(ac)}
       </div></details>`;
     }).join('') || '<p class="meta">No acceptance conditions match this query.</p>';
   };

@@ -4,6 +4,9 @@ This is the shared development map for people and AI agents working inside the
 repository. Start here to find the source of truth, the relevant design
 documents, and the checks required for a change.
 
+Read [`CONTEXT.md`](CONTEXT.md) after this map. It is the canonical glossary
+for ToppleCat-specific product terms.
+
 This document does not replace:
 
 - [`README.md`](README.md), which explains the product to users;
@@ -31,8 +34,8 @@ additional reading.
 | Change the hero animation, composition, or timing | [`site/ANIMATION.md`](site/ANIMATION.md), [`site/src/assets/README.md`](site/src/assets/README.md), [visual reference](docs/images/topplecat-readme-hero.png) | `site/src/App.jsx`, `site/src/styles.css`, `site/src/assets/` |
 | Change website deployment | [`site/README.md`](site/README.md), [Pages workflow](.github/workflows/pages.yml), [`site/vite.config.js`](site/vite.config.js) | `.github/workflows/pages.yml`, `site/` |
 | Change public documentation | The implementation document for the affected feature and [`README.md`](README.md) | `README.md`, `docs/` |
-| Prepare a release | [`CONTRIBUTING.md`](CONTRIBUTING.md), the prior notes in [`docs/releases/`](docs/releases/), [`docs/validation/README.md`](docs/validation/README.md) | Version surfaces, release notes, release scripts |
-| Change the repository's ToppleCat agent skill | [skill instructions](.agents/skills/topplecat-verification/SKILL.md), [`docs/validation/README.md`](docs/validation/README.md) | `.agents/skills/topplecat-verification/` |
+| Prepare a release or its maintainer publication handoff | [release skill](.agents/skills/topplecat-release/SKILL.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), and [`docs/validation/README.md`](docs/validation/README.md) | Release-facing docs and site, release notes, local Git tag, and the Maven/GitHub handoff |
+| Change a repository-owned ToppleCat agent skill | The affected skill and [`docs/validation/README.md`](docs/validation/README.md) | `.agents/skills/topplecat-acceptance/`, `.agents/skills/topplecat-release/` |
 
 ## Repository map
 
@@ -44,11 +47,12 @@ additional reading.
 | `topplecat-gradle-plugin/` | Gradle lifecycle, verification runs, report publication, and mutation gate |
 | `samples/` | Independent consumer projects and reproducible walkthroughs |
 | `docs/` | User guides, architecture, troubleshooting, release notes, and validation records |
-| `docs/design/` | Accepted or proposed product designs, examples, trade-offs, and implementation acceptance criteria |
+| `docs/design/` | Implemented product decisions, examples, trade-offs, and acceptance evidence |
 | `site/` | Vite/React source for the static GitHub Pages project site |
 | `scripts/` | Release, documentation, sample, cleanup, and skill validation |
 | `.github/workflows/` | CI and GitHub Pages automation |
-| `.agents/skills/topplecat-verification/` | Repository-owned agent workflow for ToppleCat adoption and verification |
+| `.agents/skills/topplecat-acceptance/` | Repository-owned authoring guidance for executable ToppleCat acceptance contracts |
+| `.agents/skills/topplecat-release/` | Repository-owned preparation and publication guidance for developer-facing ToppleCat releases |
 
 The published layout has exactly four modules. Do not turn maintainer test
 infrastructure, samples, or the website into additional product modules.

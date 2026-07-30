@@ -1,7 +1,6 @@
 package io.github.samzhu.topplecat.gradle;
 
 import org.gradle.api.Action;
-import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
@@ -9,30 +8,46 @@ import org.gradle.api.tasks.Nested;
 
 /** Gradle layout convention for the pure Java ToppleCat workflow. */
 public abstract class ToppleCatExtension {
-    /** Public JSON/YAML cases visible to the implementer. */
-    public abstract DirectoryProperty getPublicCaseRoot();
+  /** Public JSON/YAML cases visible to the implementer. */
+  public abstract DirectoryProperty getPublicCaseRoot();
 
-    /** Complete reviewer-only source set moved by {@code toppleCatHide}. */
-    public abstract DirectoryProperty getHiddenSourceRoot();
+  /** Complete reviewer-only source set moved by {@code toppleCatSeal}. */
+  public abstract DirectoryProperty getHiddenSourceRoot();
 
-    /** Optional external Markdown documents that provide public SDD context for report projections. */
-    public abstract ConfigurableFileCollection getSpecDocs();
+  /** Invocation-only list supplied through {@code --spec}; there is no persistent Spec DSL. */
+  public abstract ListProperty<String> getCommandLineSpecPaths();
 
-    /** Invocation-only replacement for fixed {@link #getSpecDocs()} configuration. */
-    public abstract ListProperty<String> getCommandLineSpecPaths();
+  /** True only when the current Gradle invocation explicitly supplied {@code --spec}. */
+  public abstract Property<Boolean> getCommandLineSpecProvided();
 
-    /** True only when the current Gradle invocation explicitly supplied {@code --spec}. */
-    public abstract Property<Boolean> getCommandLineSpecProvided();
+  /** Runtime-only Verify escalation; this never weakens a sealed hidden scope. */
+  public abstract Property<Boolean> getAllHiddenRequested();
 
-    /** Runtime-only Verify escalation; this never weakens a sealed hidden scope. */
-    public abstract Property<Boolean> getAllHiddenRequested();
+  @Nested
+  public abstract ToppleCatHiddenTestsExtension getHiddenTests();
 
-    /** Adversarial verification controls. All safeguards are enabled by default. */
-    @Nested
-    public abstract ToppleCatAdversarialExtension getAdversarial();
+  @Nested
+  public abstract ToppleCatMutationTestingExtension getMutationTesting();
 
-    /** Configures adversarial verification in Groovy and Kotlin build scripts. */
-    public void adversarial(Action<? super ToppleCatAdversarialExtension> action) {
-        action.execute(getAdversarial());
-    }
+  @Nested
+  public abstract ToppleCatPropertyBasedTestingExtension getPropertyBasedTesting();
+
+  @Nested
+  public abstract ToppleCatExpectedConsumptionExtension getExpectedConsumption();
+
+  public void hiddenTests(Action<? super ToppleCatHiddenTestsExtension> action) {
+    action.execute(getHiddenTests());
+  }
+
+  public void mutationTesting(Action<? super ToppleCatMutationTestingExtension> action) {
+    action.execute(getMutationTesting());
+  }
+
+  public void propertyBasedTesting(Action<? super ToppleCatPropertyBasedTestingExtension> action) {
+    action.execute(getPropertyBasedTesting());
+  }
+
+  public void expectedConsumption(Action<? super ToppleCatExpectedConsumptionExtension> action) {
+    action.execute(getExpectedConsumption());
+  }
 }

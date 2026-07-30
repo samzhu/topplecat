@@ -67,8 +67,10 @@ outputs/
 **/.topplecat/
 .worktrees/
 
-# Local agent tooling. The ToppleCat product skill remains versioned.
+# Local agent tooling. ToppleCat's repository skills remain versioned.
 .claude/
 .agents/skills/*
-!.agents/skills/topplecat-verification/
-!.agents/skills/topplecat-verification/**
+!.agents/skills/topplecat-acceptance/
+!.agents/skills/topplecat-acceptance/**
+!.agents/skills/topplecat-release/
+!.agents/skills/topplecat-release/**

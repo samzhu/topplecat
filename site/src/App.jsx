@@ -18,45 +18,395 @@ import uprightCup960Webp from "./assets/props/cup-upright-960.webp";
 import stageFloorLayer from "./assets/scene/tabletop.svg";
 
 const repositoryUrl = "https://github.com/samzhu/topplecat";
+const verificationGuideUrl =
+  `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.7"';
 
-const accordionItems = [
-  {
-    title: "Public contract",
-    detail:
-      "Ordinary Java acceptance tests and typed JSON or YAML rows state the behaviour in executable form.",
-    className: "contract",
-  },
-  {
-    title: "Reviewer boundary",
-    detail:
-      "Independent cases stay with the reviewer, then return only for the final verification run.",
-    className: "boundary",
-  },
-  {
-    title: "Current evidence",
-    detail:
-      "A claim passes only when the current run records a complete aggregate verdict, never a stale green check.",
-    className: "evidence",
-  },
-];
+const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
+void appliesCoupon(
+    ToppleCase c,
+    ToppleScenario scenario,
+    CouponStage coupon
+) {
+    scenario.given(coupon).a_cart(c.input("cart", Cart.class));
+    scenario.when(coupon).creates_an_order();
+    scenario.then(coupon).receipt_matches(c);
+}`;
 
-const verificationSteps = [
-  {
-    command: "toppleCatCheck",
-    title: "Inspect the contract before it leaves review",
-    body: "Validates case data, Java bindings, and the canonical Stage DSL without running tests or generating a new source of truth.",
+const copyByLocale = {
+  en: {
+    htmlLang: "en",
+    documentTitle: "ToppleCat: Make every agent’s “done” prove itself",
+    metaDescription:
+      "ToppleCat verifies AI-delivered Java with executable acceptance contracts, hidden tests, mutation testing, property-based testing, and current-run evidence.",
+    nav: {
+      label: "Primary navigation",
+      home: "ToppleCat home",
+      gates: "Safeguards",
+      contract: "The contract",
+      workflow: "Workflow",
+      install: "Get started",
+      switchLanguage: "Current language: English. Switch to Traditional Chinese.",
+    },
+    hero: {
+      titleBefore: "Make every agent’s",
+      titleAfter: "“done” prove itself.",
+      summary:
+        "Executable Java acceptance contracts catch shortcuts, hard-coded answers, changed rules, and incomplete work.",
+      explore: "See how it works",
+      repository: "View on GitHub",
+      scene:
+        "A ToppleCat watches a PASS label on a coffee mug, reaches for it, then tips the mug so the label becomes FAKE.",
+    },
+    marqueeLabel: "ToppleCat capabilities",
+    marqueeItems: [
+      "Hidden tests",
+      "Mutation testing",
+      "Property-Based Testing",
+      "Expected values asserted",
+      "Contract integrity",
+      "Run-scoped evidence",
+    ],
+    manifesto: [
+      "A green public test is useful feedback,",
+      "not proof of completion.",
+      "ToppleCat runs the accepted contract again,",
+      "challenges the implementation",
+      "from different angles,",
+      "and records",
+      "one fresh verdict",
+      "for this delivery.",
+    ],
+    gates: {
+      kicker: "Different checks catch different mistakes",
+      heading: "Your public contract runs first. Then ToppleCat pushes harder.",
+      summary:
+        "Hidden cases, changed code, and generated inputs test different failure modes. Contract integrity and expected-value checks keep the evidence honest.",
+      cards: [
+        {
+          label: "Hidden Tests",
+          detailLabel: "Reviewer-owned cases",
+          title: "Try business cases the agent never saw.",
+          body: "Reviewer-owned rows retest the selected ACs with different examples inside the reviewer boundary.",
+          className: "hidden-retest",
+        },
+        {
+          label: "Mutation Testing",
+          detailLabel: "Changed code",
+          title: "Break the implementation on purpose.",
+          body: "If public acceptance tests stay green, they were not guarding that behaviour.",
+          className: "mutation",
+        },
+        {
+          label: "Property-Based Testing",
+          detailLabel: "Generated inputs",
+          title: "Challenge one rule with many inputs.",
+          body: "Bounded, reproducible trials look for a counterexample without borrowing hidden cases.",
+          className: "property",
+        },
+        {
+          label: "Expected values",
+          detailLabel: "Assertion obligation",
+          title: "Every declared result must be checked.",
+          body: "Reading an expected value is not enough. The test must compare it with the result.",
+          className: "expected",
+        },
+        {
+          label: "Contract integrity",
+          detailLabel: "Sealed before handoff",
+          title: "The agent cannot move the goalposts.",
+          body: "The public contract and verification policy must still match the reviewer’s seal before any other result can count.",
+          className: "integrity",
+        },
+      ],
+    },
+    scenario: {
+      heading: "The review reads like the test runs.",
+      body:
+        "Each selected Spec AC maps to one Java acceptance method. The compiler fixes its Given, When, Then, and And steps before handoff, so reports cannot invent a second version of the story.",
+      chainLabel: "Executable contract mapping",
+      chain: ["Spec AC", "Java method", "Typed rows", "Review and evidence"],
+      codeLabel: "Executable Java",
+      codeAriaLabel: "ToppleScenario acceptance example",
+    },
+    views: {
+      heading: "One executable contract. Three honest views.",
+      summary:
+        "Review and report pages project the checked Java contract for the right audience. They never become another source of truth.",
+      items: [
+        {
+          title: "Contract Review",
+          detail:
+            "Before handoff, the reviewer sees the accepted ACs, readable Scenario steps, public rows, and expected results.",
+          className: "contract",
+        },
+        {
+          title: "Public Spec",
+          detail:
+            "After Verify, agents and contributors can read the safe public contract without reviewer-only cases or diagnostics.",
+          className: "boundary",
+        },
+        {
+          title: "Verification Evidence",
+          detail:
+            "The reviewer gets current-run gate results and private diagnostics. Safe agent feedback reveals the failing gate, never the hidden answer.",
+          className: "evidence",
+        },
+      ],
+    },
+    proof: {
+      kicker: "A separate formal workflow",
+      heading: "Development stays fast. Verification stays strict.",
+      body:
+        "People choose the Spec and complete its rules. ToppleCat binds those ACs to executable Java, keeps the accepted contract unchanged, and tests the agent’s completion claim.",
+      guide: "Read the verification guide",
+      steps: [
+        {
+          command: "toppleCatCheck --spec specs/023-checkout/spec.md",
+          label: "Check",
+          title: "Make the contract internally consistent",
+          body: "Validate the selected ACs, typed rows, Java bindings, and compiler-described Scenario steps.",
+        },
+        {
+          command: "toppleCatReview --spec specs/023-checkout/spec.md",
+          label: "Review",
+          title: "Read exactly what will run",
+          body: "Generate a reviewer-only view of the executable contract before any implementation handoff.",
+        },
+        {
+          command: "toppleCatSeal --spec specs/023-checkout/spec.md",
+          label: "Seal",
+          title: "Keep the approved question fixed",
+          body: "Move reviewer source into local custody and seal the public contract plus verification policy.",
+        },
+        {
+          command: "test",
+          label: "Develop",
+          title: "Let the agent work against public information",
+          body: "The implementation agent uses ordinary project tests for fast feedback. This green check is not the final verdict.",
+        },
+        {
+          command: "toppleCatVerify --spec specs/023-checkout/spec.md",
+          label: "Verify",
+          title: "Test the done claim with fresh evidence",
+          body: "Run the selected public contract and enabled safeguards, write current evidence, then re-hide reviewer source.",
+        },
+      ],
+      verdictLabel: "Aggregate verdict",
+      verdictBody:
+        "Only every required gate passing in the current run lets the claim stand.",
+    },
+    install: {
+      heading: "Try the sample before changing your project.",
+      summary:
+        "Watch a deliberately wrong implementation fail, then see the corrected version produce current evidence.",
+      note: "Requires Java 25 and a Gradle version that supports it.",
+      copy: "Copy plugin line",
+      copied: "Copied",
+      sample: "Run the sample",
+      install: "Install ToppleCat",
+      skill: "Using an SDD agent? Add the project-local acceptance skill",
+    },
+    footer: {
+      tagline: "Executable acceptance for agent-written Java.",
+      readme: "README",
+      readmePath: "README.md",
+    },
   },
-  {
-    command: "toppleCatHide",
-    title: "Hand implementation a public-only tree",
-    body: "Moves reviewer source into local custody and seals the reviewed public contract plus verification policy.",
+  "zh-TW": {
+    htmlLang: "zh-Hant-TW",
+    documentTitle: "ToppleCat：讓每一個 agent 的「完成」都能自證",
+    metaDescription:
+      "ToppleCat 以可執行的 Java 驗收契約、隱藏測試、變異測試、性質導向測試與本次執行證據，驗證 AI 交付的程式碼。",
+    nav: {
+      label: "主要導覽",
+      home: "ToppleCat 首頁",
+      gates: "防護檢查",
+      contract: "可執行契約",
+      workflow: "工作流程",
+      install: "開始使用",
+      switchLanguage: "目前語言：繁體中文。切換為英文。",
+    },
+    hero: {
+      titleBefore: "讓每一個 agent 的",
+      titleAfter: "「完成」都能自證。",
+      summary:
+        "可執行的 Java 驗收契約，找出取巧、硬編碼答案、規則遭更動與未完成的工作。",
+      explore: "看看如何運作",
+      repository: "在 GitHub 查看",
+      scene:
+        "ToppleCat 看著咖啡杯上方的 PASS，伸手撥倒杯子，標示隨之變成 FAKE。",
+    },
+    marqueeLabel: "ToppleCat 功能",
+    marqueeItems: [
+      "隱藏測試",
+      "變異測試",
+      "性質導向測試",
+      "驗證預期值",
+      "契約完整性",
+      "本次執行證據",
+    ],
+    manifesto: [
+      "綠燈的公開測試，",
+      "只是有用的回饋，",
+      "不是完成的證明。",
+      "ToppleCat 會重新執行",
+      "已接受的契約，",
+      "從不同角度挑戰實作，",
+      "並為這次交付",
+      "留下全新的判定。",
+    ],
+    gates: {
+      kicker: "不同檢查捕捉不同錯誤",
+      heading: "先跑公開契約。再讓 ToppleCat 加強驗證。",
+      summary:
+        "隱藏案例、變更後的程式碼與產生的輸入，會測試不同的失敗模式。契約完整性與預期值檢查，確保證據可信。",
+      cards: [
+        {
+          label: "隱藏測試",
+          detailLabel: "審查者持有案例",
+          title: "嘗試 agent 從未看過的業務案例。",
+          body: "審查者持有的案例列在審查邊界中，以不同範例重新測試所選 AC。",
+          className: "hidden-retest",
+        },
+        {
+          label: "變異測試",
+          detailLabel: "變更後的程式碼",
+          title: "刻意破壞實作。",
+          body: "若公開驗收測試仍為綠燈，代表它們沒有守住那個行為。",
+          className: "mutation",
+        },
+        {
+          label: "性質導向測試",
+          detailLabel: "產生的輸入",
+          title: "用大量輸入挑戰同一條規則。",
+          body: "可重現且有界限的試驗尋找反例，但不借用隱藏案例。",
+          className: "property",
+        },
+        {
+          label: "預期值",
+          detailLabel: "斷言義務",
+          title: "每個宣告的結果都必須檢查。",
+          body: "讀取預期值還不夠；測試必須將它與結果比較。",
+          className: "expected",
+        },
+        {
+          label: "契約完整性",
+          detailLabel: "交付前封存",
+          title: "agent 無法搬動終點線。",
+          body: "公開契約與驗證政策，必須仍與審查者的 seal 一致，其他結果才有資格計入。",
+          className: "integrity",
+        },
+      ],
+    },
+    scenario: {
+      heading: "審查讀到的內容，就是測試實際執行的內容。",
+      body:
+        "每個選取的 Spec AC 都對應一個 Java acceptance method。編譯器會在交付前固定 Given、When、Then 與 And 步驟，讓報告無法編造第二個故事版本。",
+      chainLabel: "可執行契約對應關係",
+      chain: ["Spec AC", "Java acceptance method", "型別化案例列", "審查與證據"],
+      codeLabel: "可執行 Java",
+      codeAriaLabel: "ToppleScenario 驗收範例",
+    },
+    views: {
+      heading: "一份可執行契約，三種忠實視圖。",
+      summary:
+        "審查與報告頁面，為正確的讀者投影已檢查的 Java 契約；它們絕不成為第二個真實來源。",
+      items: [
+        {
+          title: "契約審查",
+          detail:
+            "交付前，審查者會看到已接受的 AC、可讀的 Scenario 步驟、公開案例列與預期結果。",
+          className: "contract",
+        },
+        {
+          title: "公開 Spec",
+          detail:
+            "Verify 後，agent 與貢獻者可閱讀安全的公開契約，不會看到僅限審查者的案例或診斷資訊。",
+          className: "boundary",
+        },
+        {
+          title: "驗證證據",
+          detail:
+            "審查者取得本次執行的 gate 結果與私有診斷；安全的 agent 回饋只顯示失敗 gate，絕不揭露隱藏答案。",
+          className: "evidence",
+        },
+      ],
+    },
+    proof: {
+      kicker: "獨立且正式的流程",
+      heading: "開發維持快速，驗證維持嚴格。",
+      body:
+        "人選擇 Spec 並完成規則。ToppleCat 把這些 AC 連結到可執行 Java，維持已接受的契約不變，並檢驗 agent 的完成宣稱。",
+      guide: "閱讀驗證指南（英文）",
+      steps: [
+        {
+          command: "toppleCatCheck --spec specs/023-checkout/spec.md",
+          label: "Check",
+          title: "讓契約保持內部一致",
+          body: "驗證選取的 AC、型別化案例列、Java 連結，以及由編譯器描述的 Scenario 步驟。",
+        },
+        {
+          command: "toppleCatReview --spec specs/023-checkout/spec.md",
+          label: "Review",
+          title: "閱讀即將執行的完整內容",
+          body: "在任何實作交付前，產生僅限審查者的可執行契約視圖。",
+        },
+        {
+          command: "toppleCatSeal --spec specs/023-checkout/spec.md",
+          label: "Seal",
+          title: "固定已接受的題目",
+          body: "將審查者原始碼移入本機保管，並封存公開契約與驗證政策。",
+        },
+        {
+          command: "test",
+          label: "Develop",
+          title: "讓 agent 依公開資訊開發",
+          body: "實作 agent 使用一般專案測試取得快速回饋；這個綠燈不是最終判定。",
+        },
+        {
+          command: "toppleCatVerify --spec specs/023-checkout/spec.md",
+          label: "Verify",
+          title: "用全新證據檢驗完成宣稱",
+          body: "執行選取的公開契約與啟用的 safeguards、寫入本次證據，然後重新隱藏審查者原始碼。",
+        },
+      ],
+      verdictLabel: "彙總判定",
+      verdictBody: "只有本次執行中每個必要 gate 都通過，完成宣稱才能成立。",
+    },
+    install: {
+      heading: "先執行範例，再改動自己的專案。",
+      summary: "先看刻意錯誤的實作失敗，再看修正後的版本產生本次證據。",
+      note: "需要 Java 25 與支援它的 Gradle 版本。",
+      copy: "複製 plugin 設定",
+      copied: "已複製",
+      sample: "執行範例",
+      install: "安裝 ToppleCat",
+      skill: "正在使用 SDD agent？加入專案內的 acceptance skill",
+    },
+    footer: {
+      tagline: "為 agent 撰寫的 Java 提供可執行驗收。",
+      readme: "繁中 README",
+      readmePath: "README.zh-TW.md",
+    },
   },
-  {
-    command: "toppleCatVerify",
-    title: "Make the done claim earn its footing",
-    body: "Restores reviewer checks only in the reviewer boundary, runs enabled gates, writes evidence, then re-hides the source.",
-  },
-];
+};
+
+function localeFromUrl() {
+  return new URLSearchParams(window.location.search).get("lang") === "zh-TW"
+    ? "zh-TW"
+    : "en";
+}
+
+function replaceLocaleInUrl(locale) {
+  const url = new URL(window.location.href);
+  if (locale === "zh-TW") {
+    url.searchParams.set("lang", "zh-TW");
+  } else {
+    url.searchParams.delete("lang");
+  }
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+}
 
 function Arrow() {
   return <span aria-hidden="true" className="arrow">↗</span>;
@@ -88,8 +438,10 @@ const cupSources = {
 function App() {
   const scope = useRef(null);
   const motion = useRef({ gsap: null, Flip: null, gsapPromise: null });
+  const [locale, setLocale] = useState(localeFromUrl);
   const [activeAccordion, setActiveAccordion] = useState(0);
   const [copied, setCopied] = useState(false);
+  const copy = copyByLocale[locale];
 
   const loadGsap = async () => {
     if (motion.current.gsap) return motion.current;
@@ -105,6 +457,24 @@ function App() {
     }
     return motion.current.gsapPromise;
   };
+
+  useEffect(() => {
+    const handlePopState = () => setLocale(localeFromUrl());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = copy.htmlLang;
+    document.title = copy.documentTitle;
+    document.querySelector('meta[name="description"]')?.setAttribute("content", copy.metaDescription);
+    setCopied(false);
+
+    const frame = window.requestAnimationFrame(() => {
+      motion.current.ScrollTrigger?.refresh();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [copy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -183,6 +553,12 @@ function App() {
     };
   }, []);
 
+  const changeLanguage = () => {
+    const nextLocale = locale === "en" ? "zh-TW" : "en";
+    replaceLocaleInUrl(nextLocale);
+    setLocale(nextLocale);
+  };
+
   const changeAccordion = async (index) => {
     if (index === activeAccordion) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -217,7 +593,7 @@ function App() {
 
   const copyInstall = async () => {
     try {
-      await navigator.clipboard.writeText('id("io.github.samzhu.topplecat") version "0.0.6"');
+      await navigator.clipboard.writeText(pluginLine);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -226,30 +602,59 @@ function App() {
   };
 
   return (
-    <main className="page-shell" ref={scope}>
+    <main className="page-shell" data-locale={locale} ref={scope}>
       <div className="page-background-layer" aria-hidden="true" />
       <div className="ambient-orb orb-one" />
       <div className="ambient-orb orb-two" />
 
-      <nav className="site-nav" aria-label="Primary navigation">
-        <a className="wordmark" href="#top" aria-label="ToppleCat home">
+      <nav className="site-nav" aria-label={copy.nav.label}>
+        <a className="wordmark" href="#top" aria-label={copy.nav.home}>
           <span className="wordmark-mark" aria-hidden="true">T</span>
           <span>ToppleCat</span>
         </a>
         <div className="nav-links">
-          <a href="#gates">The gates</a>
-          <a href="#proof">The proof</a>
-          <a href="#install">Get started</a>
+          <a href="#gates">{copy.nav.gates}</a>
+          <a href="#contract">{copy.nav.contract}</a>
+          <a href="#proof">{copy.nav.workflow}</a>
+          <a href="#install">{copy.nav.install}</a>
         </div>
+        <button
+          className="language-toggle"
+          type="button"
+          onClick={changeLanguage}
+          aria-label={copy.nav.switchLanguage}
+          aria-pressed={locale === "zh-TW"}
+        >
+          <span className={locale === "en" ? "is-active" : ""} aria-hidden="true">EN</span>
+          <span className={locale === "zh-TW" ? "is-active" : ""} aria-hidden="true">繁中</span>
+        </button>
         <a className="nav-repository" href={repositoryUrl} target="_blank" rel="noreferrer">
           GitHub <Arrow />
         </a>
       </nav>
 
       <section className="hero hero-cinematic" id="top">
-        <h1 className="visually-hidden">ToppleCat turns a shaky done claim into evidence.</h1>
+        <div className="hero-message">
+          <h1>
+            {copy.hero.titleBefore}{locale === "en" ? " " : ""}{copy.hero.titleAfter}
+          </h1>
+          <p className="hero-summary">{copy.hero.summary}</p>
+          <div className="hero-actions">
+            <a className="button button-amber" href="#gates">
+              {copy.hero.explore} <Arrow />
+            </a>
+            <a
+              className="button button-ghost"
+              href={repositoryUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {copy.hero.repository} <Arrow />
+            </a>
+          </div>
+        </div>
         <div className="hero-art">
-          <div className="hero-scene hero-stage" role="img" aria-label="A ToppleCat watches a PASS label on a coffee mug, reaches for it, then tips the mug so the label becomes FAKE.">
+          <div className="hero-scene hero-stage" role="img" aria-label={copy.hero.scene}>
             <img className="stage-floor" src={stageFloorLayer} alt="" aria-hidden="true" />
             <img className="motion-coaster" src={coasterLayer} alt="" aria-hidden="true" />
             <div className="motion-frame motion-cat motion-cat-sprite" aria-hidden="true">
@@ -277,84 +682,91 @@ function App() {
         </div>
       </section>
 
-      <div className="marquee" aria-label="ToppleCat capabilities">
+      <div className="marquee" aria-label={copy.marqueeLabel}>
         <div className="marquee-track">
-          <span>Hidden retests</span><i />
-          <span>Mutation gates</span><i />
-          <span>Expected values asserted</span><i />
-          <span>Contract integrity</span><i />
-          <span>Run-scoped evidence</span><i />
-          <span>Hidden retests</span><i />
-          <span>Mutation gates</span><i />
-          <span>Expected values asserted</span><i />
-          <span>Contract integrity</span><i />
-          <span>Run-scoped evidence</span><i />
+          {[...copy.marqueeItems, ...copy.marqueeItems].map((item, index) => (
+            <span className="marquee-item" key={`${item}-${index}`}>{item}<i aria-hidden="true" /></span>
+          ))}
         </div>
       </div>
 
       <section className="manifesto content-width">
         <p className="manifesto-copy">
-          {"A final green check is a report, not a verdict. ToppleCat makes an agent’s completion claim pass through the same constraints that define the work. If the implementation is thin, hard-coded, or only tuned to the visible example, the cat gives it a nudge.".split(" ").map((word, index) => (
-            <span className="reveal-word" key={`${word}-${index}`}>{word} </span>
+          {copy.manifesto.map((phrase, index) => (
+            <span className="reveal-word" key={index}>
+              {phrase}{locale === "en" ? " " : ""}
+            </span>
           ))}
         </p>
       </section>
 
       <section className="gates content-width" id="gates">
         <div className="section-heading">
-          <p className="kicker">Five checks. One current verdict.</p>
-          <h2>Proof has more than one way to catch a shortcut.</h2>
+          <p className="kicker">{copy.gates.kicker}</p>
+          <h2>{copy.gates.heading}</h2>
+          <p className="section-summary">{copy.gates.summary}</p>
         </div>
 
         <div className="gates-grid">
-          <article className="gate-card hidden-retest">
-            <div className="card-topline"><span>01</span><span>Reviewer-controlled</span></div>
-            <div>
-              <h3>Hidden retests expose code written for the example, not the rule.</h3>
-              <p>Independent business cases return only inside the reviewer verification boundary.</p>
-            </div>
-            <div className="card-line-art" aria-hidden="true"><span /><span /><span /></div>
-          </article>
-
-          <article className="gate-card mutation">
-            <div className="card-topline"><span>02</span><span>PIT-backed</span></div>
-            <h3>Mutate the behaviour.</h3>
-            <p>Public acceptance tests must notice what changed.</p>
-            <div className="mutation-grid" aria-hidden="true"><b /><b /><b /><b /><b /><b /><b /><b /><b /></div>
-          </article>
-
-          <article className="gate-card expected">
-            <div className="card-topline"><span>03</span><span>Non-negotiable</span></div>
-            <h3>Expected means asserted.</h3>
-            <p>Reading a value does not count. Every declared result must be compared with reality.</p>
-            <div className="expected-underline" aria-hidden="true" />
-          </article>
-
-          <article className="gate-card integrity">
-            <div className="integrity-copy">
-              <div className="card-topline"><span>04</span><span>Sealed before handoff</span></div>
-              <h3>Contract integrity keeps the rules from moving after review.</h3>
-            </div>
-            <p>Tests, case data, build logic, semantic definition, and policy must still match reviewer approval before the other gates may run.</p>
-            <div className="integrity-seal" aria-hidden="true"><span>PASS</span></div>
-          </article>
+          {copy.gates.cards.map((card) => (
+            card.className === "integrity" ? (
+              <article className="gate-card integrity" key={card.className}>
+                <div className="integrity-copy">
+                  <div className="card-topline"><span>{card.label}</span><span>{card.detailLabel}</span></div>
+                  <h3>{card.title}</h3>
+                </div>
+                <p>{card.body}</p>
+                <div className="integrity-seal" aria-hidden="true"><span>PASS</span></div>
+              </article>
+            ) : (
+              <article className={`gate-card ${card.className}`} key={card.className}>
+                <div className="card-topline"><span>{card.label}</span><span>{card.detailLabel}</span></div>
+                <div>
+                  <h3>{card.title}</h3>
+                  <p>{card.body}</p>
+                </div>
+                {card.className === "hidden-retest" && (
+                  <div className="card-line-art" aria-hidden="true"><span /><span /><span /></div>
+                )}
+                {card.className === "mutation" && (
+                  <div className="mutation-grid" aria-hidden="true"><b /><b /><b /><b /><b /><b /><b /><b /><b /></div>
+                )}
+                {card.className === "expected" && <div className="expected-underline" aria-hidden="true" />}
+              </article>
+            )
+          ))}
         </div>
       </section>
 
-      <section className="accordion-section content-width">
+      <section className="scenario-section content-width" id="contract">
+        <div className="scenario-copy">
+          <h2>{copy.scenario.heading}</h2>
+          <p>{copy.scenario.body}</p>
+          <div className="contract-chain" aria-label={copy.scenario.chainLabel}>
+            {copy.scenario.chain.map((item, index) => (
+              <span className="contract-chain-item" key={item}>
+                <span>{item}</span>
+                {index < copy.scenario.chain.length - 1 && <span aria-hidden="true">→</span>}
+              </span>
+            ))}
+          </div>
+        </div>
+        <pre className="scenario-code" data-code-label={copy.scenario.codeLabel} aria-label={copy.scenario.codeAriaLabel}><code>{scenarioCode}</code></pre>
+      </section>
+
+      <section className="accordion-section content-width" id="reports">
         <div className="section-heading compact-heading">
-          <p className="kicker">Keep the truth in the right hands</p>
-          <h2>Java stays authoritative. Evidence stays honest.</h2>
+          <h2>{copy.views.heading}</h2>
+          <p className="section-summary">{copy.views.summary}</p>
         </div>
         <div className="horizontal-accordion">
-          {accordionItems.map((item, index) => (
+          {copy.views.items.map((item, index) => (
             <button
               className={`accordion-panel ${item.className} ${activeAccordion === index ? "is-active" : ""}`}
-              key={item.title}
+              key={item.className}
               onClick={() => { void changeAccordion(index); }}
               aria-pressed={activeAccordion === index}
             >
-              <span className="accordion-index">0{index + 1}</span>
               <span className="accordion-content">
                 <span className="accordion-title">{item.title}</span>
                 <span className="accordion-detail" aria-hidden={activeAccordion !== index}>{item.detail}</span>
@@ -368,24 +780,24 @@ function App() {
       <section className="proof" id="proof">
         <div className="proof-layout content-width">
           <div className="proof-intro">
-            <p className="kicker">The verification flow</p>
-            <h2>Trust the run that can show its work.</h2>
-            <p>ToppleCat is deliberately narrow: it verifies Java and JUnit delegation work. It does not replace code review, QA, CI isolation, or a sandbox.</p>
-            <a className="text-link" href={`${repositoryUrl}#how-it-fits-the-development-flow`} target="_blank" rel="noreferrer">Read the complete flow <Arrow /></a>
+            <p className="kicker">{copy.proof.kicker}</p>
+            <h2>{copy.proof.heading}</h2>
+            <p>{copy.proof.body}</p>
+            <a className="text-link" href={verificationGuideUrl} target="_blank" rel="noreferrer">{copy.proof.guide} <Arrow /></a>
           </div>
           <div className="proof-steps">
-            {verificationSteps.map((step, index) => (
-              <article className="proof-step" key={step.command}>
-                <span className="step-number">0{index + 1}</span>
+            {copy.proof.steps.map((step) => (
+              <article className="proof-step" key={step.label}>
+                <span className="step-label">{step.label}</span>
                 <p className="command">./gradlew {step.command}</p>
                 <h3>{step.title}</h3>
                 <p>{step.body}</p>
               </article>
             ))}
             <div className="verdict-card">
-              <span>Aggregate verdict</span>
+              <span>{copy.proof.verdictLabel}</span>
               <strong>PASS</strong>
-              <p>Only every required gate passing in the current run lets the claim stand.</p>
+              <p>{copy.proof.verdictBody}</p>
             </div>
           </div>
         </div>
@@ -393,29 +805,32 @@ function App() {
 
       <section className="install content-width" id="install">
         <div className="install-headline">
-          <p className="kicker">Built for Java and JUnit</p>
-          <h2>Give every confident “done” a place to land.</h2>
+          <h2>{copy.install.heading}</h2>
+          <p className="section-summary">{copy.install.summary}</p>
         </div>
         <div className="install-panel">
           <div>
-            <p className="install-note">Requires Java 25 and a Gradle version that supports it.</p>
-            <code>id("io.github.samzhu.topplecat") version "0.0.6"</code>
+            <p className="install-note">{copy.install.note}</p>
+            <code>{pluginLine}</code>
           </div>
           <button className="copy-button" onClick={copyInstall}>
-            {copied ? "Copied" : "Copy plugin line"} <Arrow />
+            {copied ? copy.install.copied : copy.install.copy} <Arrow />
           </button>
         </div>
         <div className="install-actions">
-          <a className="button button-amber" href={`${repositoryUrl}#install-006`} target="_blank" rel="noreferrer">Read installation guide <Arrow /></a>
-          <a className="button button-dark" href={`${repositoryUrl}/tree/main/samples/junit-cart-orders`} target="_blank" rel="noreferrer">Run the JUnit sample <Arrow /></a>
+          <a className="button button-amber" href={`${repositoryUrl}/tree/main/samples/junit-cart-orders`} target="_blank" rel="noreferrer">{copy.install.sample} <Arrow /></a>
+          <a className="button button-dark" href={`${repositoryUrl}#install-007`} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
+          <a className="acceptance-skill-link" href={`${repositoryUrl}/tree/main/.agents/skills/topplecat-acceptance`} target="_blank" rel="noreferrer">
+            {copy.install.skill} <Arrow />
+          </a>
         </div>
       </section>
 
       <footer className="site-footer">
-        <a className="wordmark footer-wordmark" href="#top"><span className="wordmark-mark" aria-hidden="true">T</span><span>ToppleCat</span></a>
-        <p>Evidence for the “done” claim.</p>
+        <a className="wordmark footer-wordmark" href="#top" aria-label={copy.nav.home}><span className="wordmark-mark" aria-hidden="true">T</span><span>ToppleCat</span></a>
+        <p>{copy.footer.tagline}</p>
         <div className="footer-links">
-          <a href={`${repositoryUrl}/blob/main/README.zh-TW.md`} target="_blank" rel="noreferrer">繁體中文</a>
+          <a href={`${repositoryUrl}/blob/main/${copy.footer.readmePath}`} target="_blank" rel="noreferrer">{copy.footer.readme}</a>
           <a href={`${repositoryUrl}/blob/main/LICENSE`} target="_blank" rel="noreferrer">Apache-2.0</a>
           <a href={repositoryUrl} target="_blank" rel="noreferrer">GitHub <Arrow /></a>
         </div>

@@ -4,16 +4,15 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** JSON codec for safe agent feedback. */
 public final class AgentFeedbackJson {
-    private static final JsonMapper JSON = JsonMapper.builder().build();
+  private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    private AgentFeedbackJson() {
-    }
+  private AgentFeedbackJson() {}
 
-    public static String write(AgentFeedback feedback) {
-        return JSON.writerWithDefaultPrettyPrinter().writeValueAsString(feedback) + "\n";
-    }
+  public static String write(AgentFeedback feedback) {
+    return JSON.writerWithDefaultPrettyPrinter().writeValueAsString(feedback) + "\n";
+  }
 
-    public static AgentFeedback read(String source) {
-        return JSON.readValue(source, AgentFeedback.class);
-    }
+  public static AgentFeedback read(String source) {
+    return JSON.readValue(source, AgentFeedback.class);
+  }
 }

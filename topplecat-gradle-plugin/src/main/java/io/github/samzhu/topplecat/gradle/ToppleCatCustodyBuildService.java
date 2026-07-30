@@ -7,26 +7,28 @@ import org.gradle.api.services.BuildServiceParameters;
 
 /** Holds reviewer custody for an entire verification build, including failing task graphs. */
 public abstract class ToppleCatCustodyBuildService
-        implements BuildService<ToppleCatCustodyBuildService.Parameters>, AutoCloseable {
-    /** Parameters fixed when the service is registered for one Gradle project. */
-    public interface Parameters extends BuildServiceParameters {
-        DirectoryProperty getProjectRoot();
-    }
+    implements BuildService<ToppleCatCustodyBuildService.Parameters>, AutoCloseable {
+  /** Parameters fixed when the service is registered for one Gradle project. */
+  public interface Parameters extends BuildServiceParameters {
+    DirectoryProperty getProjectRoot();
+  }
 
-    private boolean acquired;
+  private boolean acquired;
 
-    public synchronized void acquire() {
-        if (!acquired) {
-            EscrowProjectLock.acquireForVerification(getParameters().getProjectRoot().get().getAsFile().toPath());
-            acquired = true;
-        }
+  public synchronized void acquire() {
+    if (!acquired) {
+      EscrowProjectLock.acquireForVerification(
+          getParameters().getProjectRoot().get().getAsFile().toPath());
+      acquired = true;
     }
+  }
 
-    @Override
-    public synchronized void close() {
-        if (acquired) {
-            EscrowProjectLock.releaseVerification(getParameters().getProjectRoot().get().getAsFile().toPath());
-            acquired = false;
-        }
+  @Override
+  public synchronized void close() {
+    if (acquired) {
+      EscrowProjectLock.releaseVerification(
+          getParameters().getProjectRoot().get().getAsFile().toPath());
+      acquired = false;
     }
+  }
 }

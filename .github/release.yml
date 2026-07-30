@@ -1,0 +1,20 @@
+changelog:
+  exclude:
+    labels:
+      - duplicate
+      - invalid
+      - question
+      - wontfix
+  categories:
+    - title: Developer capabilities
+      labels:
+        - enhancement
+    - title: Fixes
+      labels:
+        - bug
+    - title: Documentation and examples
+      labels:
+        - documentation
+    - title: Maintenance
+      labels:
+        - "*"

@@ -1,7 +1,20 @@
 package io.github.samzhu.topplecat.gradle;
 
 import io.github.samzhu.topplecat.core.CompilerScenarioDescriptor;
-import io.github.samzhu.topplecat.junit.ToppleScenarioProcessor;
+import io.github.samzhu.topplecat.junit.ToppleAcceptanceProcessor;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -12,102 +25,118 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 /**
  * Gradle-safe compiler fallback for scenario descriptors.
  *
- * <p>Gradle wraps annotation-processing environments, which prevents the JDK's Trees API
- * from obtaining a compiler context. This task invokes the public JavaCompiler API directly
- * with {@code -proc:only}; the same ToppleScenarioProcessor therefore still receives a real
- * javac AST and resolved symbols, without relying on a regex parser.</p>
+ * <p>Gradle wraps annotation-processing environments, which prevents the JDK's Trees API from
+ * obtaining a compiler context. This task invokes the public JavaCompiler API directly with {@code
+ * -proc:only}; the same ToppleAcceptanceProcessor therefore still receives a real javac AST and
+ * resolved symbols, without relying on a regex parser.
  */
 public abstract class ToppleCatCompileContractsTask extends DefaultTask {
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
-    public abstract ConfigurableFileCollection getSourceFiles();
+  @InputFiles
+  @PathSensitive(PathSensitivity.RELATIVE)
+  public abstract ConfigurableFileCollection getSourceFiles();
 
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
-    public abstract ConfigurableFileCollection getCompileClasspath();
+  @InputFiles
+  @PathSensitive(PathSensitivity.RELATIVE)
+  public abstract ConfigurableFileCollection getCompileClasspath();
 
-    @OutputDirectory
-    public abstract DirectoryProperty getDescriptorClassesDirectory();
+  @OutputDirectory
+  public abstract DirectoryProperty getDescriptorClassesDirectory();
 
-    @TaskAction
-    public void compileContracts() {
-        Path output = getDescriptorClassesDirectory().get().getAsFile().toPath();
-        clean(output);
-        List<Path> sources = getSourceFiles().getFiles().stream().map(file -> file.toPath()).filter(Files::isRegularFile)
-                .filter(path -> path.toString().endsWith(".java")).sorted().toList();
-        if (sources.isEmpty()) {
-            return;
-        }
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
-            throw new GradleException("ToppleCat requires a JDK compiler to validate @ToppleTest scenarios.");
-        }
-        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager files = compiler.getStandardFileManager(diagnostics, null, null)) {
-            List<String> options = List.of(
-                    "-proc:only",
-                    "-classpath", classpath(getCompileClasspath().getFiles().stream().map(file -> file.toPath()).toList()),
-                    "-processorpath", classpath(List.of(codeSource(ToppleScenarioProcessor.class),
-                            codeSource(CompilerScenarioDescriptor.class))),
-                    "-processor", ToppleScenarioProcessor.class.getName(),
-                    "-d", output.toString());
-            boolean success = Boolean.TRUE.equals(compiler.getTask(null, files, diagnostics, options, null,
-                    files.getJavaFileObjectsFromPaths(sources)).call());
-            if (!success) {
-                throw new GradleException("ToppleCat compiler validation failed:\n" + diagnostics(diagnostics));
-            }
-        } catch (IOException exception) {
-            throw new GradleException("ToppleCat cannot run compiler-backed scenario validation: " + exception.getMessage(),
-                    exception);
-        }
+  @TaskAction
+  public void compileContracts() {
+    Path output = getDescriptorClassesDirectory().get().getAsFile().toPath();
+    clean(output);
+    List<Path> sources =
+        getSourceFiles().getFiles().stream()
+            .map(file -> file.toPath())
+            .filter(path -> path.toString().endsWith(".java"))
+            .sorted()
+            .toList();
+    if (sources.isEmpty()) {
+      return;
     }
-
-    private static String classpath(List<Path> files) {
-        return files.stream().map(Path::toString).collect(Collectors.joining(java.io.File.pathSeparator));
+    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+    if (compiler == null) {
+      throw new GradleException(
+          "ToppleCat requires a JDK compiler to validate @ToppleAcceptanceTest scenarios.");
     }
+    DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+    // Keep Gradle's daemon-shared jar classpath handles open; closing this manager can invalidate
+    // the archive file systems needed by the Seal-time javac source-closure pass.
+    StandardJavaFileManager files = compiler.getStandardFileManager(diagnostics, null, null);
+    List<String> options =
+        List.of(
+            "-proc:only",
+            "-classpath",
+            classpath(
+                getCompileClasspath().getFiles().stream().map(file -> file.toPath()).toList()),
+            "-processorpath",
+            classpath(
+                List.of(
+                    codeSource(ToppleAcceptanceProcessor.class),
+                    codeSource(CompilerScenarioDescriptor.class))),
+            "-processor",
+            ToppleAcceptanceProcessor.class.getName(),
+            "-d",
+            output.toString());
+    boolean success =
+        Boolean.TRUE.equals(
+            compiler
+                .getTask(
+                    null,
+                    files,
+                    diagnostics,
+                    options,
+                    null,
+                    files.getJavaFileObjectsFromPaths(sources))
+                .call());
+    if (!success) {
+      throw new GradleException(
+          "ToppleCat compiler validation failed:\n" + diagnostics(diagnostics));
+    }
+  }
 
-    private static Path codeSource(Class<?> type) {
-        try {
-            return Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI());
-        } catch (Exception exception) {
-            throw new GradleException("ToppleCat cannot locate compiler dependency " + type.getName(), exception);
+  private static String classpath(List<Path> files) {
+    return files.stream()
+        .map(Path::toString)
+        .collect(Collectors.joining(java.io.File.pathSeparator));
+  }
+
+  private static Path codeSource(Class<?> type) {
+    try {
+      return Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI());
+    } catch (Exception exception) {
+      throw new GradleException(
+          "ToppleCat cannot locate compiler dependency " + type.getName(), exception);
+    }
+  }
+
+  private static String diagnostics(DiagnosticCollector<JavaFileObject> diagnostics) {
+    return diagnostics.getDiagnostics().stream()
+        .map(Diagnostic::toString)
+        .collect(Collectors.joining("\n"));
+  }
+
+  private static void clean(Path output) {
+    try {
+      if (Files.exists(output)) {
+        try (Stream<Path> paths = Files.walk(output)) {
+          for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+            Files.deleteIfExists(path);
+          }
         }
+      }
+      Files.createDirectories(output);
+    } catch (IOException exception) {
+      throw new GradleException(
+          "Cannot prepare ToppleCat compiler descriptor output "
+              + output
+              + ": "
+              + exception.getMessage(),
+          exception);
     }
-
-    private static String diagnostics(DiagnosticCollector<JavaFileObject> diagnostics) {
-        return diagnostics.getDiagnostics().stream().map(Diagnostic::toString).collect(Collectors.joining("\n"));
-    }
-
-    private static void clean(Path output) {
-        try {
-            if (Files.exists(output)) {
-                try (Stream<Path> paths = Files.walk(output)) {
-                    for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
-                        Files.deleteIfExists(path);
-                    }
-                }
-            }
-            Files.createDirectories(output);
-        } catch (IOException exception) {
-            throw new GradleException("Cannot prepare ToppleCat compiler descriptor output " + output + ": "
-                    + exception.getMessage(), exception);
-        }
-    }
+  }
 }

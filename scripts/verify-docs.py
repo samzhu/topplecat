@@ -14,12 +14,76 @@ ROOT = Path(__file__).resolve().parent.parent
 PRIVATE_SECTIONS = {"grimo", "history", "decisions", "deepwiki", "maintainers"}
 SECRET_TOKENS = ("coupon-hidden-800", "customer-2", "ReviewerBoundary")
 LEGACY_REPORT_NAMES = ("spec.html", "review.html")
+ACTIVE_TERMINOLOGY_PATHS = (
+    "README.md",
+    "README.zh-TW.md",
+    "docs/README.md",
+    "docs/architecture.md",
+    "docs/guide",
+    "docs/faq.md",
+    "docs/faq.zh-TW.md",
+    "CONTEXT.md",
+    "docs/design/README.md",
+    "docs/design/executable-acceptance-boundary.md",
+    "docs/design/property-based-testing.md",
+    "docs/design/topple-scenario-authoring.md",
+    "docs/releases/0.0.7.md",
+    "docs/releases/0.0.7.zh-TW.md",
+    "samples",
+    ".agents/skills",
+    "site/src",
+    "topplecat-report/src/main/resources",
+)
+LEGACY_TERMS = {
+    r"@ToppleTest\b": "use @ToppleAcceptanceTest",
+    r"@ToppleAc\b": "reviewer Java tests are not ToppleCat evidence",
+    r"\bPropertyTrial\b": "use PropertyTrials",
+    r"\btoppleCatHide\b": "use toppleCatSeal",
+    r"\btoppleCatUpdateEscrow\b": "use toppleCatReseal",
+    r"\bhiddenRetest\b": "use hiddenTests",
+    r"toppleCat\.adversarial": "use individual safeguard DSL blocks",
+    r"--all-hidden(?!-tests)\b": "use --all-hidden-tests",
+    r"reports/spec": "use reports/public",
+    r"\btoppleCatMigrateEscrow\b": "0.0.7 does not migrate custody",
+    r"@ToppleStageField\b": "use the single ToppleScenario API",
+    r"@ProvidedState\b|@ExpectedState\b": "keep cross-Step state in a capability Stage",
+    r"\brecorded\s*\(": "compiler-described Steps do not use runtime recording",
+    r"\bself\s*\(": "Stage Steps are ordinary void methods",
+    r"\bToppleStageSentence\b": "compiler descriptors render Step sentences",
+    r"\bToppleStage\s*<": "ToppleStage is non-generic in 0.0.7",
+    r"\b[Hh]idden[ -][Pp]ropert(?:y|ies)\b": "Property-Based Testing has no hidden variant",
+    r"\breviewer[- ]only propert(?:y|ies)\b": "Property-Based Testing has no reviewer-only variant",
+    r"\bhiddenProperty(?:Test|Mode|ies)?\b": "Property-Based Testing has one independent execution path",
+    r"隱藏性質|審閱者(?:專用|專屬)性質": "性質導向測試沒有隱藏或審閱者專用版本",
+}
 REQUIRED_GUIDES = (
     "docs/architecture.md",
     "docs/guide/getting-started.md",
     "docs/guide/authoring.md",
     "docs/guide/verification-and-evidence.md",
     "docs/guide/troubleshooting.md",
+)
+EXPECTED_DESIGN_FILES = {
+    "README.md",
+    "executable-acceptance-boundary.md",
+    "property-based-testing.md",
+    "topple-scenario-authoring.md",
+}
+EXPECTED_RELEASE_FILES = {"0.0.7.md", "0.0.7.zh-TW.md"}
+CONTEXT_TERMS = (
+    "Acceptance Condition",
+    "Acceptance Method",
+    "Scenario",
+    "Stage",
+    "Step",
+    "Typed Case Row",
+    "Hidden Tests",
+    "Mutation Testing",
+    "Property-Based Testing",
+    "Delivery Scope",
+    "Mechanical Seal",
+    "Reviewer Custody",
+    "Current-run Evidence",
 )
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
 HTML_LINK = re.compile(r"(?:href|src)=[\"']([^\"']+)[\"']", re.IGNORECASE)
@@ -50,6 +114,24 @@ def source_markdown() -> list[Path]:
 def is_public_document(path: Path) -> bool:
     relative = path.relative_to(ROOT)
     return not (len(relative.parts) > 1 and relative.parts[0] == "docs" and relative.parts[1] in PRIVATE_SECTIONS)
+
+
+def active_terminology_files() -> list[Path]:
+    text_suffixes = {".md", ".java", ".kts", ".sh", ".py", ".js", ".jsx", ".ts", ".tsx"}
+    paths: list[Path] = []
+    for relative in ACTIVE_TERMINOLOGY_PATHS:
+        candidate = ROOT / relative
+        if candidate.is_file():
+            paths.append(candidate)
+        elif candidate.is_dir():
+            paths.extend(
+                path
+                for path in candidate.rglob("*")
+                if path.is_file()
+                and path.suffix in text_suffixes
+                and not any(part in {"build", ".gradle", ".git", ".topplecat"} for part in path.relative_to(ROOT).parts)
+            )
+    return sorted(paths)
 
 
 def local_link_target(source: Path, destination: str) -> tuple[Path, str | None] | None:
@@ -105,6 +187,29 @@ def main() -> int:
     for required in REQUIRED_GUIDES:
         if not (ROOT / required).is_file():
             failures.append(f"required public guide is missing: {required}")
+    context = ROOT / "CONTEXT.md"
+    if not context.is_file():
+        failures.append("required root glossary is missing: CONTEXT.md")
+    else:
+        context_text = context.read_text(encoding="utf-8")
+        for term in CONTEXT_TERMS:
+            if term not in context_text:
+                failures.append(f"CONTEXT.md: missing canonical term {term}")
+        if "```" in context_text or "implementation plan" in context_text.lower():
+            failures.append("CONTEXT.md: must remain a glossary without code or implementation plans")
+    design_dir = ROOT / "docs/design"
+    if design_dir.is_dir():
+        design_files = {path.name for path in design_dir.iterdir() if path.is_file()}
+        if design_files != EXPECTED_DESIGN_FILES:
+            failures.append(
+                "docs/design: expected only formal records "
+                + ", ".join(sorted(EXPECTED_DESIGN_FILES))
+            )
+    release_dir = ROOT / "docs/releases"
+    if release_dir.is_dir():
+        release_files = {path.name for path in release_dir.iterdir() if path.is_file()}
+        if release_files != EXPECTED_RELEASE_FILES:
+            failures.append("docs/releases: only 0.0.7 English and Traditional-Chinese notes may remain")
 
     for document in public_documents:
         text = document.read_text(encoding="utf-8")
@@ -140,7 +245,12 @@ def main() -> int:
                 continue
             if not target.exists():
                 failures.append(f"{relative}: dead relative link {destination}")
-            elif anchor and target.is_file() and target.suffix.lower() == ".md":
+            elif (
+                anchor
+                and target.is_file()
+                and target.suffix.lower() == ".md"
+                and not (relative.parts[:2] == ("docs", "releases") and relative.name not in {"0.0.7.md", "0.0.7.zh-TW.md"})
+            ):
                 if anchor not in markdown_anchors(target):
                     failures.append(f"{relative}: dead Markdown anchor {destination}")
 
@@ -150,6 +260,26 @@ def main() -> int:
         for legacy_name in LEGACY_REPORT_NAMES:
             if legacy_name in text:
                 failures.append(f"{relative}: uses legacy report name {legacy_name}; use reports/.../index.html")
+
+    for document in active_terminology_files():
+        text = document.read_text(encoding="utf-8")
+        relative = document.relative_to(ROOT)
+        for pattern, replacement in LEGACY_TERMS.items():
+            if re.search(pattern, text):
+                failures.append(f"{relative}: uses replaced terminology matching {pattern}; {replacement}")
+
+    english_release = ROOT / "docs/releases/0.0.7.md"
+    chinese_release = ROOT / "docs/releases/0.0.7.zh-TW.md"
+    if english_release.is_file() and chinese_release.is_file():
+        release_markers = (
+            (english_release, ("ToppleScenario", "Property-Based Testing", "toppleCatSeal", "toppleCatReseal", "current-run evidence", "topplecat-acceptance")),
+            (chinese_release, ("ToppleScenario", "性質導向測試", "toppleCatSeal", "toppleCatReseal", "本次執行證據", "topplecat-acceptance")),
+        )
+        for release, markers in release_markers:
+            text = release.read_text(encoding="utf-8")
+            for marker in markers:
+                if marker not in text:
+                    failures.append(f"{release.relative_to(ROOT)}: missing synchronized 0.0.7 change {marker}")
 
     if failures:
         print("Documentation validation failed:", file=sys.stderr)

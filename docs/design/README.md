@@ -1,12 +1,11 @@
 # Product design records
 
-This directory keeps product decisions that need more detail than a standing
-agent rule but are not yet, or are no longer, fully explained by the current
-architecture.
+This directory keeps the few product decisions that need more detail than a
+standing agent rule and are not fully explained by the current architecture.
 
 For example, suppose one delivery changes checkout while the repository also
 contains older coupon and cancellation Specs. A design record can explain which
-acceptance conditions ToppleCat should execute, why hidden retests and mutation
+acceptance conditions ToppleCat should execute, why Hidden Tests and Mutation Testing
 have different scopes, what the command should look like, and how a changed
 Spec is detected. `AGENTS.md` should only tell an agent to follow that decision;
 it should not repeat the whole design.
@@ -25,15 +24,9 @@ it should not repeat the whole design.
 
 ## Status
 
-Every design record starts with one status:
-
-- **Proposed**: still being discussed; do not implement without a later decision.
-- **Accepted**: the direction is decided and may be handed to an implementation
-  agent, but it is not current product behavior yet.
-- **Implemented**: code, tests, architecture, guides, skill, and user-facing
-  documentation agree with the decision.
-- **Superseded**: a later record replaced the decision; link to the replacement.
-- **Rejected**: kept only so future contributors understand why it was not used.
+Every retained design record starts with **Implemented**. A new decision belongs
+here only when it is decision-complete; once implemented, its lasting
+conclusions belong in the formal record and current-product documentation.
 
 ## Required structure
 
@@ -49,9 +42,9 @@ Use a concrete user example before technical details, then record:
 8. **Consequences and alternatives**
 
 The record should be decision-complete before implementation is delegated.
-After implementation, update its status and synchronize the current-product
-documents in the same change. Do not rewrite an implemented record to hide an
-earlier trade-off; add a new record and mark the old one superseded.
+After implementation, synchronize the current-product documents in the same
+change. Move the lasting conclusion into the formal record; do not retain
+step-by-step delivery notes or one-time technical spikes.
 
 This structure follows three complementary practices:
 
@@ -65,5 +58,8 @@ This structure follows three complementary practices:
 
 ## Current records
 
-- [Spec-selected verification scope](spec-selected-verification-scope.md) —
-  Implemented.
+- [Executable acceptance boundary](executable-acceptance-boundary.md)
+- [Property-Based Testing safeguard](property-based-testing.md)
+- [ToppleScenario authoring](topple-scenario-authoring.md)
+
+Use the root [context glossary](../../CONTEXT.md) for shared terms.

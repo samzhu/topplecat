@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Demonstrates the Spring hidden retest workflow, then restores the checked-in sample state.
+# Demonstrates the Spring Hidden Tests workflow, then restores the checked-in sample state.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -58,13 +58,13 @@ rm -rf "$sample/build"
 cp "$sample/demo/OrderService.broken.java" "$service"
 
 "$gradle" publishToMavenLocal
-run_sample toppleCatCheck toppleCatHide
+run_sample toppleCatCheck toppleCatSeal
 
 if ! expect_topplecat_rejection \
-  "Spring hidden-retest attack" \
+  "Spring hidden-test attack" \
   "$sample/build/topplecat/evidence.json" \
   "$sample/build/topplecat/agent-feedback.json" \
-  "JUNIT" \
+  "REVIEWER_JUNIT" \
   run_sample toppleCatVerify; then
   exit 1
 fi

@@ -53,7 +53,27 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 "$gradle" clean check
 "$gradle" publishToMavenLocal
-bash "$root/scripts/verify-toppletest-stage-dsl.sh"
+published_junit_jar="$root/topplecat-junit/build/libs/topplecat-junit-0.0.7.jar"
+if [[ ! -f "$published_junit_jar" ]]; then
+  echo "Release gate failed: expected JUnit artifact was not built: $published_junit_jar" >&2
+  exit 1
+fi
+for removed_type in \
+  ToppleStageField \
+  ProvidedState \
+  ExpectedState \
+  ToppleStageSentence \
+  ToppleTest \
+  ToppleAc \
+  ToppleAcBinding \
+  ToppleAcExtension \
+  ToppleScenarioProcessor; do
+  if jar tf "$published_junit_jar" | grep -Fq "io/github/samzhu/topplecat/junit/${removed_type}.class"; then
+    echo "Release gate failed: removed public type remains in the JUnit artifact: $removed_type" >&2
+    exit 1
+  fi
+done
+bash "$root/scripts/verify-scenario-authoring.sh"
 # Samples expose the repository wrapper locally for the interactive walkthrough.
 "$junit_sample/gradlew" -Ptopplecat.useMavenLocal=true help --task toppleCatReview
 "$spring_sample/gradlew" -Ptopplecat.useMavenLocal=true help --task toppleCatReview
@@ -69,16 +89,16 @@ assert_artifact_version() {
   fi
 }
 
-run_sample "$junit_sample" "$junit_state_root" help --task toppleCatHide
-run_sample "$spring_sample" "$spring_state_root" help --task toppleCatHide
+run_sample "$junit_sample" "$junit_state_root" help --task toppleCatSeal
+run_sample "$spring_sample" "$spring_state_root" help --task toppleCatSeal
 echo "Release verification: running red-team attacks. Each attack must be rejected; expected rejections are labelled below."
 TOPPLECAT_STATE_ROOT="$junit_state_root" bash "$root/samples/junit-cart-orders/demo.sh"
 TOPPLECAT_STATE_ROOT="$spring_state_root" bash "$root/samples/spring-boot-cart-orders/demo.sh"
 TOPPLECAT_STATE_ROOT="$release_state_root/mutation-gate" bash "$root/integration-tests/mutation-gate/verify.sh"
 
-assert_artifact_version "$junit_sample/build.gradle.kts" "0.0.6"
-assert_artifact_version "$spring_sample/build.gradle.kts" "0.0.6"
-assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.0.6"
+assert_artifact_version "$junit_sample/build.gradle.kts" "0.0.7"
+assert_artifact_version "$spring_sample/build.gradle.kts" "0.0.7"
+assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.0.7"
 
 JUNIT_SAMPLE="$junit_sample" SPRING_SAMPLE="$spring_sample" python3 - <<'PY'
 import json
@@ -96,7 +116,7 @@ def verify_artifact(path):
     ci_verdict, _ = gate(data, "CONTRACT_INTEGRITY")
     if ci_verdict != "PASS":
         raise SystemExit(f"Evidence {path} did not pass CONTRACT_INTEGRITY: {ci_verdict}")
-    for required in ("JUNIT", "REVIEWER_JUNIT", "EXPECTED_CONSUMPTION"):
+    for required in ("JUNIT", "REVIEWER_JUNIT", "EXPECTED_CONSUMPTION", "PROPERTY"):
         gv = gate(data, required)
         if gv[0] != "PASS":
             raise SystemExit(f"Evidence {path} gate {required} is {gv[0]} with reason {gv[1]!r}")
@@ -134,8 +154,8 @@ for feedback in \
 done
 
 for spec in \
-  "$junit_sample/build/topplecat/reports/spec/index.html" \
-  "$spring_sample/build/topplecat/reports/spec/index.html"; do
+  "$junit_sample/build/topplecat/reports/public/index.html" \
+  "$spring_sample/build/topplecat/reports/public/index.html"; do
   if grep -Eiq 'coupon-hidden-800|\b800\b|customer-2|ReviewerBoundary|hiddenTest' "$spec"; then
     echo "Private detail leaked into $spec" >&2
     exit 1

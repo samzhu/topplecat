@@ -38,10 +38,10 @@ TMPDIR="$tmp_parent" GRADLE_CMD="$root/gradlew" "$root/scripts/verify-release.sh
 assert_empty
 
 for expected in \
-  "EXPECTED FAILURE: JUnit hidden-retest attack was rejected." \
-  "EXPECTED FAILURE: Spring hidden-retest attack was rejected." \
+  "EXPECTED FAILURE: JUnit hidden-test attack was rejected." \
+  "EXPECTED FAILURE: Spring hidden-test attack was rejected." \
   "EXPECTED FAILURE: Mutation-gate attack was rejected." \
-  "Confirmed current-run evidence and safe agent feedback: JUNIT=FAIL." \
+  "Confirmed current-run evidence and safe agent feedback: REVIEWER_JUNIT=FAIL." \
   "Confirmed current-run evidence and safe agent feedback: MUTATION=FAIL." \
   "verify-release PASS"; do
   if ! grep -Fq "$expected" "$success_log"; then

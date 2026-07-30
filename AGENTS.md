@@ -6,8 +6,9 @@ JSON and HTML are evidence.
 
 ## Start Here
 
-Read `DEVELOPMENT.md` first and use its task map to find the relevant
-implementation documents and verification commands.
+Read `DEVELOPMENT.md` and `CONTEXT.md` first. Use the task map to find the
+relevant implementation documents and verification commands, and use the
+context glossary's formal terms consistently.
 
 Before changing supported behavior, read:
 

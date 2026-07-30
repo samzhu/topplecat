@@ -1,75 +1,69 @@
 package sample.cartorders;
 
 import io.github.samzhu.topplecat.junit.As;
-import io.github.samzhu.topplecat.junit.ExpectedState;
-import io.github.samzhu.topplecat.junit.ProvidedState;
+import io.github.samzhu.topplecat.junit.ToppleAcceptanceTest;
 import io.github.samzhu.topplecat.junit.ToppleCase;
+import io.github.samzhu.topplecat.junit.ToppleScenario;
 import io.github.samzhu.topplecat.junit.ToppleStage;
-import io.github.samzhu.topplecat.junit.ToppleStageField;
-import io.github.samzhu.topplecat.junit.ToppleTest;
+import io.github.samzhu.topplecat.junit.property.Generators;
+import io.github.samzhu.topplecat.junit.property.PropertyTrials;
+import io.github.samzhu.topplecat.junit.property.ToppleProperty;
 import org.junit.jupiter.api.DisplayName;
 
 class CouponAcceptanceTest {
-    @ToppleStageField
-    CouponGiven given;
-    @ToppleStageField
-    CouponWhen when;
-    @ToppleStageField
-    CouponThen then;
+  @ToppleProperty("AC-CART-COUPON")
+  void save100HasTheApprovedFixedDiscountForAPayableCart(PropertyTrials trial) {
+    trial
+        .forAll(Generators.integers(100, 2_000))
+        .classify("shipping-boundary", subtotal -> subtotal >= 1_000)
+        .requireCoverage("shipping-boundary", 1.0)
+        .check(
+            subtotal -> {
+              Cart cart =
+                  new Cart(
+                      "property",
+                      java.util.List.of(new CartLine("property", 1, subtotal)),
+                      subtotal,
+                      "SAVE100");
+              org.junit.jupiter.api.Assertions.assertEquals(
+                  100, new OrderService().createOrder(cart).discount());
+            });
+  }
 
-    @ToppleTest("AC-CART-COUPON")
-    @DisplayName("套用 SAVE100 折抵訂單小計")
-    void appliesCoupon(ToppleCase c) {
-        given.a_cart(c.input("cart", Cart.class), c.input("cart", Cart.class).customerId(),
-                c.input("cart", Cart.class).subtotal(), "case-data coupon");
-        when.creates_an_order();
-        then.receipt_shows_discount_and_discounted_subtotal(c);
+  @ToppleAcceptanceTest("AC-CART-COUPON")
+  @DisplayName("套用 SAVE100 折抵訂單小計")
+  void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
+    scenario.given(coupon).a_payable_cart(c.input("cart", Cart.class));
+    scenario.when(coupon).checks_out();
+    scenario.then(coupon).receipt_shows_discount_and_discounted_subtotal(c);
+  }
+
+  @ToppleAcceptanceTest("AC-CART-NO-COUPON")
+  @DisplayName("未使用優惠券時維持原始小計")
+  void createsOrderWithoutCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
+    scenario.given(coupon).a_payable_cart(c.input("cart", Cart.class));
+    scenario.when(coupon).checks_out();
+    scenario.then(coupon).receipt_shows_discount_and_discounted_subtotal(c);
+  }
+
+  static class CouponStage extends ToppleStage {
+    private final OrderService orders = new OrderService();
+    private Cart cart;
+    private OrderReceipt receipt;
+
+    @As("準備可結帳的購物車")
+    void a_payable_cart(Cart cart) {
+      this.cart = cart;
     }
 
-    @ToppleTest("AC-CART-NO-COUPON")
-    @DisplayName("未使用優惠券時維持原始小計")
-    void createsOrderWithoutCoupon(ToppleCase c) {
-        given.a_cart(c.input("cart", Cart.class), c.input("cart", Cart.class).customerId(),
-                c.input("cart", Cart.class).subtotal(), "case-data coupon");
-        when.creates_an_order();
-        then.receipt_shows_discount_and_discounted_subtotal(c);
+    @As("套用優惠券並建立訂單")
+    void checks_out() {
+      receipt = orders.createOrder(cart);
     }
 
-    static final class CouponGiven extends ToppleStage<CouponGiven> {
-        @ProvidedState
-        Cart cart;
-
-        @As("準備顧客 {0} 金額為 {1} 元、優惠券 {2} 的購物車")
-        CouponGiven a_cart(Cart cart, String customerId, int subtotal, String couponLabel) {
-            recorded(customerId, subtotal, couponLabel);
-            this.cart = cart;
-            return self();
-        }
+    @As("收據顯示折扣與折扣後小計")
+    void receipt_shows_discount_and_discounted_subtotal(ToppleCase c) {
+      c.verify("receipt", receipt);
     }
-
-    static final class CouponWhen extends ToppleStage<CouponWhen> {
-        @ExpectedState(required = true)
-        Cart cart;
-        @ProvidedState
-        OrderReceipt receipt;
-
-        @As("套用優惠券並建立訂單")
-        CouponWhen creates_an_order() {
-            recorded();
-            receipt = new OrderService().createOrder(cart);
-            return self();
-        }
-    }
-
-    static final class CouponThen extends ToppleStage<CouponThen> {
-        @ExpectedState(required = true)
-        OrderReceipt receipt;
-
-        @As("收據顯示折扣與折扣後小計")
-        CouponThen receipt_shows_discount_and_discounted_subtotal(ToppleCase c) {
-            recorded();
-            c.verify("receipt", receipt);
-            return self();
-        }
-    }
+  }
 }

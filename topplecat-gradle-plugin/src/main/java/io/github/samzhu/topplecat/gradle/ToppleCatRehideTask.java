@@ -8,11 +8,11 @@ import org.gradle.api.tasks.TaskAction;
 
 /** Internal finalizer that validates and removes restored reviewer source. */
 public abstract class ToppleCatRehideTask extends DefaultTask {
-    @Internal
-    public abstract DirectoryProperty getProjectRoot();
+  @Internal
+  public abstract DirectoryProperty getProjectRoot();
 
-    @TaskAction
-    public void rehide() {
-        new EscrowService().rehide(getProjectRoot().get().getAsFile().toPath());
-    }
+  @TaskAction
+  public void rehide() {
+    new EscrowService().rehide(getProjectRoot().get().getAsFile().toPath());
+  }
 }

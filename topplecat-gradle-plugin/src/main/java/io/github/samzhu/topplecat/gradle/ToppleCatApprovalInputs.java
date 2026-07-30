@@ -6,75 +6,94 @@ import io.github.samzhu.topplecat.core.MutationProducerKind;
 import io.github.samzhu.topplecat.core.ReviewerContractApproval;
 import io.github.samzhu.topplecat.core.SelectedSpecScope;
 import io.github.samzhu.topplecat.core.VerificationPolicy;
+import java.io.IOException;
+import java.nio.file.Files;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.Property;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Internal;
-
-import java.io.IOException;
-import java.nio.file.Files;
 
 /** Shared managed-property contract for tasks that seal or compare a reviewer approval. */
 interface ToppleCatApprovalInputs {
-    @Internal
-    DirectoryProperty getApprovalBuildRoot();
+  @Internal
+  DirectoryProperty getApprovalBuildRoot();
 
-    @Internal
-    ConfigurableFileCollection getApprovalPublicSourceRoots();
+  @Internal
+  ConfigurableFileCollection getApprovalPublicSourceRoots();
 
-    @Internal
-    DirectoryProperty getApprovalPublicCaseRoot();
+  @Internal
+  ConfigurableFileCollection getApprovalCompileClasspath();
 
-    @Internal
-    RegularFileProperty getApprovalDefinitionFile();
+  @Internal
+  DirectoryProperty getApprovalPublicCaseRoot();
 
-    @Internal
-    Property<Boolean> getApprovalHiddenRetestEnabled();
+  @Internal
+  RegularFileProperty getApprovalDefinitionFile();
 
-    @Internal
-    Property<Boolean> getApprovalExpectedConsumptionEnabled();
+  @Internal
+  Property<Boolean> getApprovalHiddenTestsEnabled();
 
-    @Internal
-    Property<Boolean> getApprovalMutationEnabled();
+  @Internal
+  Property<Boolean> getApprovalExpectedConsumptionEnabled();
 
-    @Internal
-    Property<Integer> getApprovalMutationThreshold();
+  @Internal
+  Property<Boolean> getApprovalPropertyEnabled();
 
-    @Internal
-    Property<String> getApprovalMutationProducerKind();
+  @Internal
+  Property<Boolean> getApprovalMutationEnabled();
 
-    @Internal
-    Property<String> getApprovalMutationProducerTaskPath();
+  @Internal
+  Property<Integer> getApprovalMutationThreshold();
 
-    @Internal
-    ListProperty<String> getApprovalSelectedSpecPaths();
+  @Internal
+  Property<String> getApprovalMutationProducerKind();
 
-    @Internal
-    Property<Boolean> getApprovalSpecOptionProvided();
+  @Internal
+  Property<String> getApprovalMutationProducerTaskPath();
 
-    @Internal
-    ConfigurableFileCollection getApprovalFixedSpecDocs();
+  @Internal
+  ListProperty<String> getApprovalSelectedSpecPaths();
 
-    default ReviewerContractApproval currentApproval() {
-        ContractDefinition definition;
-        try {
-            definition = ContractDefinitionJson.read(Files.readString(getApprovalDefinitionFile().get().getAsFile().toPath()));
-        } catch (IOException exception) {
-            throw new IllegalStateException("Cannot read checked ToppleCat contract definition: " + exception.getMessage(), exception);
-        }
-        String taskPath = getApprovalMutationProducerTaskPath().getOrElse("");
-        VerificationPolicy policy = new VerificationPolicy(ToppleCatVersion.CURRENT,
-                getApprovalHiddenRetestEnabled().get(), getApprovalExpectedConsumptionEnabled().get(),
-                getApprovalMutationEnabled().get(), getApprovalMutationThreshold().get(),
-                MutationProducerKind.valueOf(getApprovalMutationProducerKind().get()),
-                taskPath.isBlank() ? null : taskPath);
-        SelectedSpecScope scope = SpecScopeResolver.resolve(getApprovalBuildRoot().get().getAsFile().toPath(),
-                getApprovalSelectedSpecPaths().getOrElse(java.util.List.of()), getApprovalSpecOptionProvided().getOrElse(false),
-                getApprovalFixedSpecDocs().getFiles().stream().map(file -> file.toPath()).toList()).scope();
-        return ContractApprovalFactory.create(getApprovalBuildRoot().get().getAsFile().toPath(),
-                getApprovalPublicSourceRoots().getFiles().stream().map(file -> file.toPath()).toList(),
-                getApprovalPublicCaseRoot().get().getAsFile().toPath(), definition, policy, scope);
+  @Internal
+  Property<Boolean> getApprovalSpecOptionProvided();
+
+  default ReviewerContractApproval currentApproval() {
+    ContractDefinition definition;
+    try {
+      definition =
+          ContractDefinitionJson.read(
+              Files.readString(getApprovalDefinitionFile().get().getAsFile().toPath()));
+    } catch (IOException exception) {
+      throw new IllegalStateException(
+          "Cannot read checked ToppleCat contract definition: " + exception.getMessage(),
+          exception);
     }
+    String taskPath = getApprovalMutationProducerTaskPath().getOrElse("");
+    VerificationPolicy policy =
+        new VerificationPolicy(
+            ToppleCatVersion.CURRENT,
+            getApprovalHiddenTestsEnabled().get(),
+            getApprovalExpectedConsumptionEnabled().get(),
+            getApprovalPropertyEnabled().get(),
+            getApprovalMutationEnabled().get(),
+            getApprovalMutationThreshold().get(),
+            MutationProducerKind.valueOf(getApprovalMutationProducerKind().get()),
+            taskPath.isBlank() ? null : taskPath);
+    SelectedSpecScope scope =
+        SpecScopeResolver.resolve(
+                getApprovalBuildRoot().get().getAsFile().toPath(),
+                getApprovalSelectedSpecPaths().getOrElse(java.util.List.of()),
+                getApprovalSpecOptionProvided().getOrElse(false))
+            .scope();
+    return ContractApprovalFactory.create(
+        getApprovalBuildRoot().get().getAsFile().toPath(),
+        getApprovalPublicSourceRoots().getFiles().stream().map(file -> file.toPath()).toList(),
+        getApprovalCompileClasspath().getFiles().stream().map(file -> file.toPath()).toList(),
+        getApprovalPublicCaseRoot().get().getAsFile().toPath(),
+        definition,
+        policy,
+        scope);
+  }
 }

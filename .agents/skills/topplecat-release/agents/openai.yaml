@@ -1,0 +1,4 @@
+interface:
+  display_name: "ToppleCat Release"
+  short_description: "Prepare developer-focused ToppleCat releases"
+  default_prompt: "Use $topplecat-release to organize this repository for a release; wait for my explicit authorization before release notes or a local tag."

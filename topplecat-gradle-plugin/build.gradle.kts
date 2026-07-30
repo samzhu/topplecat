@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":topplecat-report"))
     implementation("info.solidsoft.pitest:info.solidsoft.pitest.gradle.plugin:1.19.0")
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.byte.buddy)
     testImplementation(gradleTestKit())
     testRuntimeOnly(libs.junit.platform.launcher)
 }

@@ -1,4 +1,3 @@
 package sample.cartorders;
 
-public record OrderReceipt(int discount, int discountedSubtotal) {
-}
+public record OrderReceipt(int discount, int discountedSubtotal) {}

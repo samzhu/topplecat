@@ -9,16 +9,18 @@ import org.gradle.api.tasks.TaskAction;
 
 /** Restores reviewer source from validated local hidden storage. */
 public abstract class ToppleCatRestoreTask extends DefaultTask {
-    @Internal
-    public abstract DirectoryProperty getProjectRoot();
+  @Internal
+  public abstract DirectoryProperty getProjectRoot();
 
-    @OutputDirectory
-    public abstract DirectoryProperty getHiddenSourceRoot();
+  @OutputDirectory
+  public abstract DirectoryProperty getHiddenSourceRoot();
 
-    @TaskAction
-    public void restore() {
-        var manifest = new EscrowService().restore(getProjectRoot().get().getAsFile().toPath());
-        getLogger().lifecycle("ToppleCat restore complete: {} reviewer files are available to the reviewer.",
-                manifest.entries().size());
-    }
+  @TaskAction
+  public void restore() {
+    var manifest = new EscrowService().restore(getProjectRoot().get().getAsFile().toPath());
+    getLogger()
+        .lifecycle(
+            "ToppleCat restore complete: {} reviewer files are available to the reviewer.",
+            manifest.entries().size());
+  }
 }

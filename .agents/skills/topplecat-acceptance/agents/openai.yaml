@@ -1,0 +1,4 @@
+interface:
+  display_name: "ToppleCat Acceptance"
+  short_description: "Author executable ToppleCat acceptance contracts"
+  default_prompt: "Use $topplecat-acceptance to author this Java delivery as Acceptance Conditions, Typed Case Rows, and optional Property-Based Testing declarations."

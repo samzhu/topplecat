@@ -1,244 +1,54 @@
 # Troubleshooting
 
-`toppleCatCheck` is the early, static diagnostic. It does not execute tests or
-write HTML. Fix its named source data or Java binding, then rerun the same check.
+## The acceptance method breaks Scenario authoring
 
-## A canonical test breaks the Stage DSL
+`toppleCatCheck` requires a public `@ToppleAcceptanceTest("AC-...")` method
+that uses direct `scenario.given|when|then|and(stage).step(...)` calls. Declare `ToppleCase` first, one non-generic
+`ToppleScenario` second, then distinct non-final concrete `ToppleStage`
+parameters with accessible no-argument constructors. Move setup, service calls,
+assertions, local variables, helper calls, and control flow into Stage methods.
+## A row or selected Spec AC has no acceptance binding
 
-```text
-AC <ac-id> at <file>:<line>:<column> violates the @ToppleTest Stage DSL:
-<rule>. <repair>
-```
+Add one compilable public `@ToppleAcceptanceTest` with the same literal AC ID,
+or correct the `acId`/`--spec` selection. A hidden row cannot create an AC.
 
-Every canonical `@ToppleTest` must be a non-empty sequence of direct calls to
-fields declared on that test class with `@ToppleStageField`. Move local setup,
-SUT calls, helper calls, control flow, and assertions into a Stage step. A step
-must call `recorded(...)` first and end with `return self();`; put `c.verify(...)`
-in a Then step. The diagnostic names the AC and source line and tells you which
-move to make. `@ToppleAc` is not subject to this canonical-method rule.
+## Reviewer coverage is incomplete while a Property passed
 
-## A case references an unknown acceptance condition
+This is intentional. `REVIEWER_JUNIT` requires executed hidden typed rows;
+Property-Based Testing has independent input and evidence. Add a hidden row for
+each selected AC, or explicitly disable `hiddenTests` and reseal the policy if
+the team intentionally uses PBT without Hidden Tests.
 
-```text
-Case <case-id> in <source> references AC <ac-id>, but javac emitted no canonical @ToppleTest descriptor. Add a compilable @ToppleTest("<ac-id>") method or correct the case acId.
-```
+## Property evidence is incomplete
 
-Add one public literal `@ToppleTest("AC-...")` method, or correct the row's
-`acId`. A reviewer row may target an existing public AC but may not create a new
-one.
+Check that a Property has a literal existing AC, exactly one `PropertyTrials`
+parameter, one `forAll(...).check(...)`, bounded generators, and valid trial,
+discard, shrink, and coverage limits. A filter that exhausts its discard budget
+or a failed coverage requirement is `INCOMPLETE`, not a passing assertion.
 
-## There is no public case data
+## Mutation evidence is missing or fails
 
-```text
-No public ToppleCat JSON/YAML cases found under <public-case-root>
-```
+The managed PIT producer targets public acceptance classes. A missing or
+malformed producer report is `INCOMPLETE`; a usable report that does not cover
+an acceptance method is `FAIL`. Configure a custom producer with
+`mutationTesting { producerTask.set(...); reportFile.set(...) }` only when it
+still writes a full current report.
 
-Add a `.json`, `.yaml`, or `.yml` row under
-`src/test/resources/topplecat/cases/`. Public case data is required for a
-canonical parameterized acceptance condition.
+## Contract integrity failed
 
-## A case file or row is invalid
+The sealed acceptance source closure, public rows, selected scope, Gradle logic,
+semantic definition, or policy changed. Restore reviewer custody, make the
+intended change, then Check, Review, and Reseal. Do not edit sealed public
+contract inputs in the implementation handoff.
 
-An unsupported file is rejected with this exact diagnostic:
+## Custody cannot be restored
 
-```text
-Topple case source must be JSON or YAML: <path>
-```
+The 0.0.7 custody state is reviewer-local under
+`~/.topplecat/projects/<sha256-project-key>/escrow/`. The project must be opened
+at the same resolved path and with the reviewer state available. Prior-format
+custody is not migrated; create a new sealed reviewer state.
 
-Each row must contain exactly `caseId`, `acId`, `inputs`, and `expected`; move
-notes and unrelated files outside the configured case roots.
+## The public report is absent
 
-## An expected key was never verified
-
-A test can return successfully and still fail with this message:
-
-```text
-Topple case <case-id> expected.<key> was declared by <ac-id> but never verified. Call c.verify("<key>", actual).
-```
-
-Use `c.verify("<key>", actual)` for every top-level expected key. Reading with
-`c.expected(...)` does not fulfil the obligation.
-
-## A selected Spec cannot bind to the executable contract
-
-Use a repository-relative Markdown file with `--spec`; repeat the option when
-the delivery spans documents. A selected document needs at least one `AC-...`
-identifier and every selected AC needs a canonical public binding. Typical
-diagnostics are:
-
-```text
-ToppleCat --spec must name an existing Markdown file: <path>
-Selected ToppleCat Spec documents contain no AC-... identifiers. Select a Markdown Spec that anchors at least one executable acceptance condition.
-Selected ToppleCat Spec AC <AC> has no canonical @ToppleTest binding. Add @ToppleTest("<AC>") before review.
-```
-
-Correct the selected path or add the canonical Java contract and typed cases.
-Then use that identical `--spec` selection for Hide and Verify. If Verify says
-`CONTRACT_INTEGRITY=FAIL` after the selection changes, that is intentional:
-restore reviewer custody and use Check → Review → UpdateEscrow to seal the new
-scope. Use `--all-hidden` only when the reviewer deliberately wants selected
-delivery verification to run every hidden check.
-
-## An external spec is not aligned with its tests
-
-External Markdown is optional reading context, not another contract. Selected
-`--spec` scope is strict; `toppleCat.specDocs` is the older compatibility-only
-reading-context setting. There is no implicit scan: configure `specDocs`
-explicitly only when warning-only context is wanted. A missing entry or a
-non-Markdown file reports one of these errors:
-
-```text
-Configured ToppleCat specDocs entry does not exist: <path>. Create the file or directory, or remove it from toppleCat.specDocs.
-ToppleCat specDocs entry <path> is not a Markdown file. Use a .md file or a directory containing .md files.
-```
-
-When `specDocs` is configured, the check warns in either direction:
-
-```text
-ToppleCat check warning: external spec <path> mentions <AC>, but no Java binding exists. Add @ToppleTest("<AC>") or remove the stale AC id.
-ToppleCat check warning: Java binding <AC> at <path> has no AC anchor in the configured specDocs. Add <AC> to a Markdown heading or paragraph, or remove the stale binding.
-```
-
-Add the literal `AC-...` ID to a Markdown heading or paragraph, add the named
-canonical `@ToppleTest`, or remove the stale side. Leaving `specDocs` unset emits
-neither warning. Supplementary `@ToppleAc` methods and reviewer source do not
-participate in this alignment check.
-
-## A safeguard is disabled or incomplete
-
-Each evidence run records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
-`EXPECTED_CONSUMPTION`, and `MUTATION`. `DISABLED` means the reviewer chose not
-to run one safeguard; it does not block aggregate `PASS`. These are the exact
-configuration reasons for disabled adversarial safeguards:
-
-```text
-disabled by toppleCat.adversarial.enabled=false
-disabled by toppleCat.adversarial.hiddenRetest.enabled=false
-disabled by toppleCat.adversarial.mutation.enabled=false
-disabled by toppleCat.adversarial.expectedConsumption.enabled=false
-```
-
-`INCOMPLETE` is different: it means a required stage did not complete in the
-current run. For example, the reviewer retest reason is:
-
-```text
-the reviewer retest did not complete in this verification run.
-```
-
-Rerun the complete `toppleCatVerify` task; do not use an older stable report to
-fill a missing current-run gate. A `FAIL` or `INCOMPLETE` aggregate verdict
-makes `toppleCatVerify` and `toppleCatReport` fail after evidence, reports, safe
-feedback, and the run archive are complete. Read `evidence.json` for the named
-gate and safe reason. When expected consumption is disabled, the
-Verification report still records consumption and displays:
-
-```text
-Expected consumption enforcement disabled
-```
-
-## Contract integrity is FAIL or INCOMPLETE
-
-`CONTRACT_INTEGRITY` is a mandatory precondition. `FAIL` means ToppleCat
-successfully found that the public executable contract or resolved verification
-policy no longer matches the reviewer-approved epoch. `INCOMPLETE` normally
-means the escrow predates approval sealing or its approval cannot be read.
-
-Do not rerun Hide to accept the change: ordinary Hide does not replace the
-existing approval. An authorized reviewer must run Restore, inspect the intended
-change, run Check and Review, then run `toppleCatUpdateEscrow`. For a legacy v1
-escrow this sequence performs the migration to v2. Until then, JUnit, reviewer
-JUnit, expected consumption, and mutation are recorded as `INCOMPLETE`; no stale
-public Spec bundle is retained.
-
-After upgrading from ToppleCat 0.0.5, the stored contract approval is first
-validated and read as its original full-contract scope. Because the ToppleCat
-version and delivery-scope policy are sealed inputs, an authorized reviewer
-must still Restore, Check, Review, and UpdateEscrow once under 0.0.6. Use the
-same `--spec` selection for Check, Review, UpdateEscrow, and the later Verify;
-omit it consistently when the project intends to keep full-contract scope.
-
-## Reviewer state is missing after a move or clone
-
-The project key is the SHA-256 of the canonical project root. A moved or cloned
-checkout therefore does not match the original reviewer-local state and must
-not create a new approval from public files. Restore the original checkout, or
-have an authorized reviewer recover the matching
-`~/.topplecat/projects/<project-key>/escrow/` state. If the tree still contains
-legacy `.topplecat/escrow/`, run `./gradlew toppleCatMigrateEscrow` explicitly;
-the task preserves v1/v2 manifest data and removes the project-local escrow only
-after migration succeeds.
-
-## PIT is not producing mutation results
-
-With the default `pitest` producer, ToppleCat configures PIT automatically and
-derives `targetTests` from compiler descriptors for approved public canonical
-`@ToppleTest` declaring classes. This is independent of the production package
-name. If a consumer explicitly sets `targetTests`, ToppleCat preserves it; a
-usable report that excludes a canonical test is a mutation `FAIL`, not a silent
-pass. If PIT cannot produce a usable report, the gate is `INCOMPLETE`.
-
-If a custom producer task is unavailable, the mutation gate reports:
-
-```text
-ToppleCat mutation is enabled, but producer task '<producer>' was not found. ToppleCat configures PIT automatically for the default 'pitest' task; otherwise set toppleCat.adversarial.mutation.producerTask to a task that writes mutations.xml.
-```
-
-For a custom PIT output path, use the reported producer task and configure
-`toppleCat.adversarial.mutation.reportFile`. The producer must write a full
-mutation matrix whose `coveringTests` retain PIT's JUnit Unique IDs. ToppleCat
-matches each compiled canonical method signature to those IDs; class names
-alone do not identify the right method when one class contains several ACs. A
-surviving or unattributed mutant fails its acceptance condition while evidence
-and safe feedback are still produced.
-
-When a usable report contains no covering test for a canonical AC, the safe
-feedback may say:
-
-```text
-Mutation verification did not exercise the required public acceptance contract. Check PIT test targeting and public acceptance coverage.
-```
-
-The message omits reviewer test names, source paths, and raw PIT details. A
-missing, malformed, or interrupted report is `INCOMPLETE`; an older report
-cannot fill the gap.
-
-## Reviewer rows without hidden Java
-
-Hidden JSON/YAML rows do not require a placeholder Java test. `toppleCatVerificationTest`
-runs those rows through the public canonical `@ToppleTest`, and the report aggregates
-that result as `REVIEWER_JUNIT`. A failing row makes the reviewer gate `FAIL`; an
-unasserted expected key still makes expected consumption `FAIL` or `INCOMPLETE`.
-Java helper sources with no executable JUnit method do not turn a rows-only source
-set into a hidden-test requirement. If hidden Java tests also exist, `hiddenTest`
-must pass independently. If neither
-hidden rows nor hidden Java tests exist while retest is enabled, the gate stays
-`INCOMPLETE` rather than becoming an unconditional pass.
-
-## A hidden JUnit test does not appear in evidence
-
-Plain reviewer `@Test` methods are deliberately excluded from ToppleCat
-evidence. Review warns about them. Mark an independent reviewer test with a
-literal `@ToppleAc("AC-...")` (or use a canonical `@ToppleTest`) so it receives
-the `topplecat-contract` tag and can be selected with the delivery. The tagged
-test must actually enter its test body: source comments, strings, and
-`@Disabled` methods do not create reviewer coverage. Ordinary public tests
-remain under `src/test` and always run as part of the full public contract.
-
-## Delivery hygiene
-
-Reviewer state is plaintext mechanical custody at
-`~/.topplecat/projects/<sha256-project-key>/escrow/`, not encryption, sandboxing,
-or a secrecy boundary. `./gradlew clean` does not remove it. A legacy
-`.topplecat/escrow/` requires `toppleCatMigrateEscrow`; do not copy it into a
-public handoff. Git history can retain reviewer files after they leave the
-working tree, so the external workflow must exclude reviewer state, hidden
-source, build output, and any history that contained them. ToppleCat does not
-control OS access or CI identity and cannot defend against same-user malicious
-build scripts or production code.
-
-## The public report lacks reviewer detail
-
-This is expected for the Spec bundle and `agent-feedback.json`. Use
-`reports/verification/index.html` only in a reviewer-controlled environment when
-private diagnostics are needed. The pre-handoff `reports/review/index.html` is
-also reviewer-only.
+`reports/public/index.html` is published only after a Verify run whose contract
+integrity passes. Contract Review is the pre-handoff reviewer-only report.

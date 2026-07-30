@@ -1,7 +1,20 @@
 package io.github.samzhu.topplecat.gradle;
 
 import io.github.samzhu.topplecat.core.CompilerScenarioDescriptor;
+import io.github.samzhu.topplecat.core.ContractDefinition;
+import io.github.samzhu.topplecat.core.ContractDefinitionJson;
+import io.github.samzhu.topplecat.core.Hashing;
 import io.github.samzhu.topplecat.junit.ToppleJunit;
+import java.io.IOException;
+import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -18,758 +31,1153 @@ import org.gradle.api.tasks.testing.TestListener;
 import org.gradle.api.tasks.testing.TestResult;
 import org.gradle.process.CommandLineArgumentProvider;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-/**
- * Gradle entry point for the rebuilt ToppleCat verification workflow.
- */
+/** Gradle entry point for the rebuilt ToppleCat verification workflow. */
 public final class ToppleCatPlugin implements Plugin<Project> {
-    private static final String PITEST_PLUGIN_ID = "info.solidsoft.pitest";
-    private static final Pattern JAVA_PACKAGE = Pattern.compile("(?m)^\\s*package\\s+([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)*)\\s*;");
+  private static final String PITEST_PLUGIN_ID = "info.solidsoft.pitest";
+  private static final Pattern JAVA_PACKAGE =
+      Pattern.compile("(?m)^\\s*package\\s+([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)*)\\s*;");
+
+  @Override
+  public void apply(Project project) {
+    ToppleCatExtension extension =
+        project.getExtensions().create("toppleCat", ToppleCatExtension.class);
+    extension
+        .getPublicCaseRoot()
+        .convention(
+            project.getLayout().getProjectDirectory().dir("src/test/resources/topplecat/cases"));
+    extension
+        .getHiddenSourceRoot()
+        .convention(project.getLayout().getProjectDirectory().dir("src/hiddenTest"));
+    extension.getHiddenTests().getEnabled().convention(true);
+    extension.getMutationTesting().getEnabled().convention(true);
+    extension.getMutationTesting().getThreshold().convention(100);
+    extension.getMutationTesting().getProducerTask().convention("pitest");
+    extension
+        .getMutationTesting()
+        .getReportFile()
+        .convention(project.getLayout().getBuildDirectory().file("reports/pitest/mutations.xml"));
+    extension.getExpectedConsumption().getEnabled().convention(true);
+    extension.getPropertyBasedTesting().getEnabled().convention(true);
+    extension.getCommandLineSpecPaths().convention(List.of());
+    extension.getCommandLineSpecProvided().convention(false);
+    extension.getAllHiddenRequested().convention(false);
+    project
+        .getPluginManager()
+        .withPlugin("java", ignored -> configureJavaProject(project, extension));
+  }
+
+  private static void configureJavaProject(Project project, ToppleCatExtension extension) {
+    Directory runDirectory =
+        project.getLayout().getBuildDirectory().dir("topplecat/runs/current").get();
+    Path contractIntegrityResult =
+        runDirectory.file("contract-integrity.json").getAsFile().toPath();
+    SourceSetContainer sourceSets =
+        project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets();
+    SourceSet main = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
+    SourceSet test = sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME);
+    SourceSet hidden = sourceSets.maybeCreate("hiddenTest");
+    hidden.setCompileClasspath(
+        hidden
+            .getCompileClasspath()
+            .plus(main.getOutput())
+            .plus(test.getOutput())
+            .plus(test.getCompileClasspath()));
+    hidden.setRuntimeClasspath(
+        hidden
+            .getRuntimeClasspath()
+            .plus(hidden.getOutput())
+            .plus(main.getOutput())
+            .plus(test.getRuntimeClasspath()));
+
+    project
+        .getTasks()
+        .withType(Test.class)
+        .configureEach(
+            task -> {
+              if (task.getName().equals("test")) {
+                task.systemProperty(
+                    ToppleJunit.PUBLIC_CASE_SOURCES_PROPERTY,
+                    extension.getPublicCaseRoot().get().getAsFile().getAbsolutePath());
+                task.systemProperty(ToppleJunit.CASE_EXECUTION_SCOPE_PROPERTY, "PUBLIC_ONLY");
+                task.systemProperty(ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY, "true");
+                task.useJUnitPlatform(options -> options.excludeTags(ToppleJunit.PROPERTY_TAG));
+              }
+            });
+
+    project
+        .getTasks()
+        .register(
+            "toppleCatInit",
+            ToppleCatInitTask.class,
+            task -> {
+              task.setGroup("verification");
+              task.setDescription(
+                  "Creates a minimal ToppleCat authoring skeleton without overwriting files.");
+              task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+            });
+    TaskProvider<ToppleCatPrepareRunTask> prepareRun =
+        project
+            .getTasks()
+            .register(
+                "toppleCatPrepareRun",
+                ToppleCatPrepareRunTask.class,
+                task -> {
+                  task.setDescription(
+                      "Prepares the internal workspace for one ToppleCat verification run.");
+                  task.getRunDirectory().set(runDirectory);
+                });
+    TaskProvider<ToppleCatCompileContractsTask> compileContracts =
+        project
+            .getTasks()
+            .register(
+                "toppleCatCompileContracts",
+                ToppleCatCompileContractsTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Uses javac symbols to validate @ToppleAcceptanceTest scenarios and emit"
+                          + " descriptors.");
+                  task.getSourceFiles().from(test.getAllJava());
+                  task.getCompileClasspath().from(test.getCompileClasspath());
+                  task.getDescriptorClassesDirectory()
+                      .set(project.getLayout().getBuildDirectory().dir("topplecat/compiler"));
+                  task.dependsOn(test.getCompileJavaTaskName());
+                });
+    project
+        .getTasks()
+        .named("test", Test.class)
+        .configure(
+            task -> {
+              // New-style Scenario resolution consumes only compiler-owned descriptors. Make the
+              // descriptor directory available to ordinary developer tests without creating a
+              // formal definition, evidence run, or custody dependency.
+              task.dependsOn(compileContracts);
+              task.setClasspath(
+                  task.getClasspath()
+                      .plus(
+                          project.files(
+                              compileContracts.flatMap(
+                                  ToppleCatCompileContractsTask::getDescriptorClassesDirectory))));
+            });
+    TaskProvider<ToppleCatCompileContractsTask> validateReviewerSource =
+        project
+            .getTasks()
+            .register(
+                "toppleCatValidateReviewerSource",
+                ToppleCatCompileContractsTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Validates that reviewer-only source supplies typed rows, not Property"
+                          + " declarations.");
+                  task.getSourceFiles().from(hidden.getAllJava());
+                  task.getCompileClasspath().from(hidden.getCompileClasspath());
+                  task.getDescriptorClassesDirectory()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .dir("topplecat/forbidden-hidden-properties"));
+                  task.dependsOn(test.getCompileJavaTaskName());
+                });
+    TaskProvider<ToppleCatCheckTask> check =
+        project
+            .getTasks()
+            .register(
+                "toppleCatCheck",
+                ToppleCatCheckTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Validates ToppleCat Java bindings and public/reviewer case data without"
+                          + " execution.");
+                  task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                  task.getPublicCaseRoot().set(extension.getPublicCaseRoot());
+                  task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
+                  task.getCaseSources()
+                      .from(extension.getPublicCaseRoot(), extension.getHiddenSourceRoot());
+                  task.getDescriptorClassDirectories()
+                      .from(
+                          compileContracts.flatMap(
+                              ToppleCatCompileContractsTask::getDescriptorClassesDirectory));
+                  task.getForbiddenHiddenPropertyDescriptorClassDirectories()
+                      .from(
+                          validateReviewerSource.flatMap(
+                              ToppleCatCompileContractsTask::getDescriptorClassesDirectory));
+                  configureScopeTask(task, extension);
+                  task.getReviewRoot()
+                      .set(project.getLayout().getBuildDirectory().dir("topplecat/reports/review"));
+                  task.getDefinitionFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/contract-definition.json"));
+                  task.getSelectedSpecScopeFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/selected-spec-scope.json"));
+                  task.getOutputs().upToDateWhen(ignored -> false);
+                  task.getOutputs()
+                      .doNotCacheIf(
+                          "ToppleCat contract inputs include reviewer custody state.",
+                          ignored -> true);
+                });
+    check.configure(task -> task.dependsOn(compileContracts, validateReviewerSource));
+    TaskProvider<ToppleCatReviewTask> review =
+        project
+            .getTasks()
+            .register(
+                "toppleCatReview",
+                ToppleCatReviewTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Writes a reviewer-only static contract review without executing tests.");
+                  task.dependsOn(check);
+                  task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                  task.getPublicTestSourceRoot()
+                      .set(project.getLayout().getProjectDirectory().dir("src/test/java"));
+                  task.getReviewRoot()
+                      .set(project.getLayout().getBuildDirectory().dir("topplecat/reports/review"));
+                  task.getDefinitionFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/contract-definition.json"));
+                  configureScopeTask(task, extension);
+                });
+    TaskProvider<ToppleCatSealTask> hide =
+        project
+            .getTasks()
+            .register(
+                "toppleCatSeal",
+                ToppleCatSealTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Moves the complete reviewer-only src/hiddenTest source set into local hidden"
+                          + " storage.");
+                  task.dependsOn(review);
+                  task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                  task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
+                  configureScopeTask(task, extension);
+                  configureApprovalInputs(task, project, test, extension);
+                });
+    Provider<ToppleCatCustodyBuildService> custodyService =
+        project
+            .getGradle()
+            .getSharedServices()
+            .registerIfAbsent(
+                "toppleCatCustody-" + project.getPath().replace(':', '_'),
+                ToppleCatCustodyBuildService.class,
+                spec ->
+                    spec.getParameters()
+                        .getProjectRoot()
+                        .set(project.getLayout().getProjectDirectory()));
+    TaskProvider<ToppleCatAcquireCustodyTask> acquireCustody =
+        project
+            .getTasks()
+            .register(
+                "toppleCatAcquireCustody",
+                ToppleCatAcquireCustodyTask.class,
+                task -> {
+                  task.getCustodyService().set(custodyService);
+                  task.usesService(custodyService);
+                });
+    hide.configure(
+        task -> {
+          task.mustRunAfter(acquireCustody);
+          task.usesService(custodyService);
+        });
+    TaskProvider<ToppleCatRestoreTask> restore =
+        project
+            .getTasks()
+            .register(
+                "toppleCatRestore",
+                ToppleCatRestoreTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Restores the complete reviewer-only source set from validated local hidden"
+                          + " storage.");
+                  task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                  task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
+                });
+    restore.configure(
+        task -> {
+          task.mustRunAfter(acquireCustody, hide);
+          task.usesService(custodyService);
+          task.getOutputs().upToDateWhen(ignored -> false);
+          task.getOutputs()
+              .doNotCacheIf("Reviewer source restore is custody-state dependent.", ignored -> true);
+        });
+    TaskProvider<ToppleCatResealTask> updateEscrow =
+        project
+            .getTasks()
+            .register(
+                "toppleCatReseal",
+                ToppleCatResealTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Validates, reviews, and explicitly updates reviewer-only local escrow"
+                          + " custody.");
+                  task.dependsOn(review);
+                  task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                  task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
+                  configureScopeTask(task, extension);
+                  configureApprovalInputs(task, project, test, extension);
+                });
+    updateEscrow.configure(
+        task -> {
+          task.mustRunAfter(acquireCustody, restore);
+          task.usesService(custodyService);
+        });
+    TaskProvider<ToppleCatReviewerDefinitionTask> reviewerDefinition =
+        project
+            .getTasks()
+            .register(
+                "toppleCatReviewerDefinition",
+                ToppleCatReviewerDefinitionTask.class,
+                task -> {
+                  task.setDescription(
+                      "Builds the run-scoped reviewer definition from restored source before"
+                          + " verification.");
+                  task.getPublicCaseRoot().set(extension.getPublicCaseRoot());
+                  task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
+                  task.getDescriptorClassDirectories()
+                      .from(
+                          compileContracts.flatMap(
+                              ToppleCatCompileContractsTask::getDescriptorClassesDirectory));
+                  task.getReviewerDefinitionFile()
+                      .set(runDirectory.file("reviewer-definition.json"));
+                  task.dependsOn(prepareRun, restore, check);
+                  task.mustRunAfter(acquireCustody, hide);
+                  task.usesService(custodyService);
+                });
+    TaskProvider<ToppleCatRehideTask> rehide =
+        project
+            .getTasks()
+            .register(
+                "toppleCatRehide",
+                ToppleCatRehideTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                });
+    TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity =
+        project
+            .getTasks()
+            .register(
+                "toppleCatContractIntegrity",
+                ToppleCatContractIntegrityTask.class,
+                task -> {
+                  task.setDescription(
+                      "Freshly compares the current public contract with the active reviewer"
+                          + " approval.");
+                  task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                  task.getResultFile().set(runDirectory.file("contract-integrity.json"));
+                  configureApprovalInputs(task, project, test, extension);
+                  task.dependsOn(prepareRun, hide);
+                  task.getOutputs().upToDateWhen(ignored -> false);
+                  task.getOutputs()
+                      .doNotCacheIf(
+                          "ToppleCat contract-integrity evidence is run-scoped.", ignored -> true);
+                });
+    contractIntegrity.configure(
+        task -> {
+          task.mustRunAfter(acquireCustody, hide);
+          task.usesService(custodyService);
+        });
+
+    TaskProvider<Test> verificationTest =
+        project
+            .getTasks()
+            .register(
+                "toppleCatVerificationTest",
+                Test.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Runs only public @ToppleAcceptanceTest rows for formal verification.");
+                  task.dependsOn(prepareRun, check, test.getClassesTaskName());
+                  task.setTestClassesDirs(test.getOutput().getClassesDirs());
+                  task.setClasspath(test.getRuntimeClasspath());
+                  task.useJUnitPlatform();
+                  configureCaseProperties(task, extension, "PUBLIC_ONLY", true);
+                  configureVerificationArtifacts(
+                      task, runDirectory, VerificationRunArtifacts.JUNIT);
+                  configureNarrativeEvents(task, runDirectory, true);
+                  requireFreshVerificationExecution(task);
+                  task.systemProperty(
+                      ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
+                      project
+                          .getLayout()
+                          .getBuildDirectory()
+                          .file("topplecat/contract-definition.json")
+                          .get()
+                          .getAsFile()
+                          .getAbsolutePath());
+                });
+    verificationTest.configure(
+        task -> {
+          task.dependsOn(contractIntegrity);
+          task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
+          task.mustRunAfter(acquireCustody);
+          task.usesService(custodyService);
+          configureSelectedAcceptanceScope(task, extension, project, false);
+          task.useJUnitPlatform(options -> options.excludeTags(ToppleJunit.PROPERTY_TAG));
+        });
+    reviewerDefinition.configure(
+        task -> {
+          task.dependsOn(contractIntegrity);
+          task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
+        });
+    TaskProvider<Test> hiddenTest =
+        project
+            .getTasks()
+            .register(
+                "toppleCatHiddenTest",
+                Test.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Reuses public @ToppleAcceptanceTest methods with restored hidden typed rows"
+                          + " only.");
+                  task.dependsOn(prepareRun, restore, check, test.getClassesTaskName());
+                  task.setTestClassesDirs(test.getOutput().getClassesDirs());
+                  task.setClasspath(test.getRuntimeClasspath());
+                  task.useJUnitPlatform(options -> options.includeTags(ToppleJunit.CONTRACT_TAG));
+                  configureCaseProperties(task, extension, "HIDDEN_ONLY", true);
+                  configureVerificationArtifacts(
+                      task, runDirectory, VerificationRunArtifacts.REVIEWER_JUNIT);
+                  configureNarrativeEvents(task, runDirectory, false);
+                  requireFreshVerificationExecution(task);
+                  task.systemProperty(
+                      ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
+                      project
+                          .getLayout()
+                          .getBuildDirectory()
+                          .file("topplecat/contract-definition.json")
+                          .get()
+                          .getAsFile()
+                          .getAbsolutePath());
+                  task.getFailOnNoDiscoveredTests().set(false);
+                  task.usesService(custodyService);
+                  configureSelectedAcceptanceScope(task, extension, project, true);
+                  task.useJUnitPlatform(options -> options.excludeTags(ToppleJunit.PROPERTY_TAG));
+                });
+    TaskProvider<Test> propertyTest =
+        project
+            .getTasks()
+            .register(
+                "toppleCatPropertyTest",
+                Test.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Runs all public ToppleCat Property declarations in an isolated current-run"
+                          + " task.");
+                  task.dependsOn(prepareRun, check, test.getClassesTaskName());
+                  task.setTestClassesDirs(test.getOutput().getClassesDirs());
+                  task.setClasspath(test.getRuntimeClasspath());
+                  task.useJUnitPlatform(options -> options.includeTags(ToppleJunit.PROPERTY_TAG));
+                  configureVerificationArtifacts(
+                      task, runDirectory, VerificationRunArtifacts.PROPERTY_PUBLIC);
+                  configurePropertyEvents(
+                      task,
+                      runDirectory,
+                      project
+                          .getLayout()
+                          .getBuildDirectory()
+                          .file("topplecat/contract-definition.json")
+                          .get()
+                          .getAsFile()
+                          .toPath());
+                  requireFreshVerificationExecution(task);
+                  task.getFailOnNoDiscoveredTests().set(false);
+                  task.systemProperty(
+                      ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
+                      project
+                          .getLayout()
+                          .getBuildDirectory()
+                          .file("topplecat/contract-definition.json")
+                          .get()
+                          .getAsFile()
+                          .getAbsolutePath());
+                });
+    propertyTest.configure(
+        task -> {
+          task.dependsOn(contractIntegrity);
+          task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
+          task.mustRunAfter(acquireCustody, verificationTest);
+          task.usesService(custodyService);
+          configureSelectedAcceptanceScope(task, extension, project, false);
+        });
+    TaskProvider<ToppleCatMutationGateTask> mutationGate =
+        project
+            .getTasks()
+            .register(
+                "toppleCatMutationGate",
+                ToppleCatMutationGateTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Evaluates public executable contract mutation strength for each"
+                          + " @ToppleAcceptanceTest acceptance condition.");
+                  task.getPublicTestSourceRoot()
+                      .set(project.getLayout().getProjectDirectory().dir("src/test/java"));
+                  task.getDefinitionFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/contract-definition.json"));
+                  task.getPitReportFile().set(extension.getMutationTesting().getReportFile());
+                  task.getResultsFile().set(runDirectory.file("mutation-results.json"));
+                  task.getRunDirectory().set(runDirectory);
+                  task.getThreshold().set(extension.getMutationTesting().getThreshold());
+                  task.getProducerTaskName().set(extension.getMutationTesting().getProducerTask());
+                  task.getProducerAvailable().convention(false);
+                  task.dependsOn(prepareRun, contractIntegrity);
+                  task.mustRunAfter(verificationTest, hiddenTest);
+                  task.usesService(custodyService);
+                });
+    mutationGate.configure(
+        task ->
+            task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult)));
+    TaskProvider<ToppleCatReportTask> report =
+        project
+            .getTasks()
+            .register(
+                "toppleCatReport",
+                ToppleCatReportTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Writes safe Spec and reviewer-only Verification reports plus evidence.");
+                  task.getProjectRoot().set(project.getLayout().getProjectDirectory());
+                  task.getPublicCaseRoot().set(extension.getPublicCaseRoot());
+                  task.getDefinitionFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/contract-definition.json"));
+                  task.getSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
+                  task.getSpecOptionProvided().set(extension.getCommandLineSpecProvided());
+                  task.getAllHidden().set(extension.getAllHiddenRequested());
+                  task.getRunDirectory().set(runDirectory);
+                  task.getContractIntegrityResultFile()
+                      .set(
+                          contractIntegrity.flatMap(ToppleCatContractIntegrityTask::getResultFile));
+                  task.getMutationResultsFile()
+                      .set(mutationGate.flatMap(ToppleCatMutationGateTask::getResultsFile));
+                  task.getMutationIncompleteReason().convention("");
+                  task.getPropertyEnabled().convention(true);
+                  task.getPropertyDisabledReason().convention("");
+                  task.getReviewerDefinitionRequired().convention(false);
+                  task.mustRunAfter(verificationTest, hiddenTest, propertyTest, mutationGate);
+                  task.dependsOn(acquireCustody, contractIntegrity);
+                  task.usesService(custodyService);
+                });
+    verificationTest.configure(task -> task.finalizedBy(report));
+    hiddenTest.configure(task -> task.finalizedBy(report));
+    propertyTest.configure(task -> task.finalizedBy(report));
+    mutationGate.configure(task -> task.finalizedBy(report));
+    hiddenTest.configure(task -> task.mustRunAfter(verificationTest));
+    rehide.configure(
+        task -> {
+          task.mustRunAfter(acquireCustody, report);
+          task.usesService(custodyService);
+        });
+
+    TaskProvider<ToppleCatVerifyTask> verify =
+        project
+            .getTasks()
+            .register(
+                "toppleCatVerify",
+                ToppleCatVerifyTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Runs the configured independent verification gates, then re-hides reviewer"
+                          + " source.");
+                  configureScopeTask(task, extension);
+                  task.dependsOn(acquireCustody, contractIntegrity, verificationTest);
+                  task.finalizedBy(report);
+                });
+    project.afterEvaluate(
+        ignored ->
+            configureVerificationGates(
+                project,
+                extension,
+                restore,
+                reviewerDefinition,
+                verificationTest,
+                hiddenTest,
+                propertyTest,
+                mutationGate,
+                report,
+                rehide,
+                verify,
+                hide,
+                updateEscrow,
+                contractIntegrity,
+                contractIntegrityResult,
+                compileContracts));
+  }
+
+  private static void configureCaseProperties(
+      Test task,
+      ToppleCatExtension extension,
+      String executionScope,
+      boolean expectedConsumptionEnforced) {
+    task.systemProperty(
+        ToppleJunit.PUBLIC_CASE_SOURCES_PROPERTY,
+        extension.getPublicCaseRoot().get().getAsFile().getAbsolutePath());
+    task.systemProperty(
+        ToppleJunit.HIDDEN_CASE_SOURCES_PROPERTY,
+        extension
+            .getHiddenSourceRoot()
+            .get()
+            .getAsFile()
+            .toPath()
+            .resolve("resources/topplecat/cases")
+            .toString());
+    task.systemProperty(ToppleJunit.CASE_EXECUTION_SCOPE_PROPERTY, executionScope);
+    task.systemProperty(
+        ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY,
+        Boolean.toString(expectedConsumptionEnforced));
+  }
+
+  private static void configureSelectedAcceptanceScope(
+      Test task, ToppleCatExtension extension, Project project, boolean allowAllHiddenTests) {
+    Path scope =
+        project
+            .getLayout()
+            .getBuildDirectory()
+            .getAsFile()
+            .get()
+            .toPath()
+            .resolve("topplecat/selected-spec-scope.json")
+            .toAbsolutePath();
+    task.doFirst(
+        ignored -> {
+          boolean noSpecSelection = !extension.getCommandLineSpecProvided().getOrElse(false);
+          boolean allSelected =
+              noSpecSelection
+                  || (allowAllHiddenTests && extension.getAllHiddenRequested().getOrElse(false));
+          task.systemProperty(
+              ToppleJunit.SELECTED_SCOPE_FILE_PROPERTY, allSelected ? "" : scope.toString());
+          task.systemProperty(
+              ToppleJunit.FILTER_ACCEPTANCE_TESTS_PROPERTY, Boolean.toString(!allSelected));
+        });
+  }
+
+  private static void configureVerificationArtifacts(
+      Test task, Directory runDirectory, String gate) {
+    task.getReports().getJunitXml().getOutputLocation().set(runDirectory.dir("junit/" + gate));
+    task.addTestListener(
+        new TestListener() {
+          @Override
+          public void beforeSuite(TestDescriptor suite) {}
+
+          @Override
+          public void afterSuite(TestDescriptor suite, TestResult result) {
+            if (suite.getParent() == null) {
+              VerificationRunArtifacts.markCompleted(runDirectory.getAsFile().toPath(), gate);
+            }
+          }
+
+          @Override
+          public void beforeTest(TestDescriptor testDescriptor) {}
+
+          @Override
+          public void afterTest(TestDescriptor testDescriptor, TestResult result) {}
+        });
+  }
+
+  private static void requireFreshVerificationExecution(Test task) {
+    task.getOutputs().upToDateWhen(ignored -> false);
+    task.getOutputs()
+        .doNotCacheIf("ToppleCat verification evidence is run-scoped.", ignored -> true);
+  }
+
+  private static void configureNarrativeEvents(
+      Test task, Directory runDirectory, boolean clearBeforeTask) {
+    Path narrative = runDirectory.file("narrative-executions.jsonl").getAsFile().toPath();
+    Path consumption =
+        runDirectory.file("expected-consumption-executions.jsonl").getAsFile().toPath();
+    task.systemProperty(
+        ToppleJunit.NARRATIVE_EVENTS_FILE_PROPERTY, narrative.toAbsolutePath().toString());
+    task.systemProperty(
+        ToppleJunit.EXPECTED_CONSUMPTION_EVENTS_FILE_PROPERTY,
+        consumption.toAbsolutePath().toString());
+    task.systemProperty(
+        ToppleJunit.ATTACHMENTS_DIRECTORY_PROPERTY,
+        runDirectory.dir("attachments").getAsFile().toPath().toAbsolutePath().toString());
+    if (clearBeforeTask) {
+      task.doFirst(
+          ignored -> {
+            try {
+              Files.deleteIfExists(narrative);
+              Files.deleteIfExists(consumption);
+            } catch (IOException exception) {
+              throw new GradleException(
+                  "Cannot clear ToppleCat verification sidecars in " + runDirectory, exception);
+            }
+          });
+    }
+  }
+
+  private static void configurePropertyEvents(Test task, Directory runDirectory, Path definition) {
+    Path events = runDirectory.file("public-property-events.jsonl").getAsFile().toPath();
+    task.systemProperty(
+        ToppleJunit.PROPERTY_EVENTS_FILE_PROPERTY, events.toAbsolutePath().toString());
+    task.systemProperty(ToppleJunit.HIDDEN_CASE_SOURCES_PROPERTY, "");
+    task.systemProperty(ToppleJunit.CASE_EXECUTION_SCOPE_PROPERTY, "PUBLIC_ONLY");
+    // Verification must always make fresh managed evidence, regardless of a developer's diagnostic
+    // replay JVM flag.
+    task.systemProperty("topplecat.property.replay", "");
+    task.doFirst(
+        ignored -> {
+          try {
+            Files.deleteIfExists(events);
+            task.systemProperty(
+                "topplecat.property.runId",
+                Files.readString(runDirectory.file("run-id").getAsFile().toPath()).trim());
+            ContractDefinition checked = ContractDefinitionJson.read(Files.readString(definition));
+            task.systemProperty(
+                "topplecat.property.executionContext",
+                Hashing.sha256(Files.readAllBytes(definition)));
+            for (var contract : checked.acceptanceConditions()) {
+              for (var property : contract.properties()) {
+                task.systemProperty(
+                    "topplecat.property.sourceDigest." + property.methodIdentity(),
+                    property.sourceDigest());
+              }
+            }
+          } catch (IOException exception) {
+            throw new GradleException(
+                "Cannot prepare ToppleCat Property event evidence in " + runDirectory, exception);
+          }
+        });
+  }
+
+  private static void configureVerificationGates(
+      Project project,
+      ToppleCatExtension extension,
+      TaskProvider<ToppleCatRestoreTask> restore,
+      TaskProvider<ToppleCatReviewerDefinitionTask> reviewerDefinition,
+      TaskProvider<Test> verificationTest,
+      TaskProvider<Test> hiddenTest,
+      TaskProvider<Test> propertyTest,
+      TaskProvider<ToppleCatMutationGateTask> mutationGate,
+      TaskProvider<ToppleCatReportTask> report,
+      TaskProvider<ToppleCatRehideTask> rehide,
+      TaskProvider<ToppleCatVerifyTask> verify,
+      TaskProvider<ToppleCatSealTask> hide,
+      TaskProvider<ToppleCatResealTask> updateEscrow,
+      TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity,
+      Path contractIntegrityResult,
+      TaskProvider<ToppleCatCompileContractsTask> compileContracts) {
+    VerificationConfiguration configuration = VerificationConfiguration.resolve(extension);
+    configureApprovalPolicy(
+        project, extension, configuration, hide, updateEscrow, contractIntegrity);
+    project
+        .getTasks()
+        .withType(Test.class)
+        .configureEach(
+            task -> {
+              if (task.getName().equals("test")) {
+                task.systemProperty(
+                    ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY,
+                    Boolean.toString(configuration.expectedConsumptionEnabled()));
+              }
+            });
+    verificationTest.configure(
+        task -> {
+          configureCaseProperties(
+              task, extension, "PUBLIC_ONLY", configuration.expectedConsumptionEnabled());
+        });
+    hiddenTest.configure(
+        task -> {
+          task.dependsOn(contractIntegrity);
+          task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
+          task.systemProperty(
+              ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY,
+              Boolean.toString(configuration.expectedConsumptionEnabled()));
+          if (configuration.hiddenTestsEnabled()) {
+            task.dependsOn(reviewerDefinition);
+            task.systemProperty(
+                ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
+                reviewerDefinition
+                    .get()
+                    .getReviewerDefinitionFile()
+                    .get()
+                    .getAsFile()
+                    .getAbsolutePath());
+          }
+        });
+    propertyTest.configure(
+        task -> {
+          task.setEnabled(configuration.propertyBasedTestingEnabled());
+        });
+    report.configure(
+        task -> {
+          task.getHiddenTestsEnabled().set(configuration.hiddenTestsEnabled());
+          task.getHiddenTestsDisabledReason().set(configuration.hiddenTestsDisabledReason());
+          task.getMutationEnabled().set(configuration.mutationEnabled());
+          task.getMutationDisabledReason().set(configuration.mutationDisabledReason());
+          task.getExpectedConsumptionEnabled().set(configuration.expectedConsumptionEnabled());
+          task.getExpectedConsumptionDisabledReason()
+              .set(configuration.expectedConsumptionDisabledReason());
+          task.getPropertyEnabled().set(configuration.propertyBasedTestingEnabled());
+          task.getPropertyDisabledReason().set(configuration.propertyDisabledReason());
+          boolean reviewerDefinitionRequired = configuration.hiddenTestsEnabled();
+          task.getReviewerDefinitionRequired().set(reviewerDefinitionRequired);
+          if (reviewerDefinitionRequired) {
+            task.getReviewerDefinitionFile()
+                .set(
+                    reviewerDefinition.flatMap(
+                        ToppleCatReviewerDefinitionTask::getReviewerDefinitionFile));
+            task.mustRunAfter(reviewerDefinition);
+          }
+        });
+    if (configuration.hiddenTestsEnabled()) {
+      verify.configure(task -> task.dependsOn(hiddenTest));
+    }
+    if (configuration.propertyBasedTestingEnabled()) {
+      verify.configure(
+          task -> {
+            task.dependsOn(propertyTest);
+          });
+    }
+    report.configure(task -> task.finalizedBy(rehide));
+    configureMutationGate(
+        project,
+        extension,
+        configuration,
+        mutationGate,
+        report,
+        verify,
+        contractIntegrityResult,
+        compileContracts);
+  }
+
+  private static void configureApprovalInputs(
+      ToppleCatApprovalInputs task, Project project, SourceSet test, ToppleCatExtension extension) {
+    task.getApprovalBuildRoot().set(project.getRootProject().getLayout().getProjectDirectory());
+    task.getApprovalPublicSourceRoots().from(test.getAllSource().getSourceDirectories());
+    task.getApprovalCompileClasspath().from(test.getCompileClasspath());
+    task.getApprovalPublicCaseRoot().set(extension.getPublicCaseRoot());
+    task.getApprovalDefinitionFile()
+        .set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
+    task.getApprovalHiddenTestsEnabled().convention(true);
+    task.getApprovalExpectedConsumptionEnabled().convention(true);
+    task.getApprovalPropertyEnabled().convention(true);
+    task.getApprovalMutationEnabled().convention(true);
+    task.getApprovalMutationThreshold().convention(100);
+    task.getApprovalMutationProducerKind().convention("DEFAULT");
+    task.getApprovalMutationProducerTaskPath().convention("");
+    task.getApprovalSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
+    task.getApprovalSpecOptionProvided().set(extension.getCommandLineSpecProvided());
+  }
+
+  private static void configureScopeTask(ToppleCatScopedTask task, ToppleCatExtension extension) {
+    task.getSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
+    task.getSpecOptionProvided().set(extension.getCommandLineSpecProvided());
+  }
+
+  private static void configureApprovalPolicy(
+      Project project,
+      ToppleCatExtension extension,
+      VerificationConfiguration configuration,
+      TaskProvider<ToppleCatSealTask> hide,
+      TaskProvider<ToppleCatResealTask> updateEscrow,
+      TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity) {
+    String producerName = extension.getMutationTesting().getProducerTask().get().trim();
+    boolean defaultProducer = producerName.equals("pitest");
+    Task producer = project.getTasks().findByName(producerName);
+    String producerPath =
+        defaultProducer
+            ? ""
+            : producer == null ? resolvedTaskPath(project, producerName) : producer.getPath();
+    for (TaskProvider<? extends ToppleCatApprovalInputs> provider :
+        List.of(hide, updateEscrow, contractIntegrity)) {
+      provider.configure(
+          task -> {
+            task.getApprovalHiddenTestsEnabled().set(configuration.hiddenTestsEnabled());
+            task.getApprovalExpectedConsumptionEnabled()
+                .set(configuration.expectedConsumptionEnabled());
+            task.getApprovalPropertyEnabled().set(configuration.propertyBasedTestingEnabled());
+            task.getApprovalMutationEnabled().set(configuration.mutationEnabled());
+            task.getApprovalMutationThreshold().set(extension.getMutationTesting().getThreshold());
+            task.getApprovalMutationProducerKind().set(defaultProducer ? "DEFAULT" : "CUSTOM");
+            task.getApprovalMutationProducerTaskPath().set(producerPath);
+          });
+    }
+  }
+
+  private static String resolvedTaskPath(Project project, String taskName) {
+    if (taskName.startsWith(":")) {
+      return taskName;
+    }
+    return project.getPath().equals(":") ? ":" + taskName : project.getPath() + ":" + taskName;
+  }
+
+  private static void configureMutationGate(
+      Project project,
+      ToppleCatExtension extension,
+      VerificationConfiguration configuration,
+      TaskProvider<ToppleCatMutationGateTask> mutationGate,
+      TaskProvider<ToppleCatReportTask> report,
+      TaskProvider<ToppleCatVerifyTask> verify,
+      Path contractIntegrityResult,
+      TaskProvider<ToppleCatCompileContractsTask> compileContracts) {
+    if (!configuration.mutationEnabled()) {
+      return;
+    }
+    ProductionPackages productionPackages = productionPackages(project);
+    if (productionPackages.targets().isEmpty()) {
+      String reason =
+          productionPackages.sourcesFound()
+              ? "no production packages found under src/main/java; the mutation gate cannot run."
+              : "no production sources found under src/main/java; the mutation gate cannot run.";
+      report.configure(task -> task.getMutationIncompleteReason().set(reason));
+      return;
+    }
+    String producerName = extension.getMutationTesting().getProducerTask().get().trim();
+    boolean managedDefaultPit;
+    if (producerName.equals("pitest")) {
+      managedDefaultPit = project.getTasks().findByName(producerName) == null;
+      if (managedDefaultPit) {
+        project.getPluginManager().apply(PITEST_PLUGIN_ID);
+        configureDefaultPit(project, productionPackages.targets());
+      }
+    } else {
+      managedDefaultPit = false;
+    }
+    Task producer = project.getTasks().findByName(producerName);
+    mutationGate.configure(
+        task -> {
+          task.getProducerAvailable().set(producer != null);
+          if (producer != null) {
+            task.dependsOn(producer);
+            if (managedDefaultPit) {
+              // This PIT task was created by ToppleCat, so its targetTests are owned by
+              // ToppleCat rather than a consumer. Descriptor generation must finish
+              // before PIT launches with the acceptance target argument.
+              producer.dependsOn(compileContracts);
+              configureManagedDefaultPitTargetTests(project, producer);
+            }
+          }
+        });
+    if (producer != null) {
+      producer.onlyIf(
+          ignored ->
+              !project.getGradle().getTaskGraph().hasTask(verify.get())
+                  || ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
+      if (producerName.equals("pitest")) {
+        configureFullMutationMatrix(project, producer);
+      }
+    }
+    verify.configure(task -> task.dependsOn(mutationGate));
+  }
+
+  private static void configureDefaultPit(Project project, Set<String> targetClasses) {
+    Object pitest = project.getExtensions().findByName("pitest");
+    if (pitest == null) {
+      throw new GradleException(
+          "ToppleCat could not configure its default PIT producer. Apply info.solidsoft.pitest"
+              + " explicitly or set toppleCat.mutationTesting.producerTask.");
+    }
+    setPitProperty(pitest, "getPitestVersion", "1.25.5");
+    setPitProperty(pitest, "getJunit5PluginVersion", "1.2.3");
+    setPitProperty(pitest, "getTargetClasses", targetClasses);
+    SourceSet publicTests =
+        project
+            .getExtensions()
+            .getByType(JavaPluginExtension.class)
+            .getSourceSets()
+            .getByName(SourceSet.TEST_SOURCE_SET_NAME);
+    setPitProperty(pitest, "getTestSourceSets", Set.of(publicTests));
+    setPitProperty(pitest, "getFullMutationMatrix", true);
+    setPitProperty(pitest, "getOutputFormats", Set.of("XML"));
+    setPitProperty(pitest, "getTimestampedReports", false);
+    setPitProperty(pitest, "getMutationThreshold", 0);
+    setPitProperty(pitest, "getFailWhenNoMutations", false);
+    project
+        .getLogger()
+        .lifecycle(
+            "ToppleCat configured the default PIT producer with a full mutation matrix against"
+                + " public @ToppleAcceptanceTest classes.");
+  }
+
+  /** Configures targetTests for the PIT producer ToppleCat itself applied. */
+  private static void configureManagedDefaultPitTargetTests(Project project, Task producer) {
+    Object pitest = project.getExtensions().findByName("pitest");
+    if (pitest == null) {
+      throw new GradleException("ToppleCat could not configure its managed PIT targetTests.");
+    }
+
+    // Do not attach a task-produced Provider to PIT's targetTests input. Gradle's
+    // configuration-cache serializer queries that input before producer tasks execute,
+    // and querying a task-backed provider at that point is invalid. Keep PIT's declared
+    // targetTests input empty and add the compiler-backed target as a lazy command-line
+    // argument provider; JavaExec evaluates it when PIT actually launches, after the
+    // compiler-contract dependency has completed.
+    Path descriptorDirectory =
+        project
+            .getLayout()
+            .getBuildDirectory()
+            .getAsFile()
+            .get()
+            .toPath()
+            .resolve("topplecat")
+            .resolve("compiler");
+    setPitProperty(pitest, "getTargetTests", Set.of());
+    try {
+      Object providers = producer.getClass().getMethod("getArgumentProviders").invoke(producer);
+      @SuppressWarnings("unchecked")
+      List<CommandLineArgumentProvider> argumentProviders =
+          (List<CommandLineArgumentProvider>) providers;
+      argumentProviders.add(
+          new AcceptanceTestPitTargetArgumentProvider(descriptorDirectory.toString()));
+    } catch (ReflectiveOperationException | ClassCastException exception) {
+      throw new GradleException(
+          "ToppleCat could not configure PIT targetTests at execution time.", exception);
+    }
+    project
+        .getLogger()
+        .lifecycle(
+            "ToppleCat configured its managed PIT targetTests from compiler-emitted acceptance"
+                + " public descriptors.");
+  }
+
+  private static List<String> acceptanceTestClasses(Path descriptorDirectory) {
+    Set<String> classes = new TreeSet<>();
+    for (CompilerScenarioDescriptor descriptor :
+        CompilerDescriptorReader.read(List.of(descriptorDirectory))) {
+      classes.add(descriptor.declaringBinaryName());
+    }
+    return List.copyOf(classes);
+  }
+
+  /**
+   * A serializable argument provider is required because PIT task actions are retained in the
+   * configuration cache. Capturing Project, TaskProvider, or a Gradle Provider would make the PIT
+   * task graph non-cacheable. JavaExec evaluates this provider when launching PIT.
+   */
+  private static final class AcceptanceTestPitTargetArgumentProvider
+      implements CommandLineArgumentProvider, Serializable {
+    private final String descriptorDirectory;
+
+    private AcceptanceTestPitTargetArgumentProvider(String descriptorDirectory) {
+      this.descriptorDirectory = descriptorDirectory;
+    }
 
     @Override
-    public void apply(Project project) {
-        ToppleCatExtension extension = project.getExtensions().create("toppleCat", ToppleCatExtension.class);
-        extension.getPublicCaseRoot().convention(project.getLayout().getProjectDirectory().dir("src/test/resources/topplecat/cases"));
-        extension.getHiddenSourceRoot().convention(project.getLayout().getProjectDirectory().dir("src/hiddenTest"));
-        extension.getAdversarial().getEnabled().convention(true);
-        extension.getAdversarial().getHiddenRetest().getEnabled().convention(true);
-        extension.getAdversarial().getMutation().getEnabled().convention(true);
-        extension.getAdversarial().getMutation().getThreshold().convention(100);
-        extension.getAdversarial().getMutation().getProducerTask().convention("pitest");
-        extension.getAdversarial().getMutation().getReportFile()
-                .convention(project.getLayout().getBuildDirectory().file("reports/pitest/mutations.xml"));
-        extension.getAdversarial().getExpectedConsumption().getEnabled().convention(true);
-        extension.getCommandLineSpecPaths().convention(List.of());
-        extension.getCommandLineSpecProvided().convention(false);
-        extension.getAllHiddenRequested().convention(false);
-        project.getPluginManager().withPlugin("java", ignored -> configureJavaProject(project, extension));
+    public Iterable<String> asArguments() {
+      List<String> canonicalTests = acceptanceTestClasses(Path.of(descriptorDirectory));
+      if (canonicalTests.isEmpty()) {
+        throw new GradleException(
+            "ToppleCat compiler emitted no public @ToppleAcceptanceTest descriptors for" + " PIT.");
+      }
+      return List.of("--targetTests=" + String.join(",", canonicalTests));
     }
+  }
 
-    private static void configureJavaProject(Project project, ToppleCatExtension extension) {
-        Directory runDirectory = project.getLayout().getBuildDirectory()
-                .dir("topplecat/runs/current").get();
-        Path contractIntegrityResult = runDirectory.file("contract-integrity.json").getAsFile().toPath();
-        SourceSetContainer sourceSets = project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets();
-        SourceSet main = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
-        SourceSet test = sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME);
-        SourceSet hidden = sourceSets.maybeCreate("hiddenTest");
-        hidden.setCompileClasspath(hidden.getCompileClasspath().plus(main.getOutput()).plus(test.getOutput())
-                .plus(test.getCompileClasspath()));
-        hidden.setRuntimeClasspath(hidden.getRuntimeClasspath().plus(hidden.getOutput()).plus(main.getOutput())
-                .plus(test.getRuntimeClasspath()));
-
-        project.getTasks().withType(Test.class).configureEach(task -> {
-            if (task.getName().equals("test")) {
-                task.systemProperty(ToppleJunit.PUBLIC_CASE_SOURCES_PROPERTY,
-                        extension.getPublicCaseRoot().get().getAsFile().getAbsolutePath());
-                task.systemProperty(ToppleJunit.INCLUDE_HIDDEN_CASES_PROPERTY, "false");
-                task.systemProperty(ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY, "true");
-            }
-        });
-
-        project.getTasks().register("toppleCatInit", ToppleCatInitTask.class, task -> {
-            task.setGroup("verification");
-            task.setDescription("Creates a minimal ToppleCat authoring skeleton without overwriting files.");
-            task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-        });
-        TaskProvider<ToppleCatPrepareRunTask> prepareRun = project.getTasks().register(
-                "toppleCatPrepareRun", ToppleCatPrepareRunTask.class, task -> {
-                    task.setDescription("Prepares the internal workspace for one ToppleCat verification run.");
-                    task.getRunDirectory().set(runDirectory);
-                });
-        TaskProvider<ToppleCatCompileContractsTask> compileContracts = project.getTasks().register(
-                "toppleCatCompileContracts", ToppleCatCompileContractsTask.class, task -> {
-                    task.setGroup("verification");
-                    task.setDescription("Uses javac symbols to validate @ToppleTest scenarios and emit descriptors.");
-                    task.getSourceFiles().from(test.getAllJava());
-                    task.getCompileClasspath().from(test.getCompileClasspath());
-                    task.getDescriptorClassesDirectory().set(project.getLayout().getBuildDirectory().dir("topplecat/compiler"));
-                    task.dependsOn(test.getCompileJavaTaskName());
-                });
-        TaskProvider<ToppleCatCheckTask> check = project.getTasks().register("toppleCatCheck", ToppleCatCheckTask.class,
-                task -> {
-                    task.setGroup("verification");
-                    task.setDescription("Validates ToppleCat Java bindings and public/reviewer case data without execution.");
-                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-                    task.getPublicCaseRoot().set(extension.getPublicCaseRoot());
-                    task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
-                    task.getCaseSources().from(extension.getPublicCaseRoot(), extension.getHiddenSourceRoot());
-                    task.getDescriptorClassDirectories().from(compileContracts.flatMap(
-                            ToppleCatCompileContractsTask::getDescriptorClassesDirectory));
-                    task.getSpecDocs().from(extension.getSpecDocs());
-                    configureScopeTask(task, extension);
-                    task.getReviewRoot().set(project.getLayout().getBuildDirectory().dir("topplecat/reports/review"));
-                    task.getDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
-                    task.getSelectedSpecScopeFile().set(project.getLayout().getBuildDirectory()
-                            .file("topplecat/selected-spec-scope.json"));
-                    task.getOutputs().upToDateWhen(ignored -> false);
-                    task.getOutputs().doNotCacheIf("ToppleCat contract inputs include reviewer custody state.", ignored -> true);
-                });
-        check.configure(task -> task.dependsOn(compileContracts));
-        project.getTasks().named("test", Test.class).configure(task -> {
-            task.dependsOn(check);
-            task.systemProperty(ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
-                    project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json").get().getAsFile()
-                            .getAbsolutePath());
-        });
-        TaskProvider<ToppleCatReviewTask> review = project.getTasks().register("toppleCatReview", ToppleCatReviewTask.class, task -> {
-            task.setGroup("verification");
-            task.setDescription("Writes a reviewer-only static contract review without executing tests.");
-            task.dependsOn(check);
-            task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-            task.getPublicTestSourceRoot().set(project.getLayout().getProjectDirectory().dir("src/test/java"));
-            task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
-            task.getReviewRoot().set(project.getLayout().getBuildDirectory().dir("topplecat/reports/review"));
-            task.getDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
-            task.getSpecDocs().from(extension.getSpecDocs());
-            configureScopeTask(task, extension);
-        });
-        TaskProvider<ToppleCatHideTask> hide = project.getTasks().register("toppleCatHide", ToppleCatHideTask.class,
-                task -> {
-                    task.setGroup("verification");
-                    task.setDescription("Moves the complete reviewer-only src/hiddenTest source set into local hidden storage.");
-                    task.dependsOn(review);
-                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-                    task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
-                    configureScopeTask(task, extension);
-                    configureApprovalInputs(task, project, test, extension);
-                });
-        Provider<ToppleCatCustodyBuildService> custodyService = project.getGradle().getSharedServices()
-                .registerIfAbsent("toppleCatCustody-" + project.getPath().replace(':', '_'),
-                        ToppleCatCustodyBuildService.class,
-                        spec -> spec.getParameters().getProjectRoot().set(project.getLayout().getProjectDirectory()));
-        TaskProvider<ToppleCatAcquireCustodyTask> acquireCustody = project.getTasks().register(
-                "toppleCatAcquireCustody", ToppleCatAcquireCustodyTask.class, task -> {
-                    task.getCustodyService().set(custodyService);
-                    task.usesService(custodyService);
-                });
-        hide.configure(task -> {
-            task.mustRunAfter(acquireCustody);
-            task.usesService(custodyService);
-        });
-        TaskProvider<ToppleCatRestoreTask> restore = project.getTasks().register("toppleCatRestore",
-                ToppleCatRestoreTask.class, task -> {
-                    task.setGroup("verification");
-                    task.setDescription("Restores the complete reviewer-only source set from validated local hidden storage.");
-                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-                    task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
-                });
-        restore.configure(task -> {
-            task.mustRunAfter(acquireCustody, hide);
-            task.usesService(custodyService);
-            task.getOutputs().upToDateWhen(ignored -> false);
-            task.getOutputs().doNotCacheIf("Reviewer source restore is custody-state dependent.", ignored -> true);
-        });
-        TaskProvider<ToppleCatMigrateEscrowTask> migrateEscrow = project.getTasks().register("toppleCatMigrateEscrow",
-                ToppleCatMigrateEscrowTask.class, task -> {
-                    task.setGroup("verification");
-                    task.setDescription("Migrates a legacy project-local escrow into reviewer-local custody.");
-                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-                });
-        migrateEscrow.configure(task -> {
-            task.mustRunAfter(acquireCustody);
-            task.usesService(custodyService);
-            task.getOutputs().upToDateWhen(ignored -> false);
-            task.getOutputs().doNotCacheIf("Legacy escrow migration is custody-state dependent.", ignored -> true);
-        });
-        TaskProvider<ToppleCatUpdateEscrowTask> updateEscrow = project.getTasks().register(
-                "toppleCatUpdateEscrow", ToppleCatUpdateEscrowTask.class, task -> {
-                    task.setGroup("verification");
-                    task.setDescription("Validates, reviews, and explicitly updates reviewer-only local escrow custody.");
-                    task.dependsOn(review);
-                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-                    task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
-                    configureScopeTask(task, extension);
-                    configureApprovalInputs(task, project, test, extension);
-                });
-        updateEscrow.configure(task -> {
-            task.mustRunAfter(acquireCustody, restore);
-            task.usesService(custodyService);
-        });
-        TaskProvider<ToppleCatReviewerDefinitionTask> reviewerDefinition = project.getTasks().register(
-                "toppleCatReviewerDefinition", ToppleCatReviewerDefinitionTask.class, task -> {
-                    task.setDescription("Builds the run-scoped reviewer definition from restored source before verification.");
-                    task.getPublicCaseRoot().set(extension.getPublicCaseRoot());
-                    task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
-                    task.getDescriptorClassDirectories().from(compileContracts.flatMap(
-                            ToppleCatCompileContractsTask::getDescriptorClassesDirectory));
-                    task.getReviewerDefinitionFile().set(runDirectory.file("reviewer-definition.json"));
-                    task.dependsOn(prepareRun, restore, check);
-                    task.mustRunAfter(acquireCustody, hide);
-                    task.usesService(custodyService);
-                });
-        project.getTasks().named(hidden.getCompileJavaTaskName()).configure(task -> {
-            task.dependsOn(restore);
-            task.doLast(ignored -> VerificationRunArtifacts.markCompleted(
-                    runDirectory.getAsFile().toPath(), VerificationRunArtifacts.REVIEWER_JAVA_COMPILE));
-        });
-        project.getTasks().named(hidden.getProcessResourcesTaskName()).configure(task -> task.dependsOn(restore));
-        TaskProvider<ToppleCatRehideTask> rehide = project.getTasks().register("toppleCatRehide", ToppleCatRehideTask.class,
-                task -> {
-                    task.setGroup("verification");
-                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-                });
-        TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity = project.getTasks().register(
-                "toppleCatContractIntegrity", ToppleCatContractIntegrityTask.class, task -> {
-                    task.setDescription("Freshly compares the current public contract with the active reviewer approval.");
-                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-                    task.getResultFile().set(runDirectory.file("contract-integrity.json"));
-                    configureApprovalInputs(task, project, test, extension);
-                    task.dependsOn(prepareRun, hide);
-                    task.getOutputs().upToDateWhen(ignored -> false);
-                    task.getOutputs().doNotCacheIf("ToppleCat contract-integrity evidence is run-scoped.", ignored -> true);
-                });
-        contractIntegrity.configure(task -> {
-            task.mustRunAfter(acquireCustody, hide);
-            task.usesService(custodyService);
-        });
-
-        TaskProvider<Test> verificationTest = project.getTasks().register("toppleCatVerificationTest", Test.class, task -> {
-            task.setGroup("verification");
-            task.setDescription("Runs public JUnit verification and, when enabled, restored reviewer case rows.");
-            task.dependsOn(prepareRun, check, test.getClassesTaskName());
-            task.setTestClassesDirs(test.getOutput().getClassesDirs());
-            task.setClasspath(test.getRuntimeClasspath());
-            task.useJUnitPlatform();
-            configureCaseProperties(task, extension, false, true);
-            configureVerificationArtifacts(task, runDirectory, VerificationRunArtifacts.JUNIT);
-            configureNarrativeEvents(task, runDirectory, true);
-            requireFreshVerificationExecution(task);
-            task.systemProperty(ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
-                    project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json").get().getAsFile()
-                            .getAbsolutePath());
-        });
-        verificationTest.configure(task -> {
-            task.dependsOn(contractIntegrity);
-            task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
-            task.mustRunAfter(acquireCustody);
-            task.usesService(custodyService);
-            configureSelectedHiddenScope(task, extension, project, false);
-        });
-        reviewerDefinition.configure(task -> {
-            task.dependsOn(contractIntegrity);
-            task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
-        });
-        TaskProvider<Test> hiddenTest = project.getTasks().register("hiddenTest", Test.class, task -> {
-            task.setGroup("verification");
-            task.setDescription("Runs restored reviewer-only JUnit tests.");
-            task.dependsOn(prepareRun, restore, hidden.getClassesTaskName());
-            task.setTestClassesDirs(hidden.getOutput().getClassesDirs());
-            task.setClasspath(hidden.getRuntimeClasspath());
-            task.useJUnitPlatform(options -> options.includeTags(ToppleJunit.CONTRACT_TAG));
-            configureCaseProperties(task, extension, true, true);
-            configureVerificationArtifacts(task, runDirectory, VerificationRunArtifacts.REVIEWER_JUNIT);
-            configureNarrativeEvents(task, runDirectory, false);
-            configureReviewerJavaExecutions(task, runDirectory);
-            requireFreshVerificationExecution(task);
-            task.systemProperty(ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
-                    project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json").get().getAsFile()
-                            .getAbsolutePath());
-            // A reviewer source set may contain Java helpers without executable tests. Gradle
-            // 9 otherwise fails such a task before the report can classify it as rows-only.
-            // The report still requires a successful hidden Java compilation and detects
-            // executable JUnit annotations before deciding whether this result is needed.
-            task.getFailOnNoDiscoveredTests().set(false);
-            task.usesService(custodyService);
-            configureSelectedHiddenScope(task, extension, project, true);
-        });
-        TaskProvider<ToppleCatMutationGateTask> mutationGate = project.getTasks().register("toppleCatMutationGate",
-                ToppleCatMutationGateTask.class, task -> {
-                    task.setGroup("verification");
-                    task.setDescription("Evaluates public executable contract mutation strength for each @ToppleTest acceptance condition.");
-                    task.getPublicTestSourceRoot().set(project.getLayout().getProjectDirectory().dir("src/test/java"));
-                    task.getDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
-                    task.getPitReportFile().set(extension.getAdversarial().getMutation().getReportFile());
-                    task.getResultsFile().set(runDirectory.file("mutation-results.json"));
-                    task.getRunDirectory().set(runDirectory);
-                    task.getThreshold().set(extension.getAdversarial().getMutation().getThreshold());
-                    task.getProducerTaskName().set(extension.getAdversarial().getMutation().getProducerTask());
-                    task.getProducerAvailable().convention(false);
-                    task.dependsOn(prepareRun, contractIntegrity);
-                    task.mustRunAfter(verificationTest, hiddenTest);
-                    task.usesService(custodyService);
-                });
-        mutationGate.configure(task -> task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult)));
-        TaskProvider<ToppleCatReportTask> report = project.getTasks().register("toppleCatReport", ToppleCatReportTask.class,
-                task -> {
-                    task.setGroup("verification");
-                    task.setDescription("Writes safe Spec and reviewer-only Verification reports plus evidence.");
-                    task.getProjectRoot().set(project.getLayout().getProjectDirectory());
-                    task.getPublicCaseRoot().set(extension.getPublicCaseRoot());
-                    task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
-                    task.getDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
-                    task.getSpecDocs().from(extension.getSpecDocs());
-                    task.getSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
-                    task.getSpecOptionProvided().set(extension.getCommandLineSpecProvided());
-                    task.getAllHidden().set(extension.getAllHiddenRequested());
-                    task.getRunDirectory().set(runDirectory);
-                    task.getContractIntegrityResultFile().set(contractIntegrity.flatMap(
-                            ToppleCatContractIntegrityTask::getResultFile));
-                    task.getMutationResultsFile().set(mutationGate.flatMap(ToppleCatMutationGateTask::getResultsFile));
-                    task.getMutationIncompleteReason().convention("");
-                    task.mustRunAfter(verificationTest, hiddenTest, mutationGate);
-                    task.dependsOn(acquireCustody, contractIntegrity);
-                    task.usesService(custodyService);
-                });
-        verificationTest.configure(task -> task.finalizedBy(report));
-        hiddenTest.configure(task -> task.finalizedBy(report));
-        mutationGate.configure(task -> task.finalizedBy(report));
-        hiddenTest.configure(task -> task.mustRunAfter(verificationTest));
-        rehide.configure(task -> {
-            task.mustRunAfter(acquireCustody, report);
-            task.usesService(custodyService);
-        });
-
-        TaskProvider<ToppleCatVerifyTask> verify = project.getTasks().register("toppleCatVerify", ToppleCatVerifyTask.class, task -> {
-            task.setGroup("verification");
-            task.setDescription("Runs configured adversarial verification, then re-hides reviewer source.");
-            configureScopeTask(task, extension);
-            task.dependsOn(acquireCustody, contractIntegrity, verificationTest);
-            task.finalizedBy(report);
-        });
-        project.afterEvaluate(ignored -> configureAdversarialVerification(project, extension, restore, reviewerDefinition,
-                verificationTest, hiddenTest, mutationGate, report, rehide, verify, hide, updateEscrow, contractIntegrity,
-                contractIntegrityResult, compileContracts));
+  private static void configureFullMutationMatrix(Project project, Task producer) {
+    Object pitest = project.getExtensions().findByName("pitest");
+    if (pitest == null) {
+      return;
     }
-
-    private static void configureCaseProperties(
-            Test task,
-            ToppleCatExtension extension,
-            boolean includeHidden,
-            boolean expectedConsumptionEnforced
-    ) {
-        task.systemProperty(ToppleJunit.PUBLIC_CASE_SOURCES_PROPERTY,
-                extension.getPublicCaseRoot().get().getAsFile().getAbsolutePath());
-        task.systemProperty(ToppleJunit.HIDDEN_CASE_SOURCES_PROPERTY,
-                extension.getHiddenSourceRoot().get().getAsFile().toPath().resolve("resources/topplecat/cases").toString());
-        task.systemProperty(ToppleJunit.INCLUDE_HIDDEN_CASES_PROPERTY, Boolean.toString(includeHidden));
-        task.systemProperty(ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY,
-                Boolean.toString(expectedConsumptionEnforced));
+    try {
+      setPitProperty(pitest, "getFullMutationMatrix", true);
+      project
+          .getLogger()
+          .lifecycle("ToppleCat enables PIT fullMutationMatrix=true for {}.", producer.getPath());
+    } catch (GradleException exception) {
+      project
+          .getLogger()
+          .warn(
+              "ToppleCat could not enable PIT fullMutationMatrix=true for {}. "
+                  + "Configure it in the PIT extension before verification.",
+              producer.getPath());
     }
+  }
 
-    private static void configureSelectedHiddenScope(
-            Test task,
-            ToppleCatExtension extension,
-            Project project,
-            boolean filterReviewerJava
-    ) {
-        Path scope = project.getLayout().getBuildDirectory().getAsFile().get().toPath()
-                .resolve("topplecat/selected-spec-scope.json").toAbsolutePath();
-        task.doFirst(ignored -> {
-            boolean noSpecSelection = !extension.getCommandLineSpecProvided().getOrElse(false);
-            boolean allHidden = extension.getAllHiddenRequested().getOrElse(false) || noSpecSelection;
-            task.systemProperty(ToppleJunit.SELECTED_HIDDEN_SCOPE_FILE_PROPERTY, allHidden ? "" : scope.toString());
-            task.systemProperty(ToppleJunit.FILTER_CONTRACT_TESTS_PROPERTY,
-                    Boolean.toString(filterReviewerJava && !allHidden));
-        });
+  private static void setPitProperty(Object pitest, String getter, Object value) {
+    try {
+      Object property = pitest.getClass().getMethod(getter).invoke(pitest);
+      java.lang.reflect.Method setter =
+          java.util.Arrays.stream(property.getClass().getMethods())
+              .filter(
+                  method ->
+                      method.getName().equals("set")
+                          && method.getParameterCount() == 1
+                          && method.getParameterTypes()[0].isAssignableFrom(value.getClass()))
+              .findFirst()
+              .orElseThrow(
+                  () ->
+                      new NoSuchMethodException("set(value) on " + property.getClass().getName()));
+      setter.invoke(property, value);
+    } catch (ReflectiveOperationException exception) {
+      throw new GradleException("ToppleCat could not configure PIT via " + getter + ".", exception);
     }
+  }
 
-    private static void configureVerificationArtifacts(Test task, Directory runDirectory, String gate) {
-        task.getReports().getJunitXml().getOutputLocation().set(runDirectory.dir("junit/" + gate));
-        task.addTestListener(new TestListener() {
-            @Override
-            public void beforeSuite(TestDescriptor suite) {
-            }
-
-            @Override
-            public void afterSuite(TestDescriptor suite, TestResult result) {
-                if (suite.getParent() == null) {
-                    VerificationRunArtifacts.markCompleted(runDirectory.getAsFile().toPath(), gate);
-                }
-            }
-
-            @Override
-            public void beforeTest(TestDescriptor testDescriptor) {
-            }
-
-            @Override
-            public void afterTest(TestDescriptor testDescriptor, TestResult result) {
-            }
-        });
+  private static ProductionPackages productionPackages(Project project) {
+    Path sourceRoot =
+        project.getLayout().getProjectDirectory().dir("src/main/java").getAsFile().toPath();
+    if (!Files.isDirectory(sourceRoot)) {
+      return new ProductionPackages(false, Set.of());
     }
-
-    private static void requireFreshVerificationExecution(Test task) {
-        task.getOutputs().upToDateWhen(ignored -> false);
-        task.getOutputs().doNotCacheIf("ToppleCat verification evidence is run-scoped.", ignored -> true);
-    }
-
-    private static void configureNarrativeEvents(Test task, Directory runDirectory, boolean clearBeforeTask) {
-        Path narrative = runDirectory.file("narrative-executions.jsonl").getAsFile().toPath();
-        Path consumption = runDirectory.file("expected-consumption-executions.jsonl").getAsFile().toPath();
-        task.systemProperty(ToppleJunit.NARRATIVE_EVENTS_FILE_PROPERTY, narrative.toAbsolutePath().toString());
-        task.systemProperty(ToppleJunit.EXPECTED_CONSUMPTION_EVENTS_FILE_PROPERTY, consumption.toAbsolutePath().toString());
-        task.systemProperty(ToppleJunit.ATTACHMENTS_DIRECTORY_PROPERTY,
-                runDirectory.dir("attachments").getAsFile().toPath().toAbsolutePath().toString());
-        if (clearBeforeTask) {
-            task.doFirst(ignored -> {
-                try {
-                    Files.deleteIfExists(narrative);
-                    Files.deleteIfExists(consumption);
-                } catch (IOException exception) {
-                    throw new GradleException("Cannot clear ToppleCat verification sidecars in " + runDirectory, exception);
-                }
-            });
+    Set<String> patterns = new LinkedHashSet<>();
+    boolean sourcesFound = false;
+    try (java.util.stream.Stream<Path> files = Files.walk(sourceRoot)) {
+      for (Path source : files.filter(path -> path.toString().endsWith(".java")).toList()) {
+        sourcesFound = true;
+        Matcher matcher = JAVA_PACKAGE.matcher(Files.readString(source));
+        if (matcher.find()) {
+          patterns.add(matcher.group(1) + ".*");
         }
+      }
+    } catch (IOException exception) {
+      throw new GradleException(
+          "ToppleCat could not inspect src/main/java to configure default PIT targets.", exception);
     }
+    return new ProductionPackages(sourcesFound, Set.copyOf(patterns));
+  }
 
-    private static void configureReviewerJavaExecutions(Test task, Directory runDirectory) {
-        Path executions = runDirectory.file("reviewer-java-executions.jsonl").getAsFile().toPath();
-        task.systemProperty(ToppleJunit.REVIEWER_JAVA_EXECUTIONS_FILE_PROPERTY, executions.toAbsolutePath().toString());
-        task.doFirst(ignored -> {
-            try {
-                Files.deleteIfExists(executions);
-            } catch (IOException exception) {
-                throw new GradleException("Cannot clear ToppleCat reviewer Java execution evidence in " + runDirectory,
-                        exception);
-            }
-        });
+  private record ProductionPackages(boolean sourcesFound, Set<String> targets) {}
+
+  private record VerificationConfiguration(
+      boolean hiddenTestsEnabled,
+      String hiddenTestsDisabledReason,
+      boolean mutationEnabled,
+      String mutationDisabledReason,
+      boolean expectedConsumptionEnabled,
+      String expectedConsumptionDisabledReason,
+      boolean propertyBasedTestingEnabled,
+      String propertyDisabledReason) {
+    private static VerificationConfiguration resolve(ToppleCatExtension extension) {
+      boolean hiddenTests = extension.getHiddenTests().getEnabled().getOrElse(true);
+      boolean mutation = extension.getMutationTesting().getEnabled().getOrElse(true);
+      boolean expectedConsumption = extension.getExpectedConsumption().getEnabled().getOrElse(true);
+      boolean property = extension.getPropertyBasedTesting().getEnabled().getOrElse(true);
+      return new VerificationConfiguration(
+          hiddenTests, hiddenTests ? "" : "disabled by toppleCat.hiddenTests.enabled=false",
+          mutation, mutation ? "" : "disabled by toppleCat.mutationTesting.enabled=false",
+          expectedConsumption,
+              expectedConsumption ? "" : "disabled by toppleCat.expectedConsumption.enabled=false",
+          property, property ? "" : "disabled by toppleCat.propertyBasedTesting.enabled=false");
     }
-
-    private static void configureAdversarialVerification(
-            Project project,
-            ToppleCatExtension extension,
-            TaskProvider<ToppleCatRestoreTask> restore,
-            TaskProvider<ToppleCatReviewerDefinitionTask> reviewerDefinition,
-            TaskProvider<Test> verificationTest,
-            TaskProvider<Test> hiddenTest,
-            TaskProvider<ToppleCatMutationGateTask> mutationGate,
-            TaskProvider<ToppleCatReportTask> report,
-            TaskProvider<ToppleCatRehideTask> rehide,
-            TaskProvider<ToppleCatVerifyTask> verify,
-            TaskProvider<ToppleCatHideTask> hide,
-            TaskProvider<ToppleCatUpdateEscrowTask> updateEscrow,
-            TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity,
-            Path contractIntegrityResult,
-            TaskProvider<ToppleCatCompileContractsTask> compileContracts
-    ) {
-        AdversarialConfiguration configuration = AdversarialConfiguration.resolve(extension);
-        configureApprovalPolicy(project, extension, configuration, hide, updateEscrow, contractIntegrity);
-        project.getTasks().withType(Test.class).configureEach(task -> {
-            if (task.getName().equals("test")) {
-                task.systemProperty(ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY,
-                        Boolean.toString(configuration.expectedConsumptionEnabled()));
-            }
-        });
-        verificationTest.configure(task -> {
-            configureCaseProperties(task, extension, configuration.hiddenRetestEnabled(),
-                    configuration.expectedConsumptionEnabled());
-            if (configuration.hiddenRetestEnabled()) {
-                task.dependsOn(reviewerDefinition);
-                task.systemProperty(ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
-                        reviewerDefinition.get().getReviewerDefinitionFile().get().getAsFile().getAbsolutePath());
-            }
-        });
-        hiddenTest.configure(task -> {
-            task.dependsOn(contractIntegrity);
-            task.onlyIf(ignored -> ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
-            task.systemProperty(ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY,
-                    Boolean.toString(configuration.expectedConsumptionEnabled()));
-            if (configuration.hiddenRetestEnabled()) {
-                task.dependsOn(reviewerDefinition);
-                task.systemProperty(ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY,
-                        reviewerDefinition.get().getReviewerDefinitionFile().get().getAsFile().getAbsolutePath());
-            }
-        });
-        report.configure(task -> {
-            task.getHiddenRetestEnabled().set(configuration.hiddenRetestEnabled());
-            task.getHiddenRetestDisabledReason().set(configuration.hiddenRetestDisabledReason());
-            task.getMutationEnabled().set(configuration.mutationEnabled());
-            task.getMutationDisabledReason().set(configuration.mutationDisabledReason());
-            task.getExpectedConsumptionEnabled().set(configuration.expectedConsumptionEnabled());
-            task.getExpectedConsumptionDisabledReason().set(configuration.expectedConsumptionDisabledReason());
-            if (configuration.hiddenRetestEnabled()) {
-                task.getReviewerDefinitionFile().set(reviewerDefinition.flatMap(
-                        ToppleCatReviewerDefinitionTask::getReviewerDefinitionFile));
-                task.mustRunAfter(reviewerDefinition);
-            }
-        });
-        if (configuration.hiddenRetestEnabled()) {
-            verify.configure(task -> task.dependsOn(hiddenTest));
-        }
-        report.configure(task -> task.finalizedBy(rehide));
-        configureMutationGate(project, extension, configuration, mutationGate, report, verify, contractIntegrityResult,
-                compileContracts);
-    }
-
-    private static void configureApprovalInputs(
-            ToppleCatApprovalInputs task,
-            Project project,
-            SourceSet test,
-            ToppleCatExtension extension
-    ) {
-        task.getApprovalBuildRoot().set(project.getRootProject().getLayout().getProjectDirectory());
-        task.getApprovalPublicSourceRoots().from(test.getAllSource().getSourceDirectories());
-        task.getApprovalPublicCaseRoot().set(extension.getPublicCaseRoot());
-        task.getApprovalDefinitionFile().set(project.getLayout().getBuildDirectory().file("topplecat/contract-definition.json"));
-        task.getApprovalHiddenRetestEnabled().convention(true);
-        task.getApprovalExpectedConsumptionEnabled().convention(true);
-        task.getApprovalMutationEnabled().convention(true);
-        task.getApprovalMutationThreshold().convention(100);
-        task.getApprovalMutationProducerKind().convention("DEFAULT");
-        task.getApprovalMutationProducerTaskPath().convention("");
-        task.getApprovalSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
-        task.getApprovalSpecOptionProvided().set(extension.getCommandLineSpecProvided());
-        task.getApprovalFixedSpecDocs().from(extension.getSpecDocs());
-    }
-
-    private static void configureScopeTask(ToppleCatScopedTask task, ToppleCatExtension extension) {
-        task.getSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
-        task.getSpecOptionProvided().set(extension.getCommandLineSpecProvided());
-    }
-
-    private static void configureApprovalPolicy(
-            Project project,
-            ToppleCatExtension extension,
-            AdversarialConfiguration configuration,
-            TaskProvider<ToppleCatHideTask> hide,
-            TaskProvider<ToppleCatUpdateEscrowTask> updateEscrow,
-            TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity
-    ) {
-        String producerName = extension.getAdversarial().getMutation().getProducerTask().get().trim();
-        boolean defaultProducer = producerName.equals("pitest");
-        Task producer = project.getTasks().findByName(producerName);
-        String producerPath = defaultProducer ? "" : producer == null ? resolvedTaskPath(project, producerName) : producer.getPath();
-        for (TaskProvider<? extends ToppleCatApprovalInputs> provider : List.of(hide, updateEscrow, contractIntegrity)) {
-            provider.configure(task -> {
-                task.getApprovalHiddenRetestEnabled().set(configuration.hiddenRetestEnabled());
-                task.getApprovalExpectedConsumptionEnabled().set(configuration.expectedConsumptionEnabled());
-                task.getApprovalMutationEnabled().set(configuration.mutationEnabled());
-                task.getApprovalMutationThreshold().set(extension.getAdversarial().getMutation().getThreshold());
-                task.getApprovalMutationProducerKind().set(defaultProducer ? "DEFAULT" : "CUSTOM");
-                task.getApprovalMutationProducerTaskPath().set(producerPath);
-            });
-        }
-    }
-
-    private static String resolvedTaskPath(Project project, String taskName) {
-        if (taskName.startsWith(":")) {
-            return taskName;
-        }
-        return project.getPath().equals(":") ? ":" + taskName : project.getPath() + ":" + taskName;
-    }
-
-    private static void configureMutationGate(
-            Project project,
-            ToppleCatExtension extension,
-            AdversarialConfiguration configuration,
-            TaskProvider<ToppleCatMutationGateTask> mutationGate,
-            TaskProvider<ToppleCatReportTask> report,
-            TaskProvider<ToppleCatVerifyTask> verify,
-            Path contractIntegrityResult,
-            TaskProvider<ToppleCatCompileContractsTask> compileContracts
-    ) {
-        if (!configuration.mutationEnabled()) {
-            return;
-        }
-        ProductionPackages productionPackages = productionPackages(project);
-        if (productionPackages.targets().isEmpty()) {
-            String reason = productionPackages.sourcesFound()
-                    ? "no production packages found under src/main/java; the mutation gate cannot run."
-                    : "no production sources found under src/main/java; the mutation gate cannot run.";
-            report.configure(task -> task.getMutationIncompleteReason().set(reason));
-            return;
-        }
-        String producerName = extension.getAdversarial().getMutation().getProducerTask().get().trim();
-        boolean managedDefaultPit;
-        if (producerName.equals("pitest")) {
-            managedDefaultPit = project.getTasks().findByName(producerName) == null;
-            if (managedDefaultPit) {
-                project.getPluginManager().apply(PITEST_PLUGIN_ID);
-                configureDefaultPit(project, productionPackages.targets());
-            }
-        } else {
-            managedDefaultPit = false;
-        }
-        Task producer = project.getTasks().findByName(producerName);
-        mutationGate.configure(task -> {
-            task.getProducerAvailable().set(producer != null);
-            if (producer != null) {
-                task.dependsOn(producer);
-                if (managedDefaultPit) {
-                    // This PIT task was created by ToppleCat, so its targetTests are owned by
-                    // ToppleCat rather than a consumer. Descriptor generation must finish
-                    // before PIT launches with the canonical target argument.
-                    producer.dependsOn(compileContracts);
-                    configureManagedDefaultPitTargetTests(project, producer);
-                }
-            }
-        });
-        if (producer != null) {
-            producer.onlyIf(ignored -> !project.getGradle().getTaskGraph().hasTask(verify.get())
-                    || ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
-            if (producerName.equals("pitest")) {
-                configureFullMutationMatrix(project, producer);
-            }
-        }
-        verify.configure(task -> task.dependsOn(mutationGate));
-    }
-
-    private static void configureDefaultPit(
-            Project project,
-            Set<String> targetClasses
-    ) {
-        Object pitest = project.getExtensions().findByName("pitest");
-        if (pitest == null) {
-            throw new GradleException("ToppleCat could not configure its default PIT producer. "
-                    + "Apply info.solidsoft.pitest explicitly or set toppleCat.adversarial.mutation.producerTask.");
-        }
-        setPitProperty(pitest, "getPitestVersion", "1.25.5");
-        setPitProperty(pitest, "getJunit5PluginVersion", "1.2.3");
-        setPitProperty(pitest, "getTargetClasses", targetClasses);
-        SourceSet publicTests = project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets()
-                .getByName(SourceSet.TEST_SOURCE_SET_NAME);
-        setPitProperty(pitest, "getTestSourceSets", Set.of(publicTests));
-        setPitProperty(pitest, "getFullMutationMatrix", true);
-        setPitProperty(pitest, "getOutputFormats", Set.of("XML"));
-        setPitProperty(pitest, "getTimestampedReports", false);
-        setPitProperty(pitest, "getMutationThreshold", 0);
-        setPitProperty(pitest, "getFailWhenNoMutations", false);
-        project.getLogger().lifecycle("ToppleCat configured the default PIT producer with a full mutation matrix against canonical public @ToppleTest classes.");
-    }
-
-    /** Configures the canonical targetTests for the PIT producer ToppleCat itself applied. */
-    private static void configureManagedDefaultPitTargetTests(Project project, Task producer) {
-        Object pitest = project.getExtensions().findByName("pitest");
-        if (pitest == null) {
-            throw new GradleException("ToppleCat could not configure its managed PIT targetTests.");
-        }
-
-        // Do not attach a task-produced Provider to PIT's targetTests input. Gradle's
-        // configuration-cache serializer queries that input before producer tasks execute,
-        // and querying a task-backed provider at that point is invalid. Keep PIT's declared
-        // targetTests input empty and add the compiler-backed target as a lazy command-line
-        // argument provider; JavaExec evaluates it when PIT actually launches, after the
-        // compiler-contract dependency has completed.
-        Path descriptorDirectory = project.getLayout().getBuildDirectory().getAsFile().get().toPath()
-                .resolve("topplecat")
-                .resolve("compiler");
-        setPitProperty(pitest, "getTargetTests", Set.of());
-        try {
-            Object providers = producer.getClass().getMethod("getArgumentProviders").invoke(producer);
-            @SuppressWarnings("unchecked")
-            List<CommandLineArgumentProvider> argumentProviders = (List<CommandLineArgumentProvider>) providers;
-            argumentProviders.add(new CanonicalPitTargetArgumentProvider(descriptorDirectory.toString()));
-        } catch (ReflectiveOperationException | ClassCastException exception) {
-            throw new GradleException("ToppleCat could not configure PIT targetTests at execution time.", exception);
-        }
-        project.getLogger().lifecycle("ToppleCat configured its managed PIT targetTests from compiler-emitted canonical public descriptors.");
-    }
-
-    private static List<String> canonicalTestClasses(Path descriptorDirectory) {
-        Set<String> classes = new TreeSet<>();
-        for (CompilerScenarioDescriptor descriptor : CompilerDescriptorReader.read(List.of(descriptorDirectory))) {
-            classes.add(descriptor.declaringBinaryName());
-        }
-        return List.copyOf(classes);
-    }
-
-    /**
-     * A serializable argument provider is required because PIT task actions are retained in the
-     * configuration cache. Capturing Project, TaskProvider, or a Gradle Provider would make the
-     * PIT task graph non-cacheable. JavaExec evaluates this provider when launching PIT.
-     */
-    private static final class CanonicalPitTargetArgumentProvider
-            implements CommandLineArgumentProvider, Serializable {
-        private final String descriptorDirectory;
-
-        private CanonicalPitTargetArgumentProvider(String descriptorDirectory) {
-            this.descriptorDirectory = descriptorDirectory;
-        }
-
-        @Override
-        public Iterable<String> asArguments() {
-            List<String> canonicalTests = canonicalTestClasses(Path.of(descriptorDirectory));
-            if (canonicalTests.isEmpty()) {
-                throw new GradleException("ToppleCat compiler emitted no canonical public @ToppleTest descriptors for PIT.");
-            }
-            return List.of("--targetTests=" + String.join(",", canonicalTests));
-        }
-    }
-
-    private static void configureFullMutationMatrix(Project project, Task producer) {
-        Object pitest = project.getExtensions().findByName("pitest");
-        if (pitest == null) {
-            return;
-        }
-        try {
-            setPitProperty(pitest, "getFullMutationMatrix", true);
-            project.getLogger().lifecycle("ToppleCat enables PIT fullMutationMatrix=true for {}.", producer.getPath());
-        } catch (GradleException exception) {
-            project.getLogger().warn("ToppleCat could not enable PIT fullMutationMatrix=true for {}. "
-                    + "Configure it in the PIT extension before verification.", producer.getPath());
-        }
-    }
-
-    private static void setPitProperty(Object pitest, String getter, Object value) {
-        try {
-            Object property = pitest.getClass().getMethod(getter).invoke(pitest);
-            java.lang.reflect.Method setter = java.util.Arrays.stream(property.getClass().getMethods())
-                    .filter(method -> method.getName().equals("set") && method.getParameterCount() == 1
-                            && method.getParameterTypes()[0].isAssignableFrom(value.getClass()))
-                    .findFirst()
-                    .orElseThrow(() -> new NoSuchMethodException("set(value) on " + property.getClass().getName()));
-            setter.invoke(property, value);
-        } catch (ReflectiveOperationException exception) {
-            throw new GradleException("ToppleCat could not configure PIT via " + getter + ".", exception);
-        }
-    }
-
-    private static ProductionPackages productionPackages(Project project) {
-        Path sourceRoot = project.getLayout().getProjectDirectory().dir("src/main/java").getAsFile().toPath();
-        if (!Files.isDirectory(sourceRoot)) {
-            return new ProductionPackages(false, Set.of());
-        }
-        Set<String> patterns = new LinkedHashSet<>();
-        boolean sourcesFound = false;
-        try (java.util.stream.Stream<Path> files = Files.walk(sourceRoot)) {
-            for (Path source : files.filter(path -> path.toString().endsWith(".java")).toList()) {
-                sourcesFound = true;
-                Matcher matcher = JAVA_PACKAGE.matcher(Files.readString(source));
-                if (matcher.find()) {
-                    patterns.add(matcher.group(1) + ".*");
-                }
-            }
-        } catch (IOException exception) {
-            throw new GradleException("ToppleCat could not inspect src/main/java to configure default PIT targets.", exception);
-        }
-        return new ProductionPackages(sourcesFound, Set.copyOf(patterns));
-    }
-
-    private record ProductionPackages(boolean sourcesFound, Set<String> targets) {
-    }
-
-    private record AdversarialConfiguration(
-            boolean hiddenRetestEnabled,
-            String hiddenRetestDisabledReason,
-            boolean mutationEnabled,
-            String mutationDisabledReason,
-            boolean expectedConsumptionEnabled,
-            String expectedConsumptionDisabledReason
-    ) {
-        private static AdversarialConfiguration resolve(ToppleCatExtension extension) {
-            boolean global = extension.getAdversarial().getEnabled().getOrElse(true);
-            boolean hiddenRetest = global && extension.getAdversarial().getHiddenRetest().getEnabled().getOrElse(true);
-            boolean mutation = global && extension.getAdversarial().getMutation().getEnabled().getOrElse(true);
-            boolean expectedConsumption = global && extension.getAdversarial().getExpectedConsumption().getEnabled().getOrElse(true);
-            String globalReason = "disabled by toppleCat.adversarial.enabled=false";
-            return new AdversarialConfiguration(
-                    hiddenRetest, hiddenRetest ? "" : global ?
-                            "disabled by toppleCat.adversarial.hiddenRetest.enabled=false" : globalReason,
-                    mutation, mutation ? "" : global ?
-                            "disabled by toppleCat.adversarial.mutation.enabled=false" : globalReason,
-                    expectedConsumption, expectedConsumption ? "" : global ?
-                            "disabled by toppleCat.adversarial.expectedConsumption.enabled=false" : globalReason
-            );
-        }
-    }
+  }
 }
