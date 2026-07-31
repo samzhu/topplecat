@@ -1,29 +1,31 @@
 package io.github.samzhu.topplecat.pitest;
 
 import io.github.samzhu.topplecat.core.ToppleCatException;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 /** One mutant from a PIT {@code mutations.xml} report. */
 public record PitMutation(
-    boolean detected, String status, String mutatedClass, List<String> coveringTests) {
+    boolean detected,
+    String status,
+    String mutatedClass,
+    List<String> coveringTests,
+    List<String> killingTests,
+    List<String> succeedingTests) {
   public PitMutation {
     requireText(status, "status");
     requireText(mutatedClass, "mutatedClass");
-    LinkedHashSet<String> normalized = new LinkedHashSet<>();
-    if (coveringTests != null) {
-      for (String test : coveringTests) {
-        if (test != null && !test.isBlank()) {
-          normalized.add(test.trim());
-        }
-      }
-    }
-    coveringTests = List.copyOf(normalized);
+    coveringTests = normalized(coveringTests);
+    killingTests = normalized(killingTests);
+    succeedingTests = normalized(succeedingTests);
   }
 
-  /** Returns whether PIT reports this mutant as detected by a test. */
-  public boolean killed() {
-    return detected || "KILLED".equalsIgnoreCase(status);
+  private static List<String> normalized(List<String> selectors) {
+    return (selectors == null ? List.<String>of() : selectors)
+        .stream()
+            .filter(selector -> selector != null && !selector.isBlank())
+            .map(String::trim)
+            .distinct()
+            .toList();
   }
 
   private static void requireText(String value, String field) {

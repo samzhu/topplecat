@@ -84,10 +84,20 @@ verdict. A green `test` task is development feedback only.
 - Lead with the human problem and visible outcome. Introduce annotations,
   Gradle task wiring, digests, schemas, gates, and class names only after the
   reader understands what they solve.
+- Before asking someone to approve a technical rule, explain one concrete
+  example in plain language and say what ToppleCat can and cannot conclude.
+  Put the decision question after that explanation.
 - When presenting alternatives, reuse one simple domain example across all
   options so the trade-off is easy to compare.
 - Translate jargon into plain language the first time it appears. Do not assume
   a maintainer asking a product question wants an implementation-first answer.
+- Keep three layers distinct: what an external tool observed, how ToppleCat
+  attributed that observation to the executable contract, and the resulting
+  ToppleCat Gate verdict. Preserve an external tool's official outcome names
+  and definitions; do not silently rename or reinterpret them.
+- Do not use a bare status such as `FAIL`, `INCOMPLETE`, `detected`, or
+  `NO_COVERAGE` as its own explanation. State what ran, what happened, and why
+  that evidence supports—or cannot support—the verdict.
 
 ## Git Safety
 

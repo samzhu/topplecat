@@ -9,6 +9,7 @@ import io.github.samzhu.topplecat.core.SourceRef;
 import io.github.samzhu.topplecat.core.StepTemplate;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.core.ToppleCatException;
+import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -287,7 +288,8 @@ public final class ReportViews {
         expectedConsumptionEnforced,
         gates,
         acs,
-        deliveryScope);
+        deliveryScope,
+        null);
   }
 
   /**
@@ -338,7 +340,22 @@ public final class ReportViews {
         view.expectedConsumptionEnforced(),
         view.gates(),
         acceptanceConditions,
-        view.deliveryScope());
+        view.deliveryScope(),
+        view.mutationAttribution());
+  }
+
+  /** Adds reviewer-only raw PIT attribution after the mutation producer result is available. */
+  public static VerificationView withMutationAttribution(
+      VerificationView view, PitMutationAttribution mutationAttribution) {
+    return new VerificationView(
+        VerificationView.SCHEMA_VERSION,
+        view.generatedAt(),
+        view.verdict(),
+        view.expectedConsumptionEnforced(),
+        view.gates(),
+        view.acceptanceConditions(),
+        view.deliveryScope(),
+        mutationAttribution);
   }
 
   private static CaseResultStatus suiteVerdict(
@@ -425,7 +442,7 @@ public final class ReportViews {
               methods.getOrDefault(acId, new ReviewMethod(List.of(), ""))));
     }
     return new ReviewView(
-        ReviewView.SCHEMA_VERSION, generatedAt, acceptanceConditions, deliveryScope);
+        ReviewView.SCHEMA_VERSION, generatedAt, acceptanceConditions, deliveryScope, List.of());
   }
 
   /** Adds static Property source cards to a reviewer-only review projection. */
@@ -444,7 +461,22 @@ public final class ReportViews {
                         properties.getOrDefault(ac.acId(), List.of())))
             .toList();
     return new ReviewView(
-        ReviewView.SCHEMA_VERSION, view.generatedAt(), acceptanceConditions, view.deliveryScope());
+        ReviewView.SCHEMA_VERSION,
+        view.generatedAt(),
+        acceptanceConditions,
+        view.deliveryScope(),
+        view.contractQualityAdvisories());
+  }
+
+  /** Adds reviewer-only, non-blocking expected-output observations to Contract Review. */
+  public static ReviewView withContractQualityAdvisories(
+      ReviewView view, List<io.github.samzhu.topplecat.core.ContractQualityAdvisory> advisories) {
+    return new ReviewView(
+        ReviewView.SCHEMA_VERSION,
+        view.generatedAt(),
+        view.acceptanceConditions(),
+        view.deliveryScope(),
+        advisories);
   }
 
   private static Map<String, List<ToppleCaseData>> group(List<ToppleCaseData> cases) {

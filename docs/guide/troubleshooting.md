@@ -33,18 +33,21 @@ missing or damaged. Do not inspect an earlier run as a replacement.
 
 ## Mutation evidence is missing or fails
 
-The managed PIT producer targets public acceptance classes. A missing or
-malformed producer report is `INCOMPLETE`; a usable report that does not cover
-an acceptance method is `FAIL`. Configure a custom producer with
-`mutationTesting { producerTask.set(...); reportFile.set(...) }` only when it
-still writes a full current report.
+The managed PIT producer targets public acceptance classes and must write a
+complete current full matrix. Its `coveringTests`, `killingTests`, and
+`succeedingTests` selectors must be readable. A missing, damaged, interrupted,
+ambiguous, or zero-mutant producer result leaves the Mutation Gate incomplete.
+Configure a custom producer with `mutationTesting { producerTask.set(...);
+reportFile.set(...) }` only when it writes that full current report.
 
-A surviving mutant is `MUTATION=FAIL`; Verify writes reports, safe feedback,
-and re-hides reviewer source before returning that aggregate failure. A producer
-that was interrupted is `INCOMPLETE`; a task that completed without a usable
-current report is also `INCOMPLETE`. Verify removes the configured producer
-report before Gradle evaluates producer skip conditions, so stale mutation
-evidence cannot be reused.
+When PIT produced mutants but none map exactly to a public Acceptance Method,
+the Mutation Gate fails because ToppleCat cannot claim public-contract
+attribution. When an AC did cover mutants but its own method did not kill enough
+of them for the sealed threshold, the Gate also fails. Inspect the reviewer-only
+`mutation-results.json` and Verification Evidence to see the unmodified PIT
+outcomes and selector relationships. Verify writes reports, safe feedback, and
+re-hides reviewer source before returning the aggregate failure; stale producer
+reports cannot be reused.
 
 ## Contract integrity failed
 
@@ -57,7 +60,7 @@ on its own.
 
 ## Custody cannot be restored
 
-The 0.0.8 custody state is reviewer-local under
+The 0.0.9 custody state is reviewer-local under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`. The project must be opened
 at the same resolved path and with the reviewer state available. Prior-format
 custody is not migrated; create a new sealed reviewer state.

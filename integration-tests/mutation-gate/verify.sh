@@ -93,20 +93,53 @@ for artifact in "$mutation" "$evidence" "$feedback"; do
     exit 1
   fi
 done
-EVIDENCE="$evidence" python3 - <<'PY'
+MUTATION="$mutation" EVIDENCE="$evidence" FEEDBACK="$feedback" python3 - <<'PY'
 import json
 import os
 
-data = json.loads(open(os.environ["EVIDENCE"]).read())
-gate = next((item for item in data.get("gates", []) if item.get("name") == "CONTRACT_INTEGRITY"), None)
-if gate is None or gate.get("verdict") != "PASS":
+mutation = json.loads(open(os.environ["MUTATION"]).read())
+evidence = json.loads(open(os.environ["EVIDENCE"]).read())
+feedback = open(os.environ["FEEDBACK"]).read()
+
+if mutation.get("schemaVersion") != "topplecat.mutation-results.v1":
+    raise SystemExit("Mutation results must use the sole v1 schema")
+assessment = next(
+    (item for item in mutation.get("assessments", []) if item.get("acId") == "AC-MUTATION-GATE"),
+    None,
+)
+if assessment is None:
+    raise SystemExit("Mutation results must contain the acceptance-method assessment")
+if assessment.get("coveredMutantCount", 0) < 1:
+    raise SystemExit("The acceptance method did not cover the surviving mutant")
+if assessment.get("killedByAcceptanceMethodMutantCount") != 0:
+    raise SystemExit("The acceptance method incorrectly received kill credit")
+if assessment.get("detectionRate", 100) >= assessment.get("sealedThreshold", 0):
+    raise SystemExit("The acceptance-method detection rate did not fall below its threshold")
+if assessment.get("verdict") != "FAIL":
+    raise SystemExit("The acceptance-method assessment must fail")
+
+gates = {item.get("name"): item.get("verdict") for item in evidence.get("gates", [])}
+if gates.get("CONTRACT_INTEGRITY") != "PASS":
     raise SystemExit("Mutation-gate evidence must contain CONTRACT_INTEGRITY: PASS")
+if gates.get("MUTATION") != "FAIL":
+    raise SystemExit("Mutation-gate evidence must record MUTATION: FAIL, not INCOMPLETE")
+
+for reviewer_only in (
+    "AC-MUTATION-GATE",
+    "CouponAcceptanceTest",
+    "CouponService",
+    "acceptsThePublicCase",
+    "coveringTests",
+    "killingTests",
+    "succeedingTests",
+    "producerMutationCount",
+    "coveredMutantCount",
+    "killedByAcceptanceMethodMutantCount",
+    "detectionRate",
+):
+    if reviewer_only in feedback:
+        raise SystemExit(f"Agent feedback leaked reviewer-only mutation data: {reviewer_only}")
 PY
 grep -Fq '"MUTATION"' "$evidence"
-grep -Fq '"FAIL"' "$mutation"
-if grep -Fq 'AC-MUTATION-GATE' "$feedback"; then
-  echo "Agent feedback leaked an acceptance-condition identifier." >&2
-  exit 1
-fi
 
 echo "mutation-gate integration test PASS: expected verification failure with safe feedback"

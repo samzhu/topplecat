@@ -64,5 +64,7 @@ This structure follows three complementary practices:
 - [Property-Based Testing safeguard](property-based-testing.md)
 - [ToppleScenario authoring](topple-scenario-authoring.md)
 - [Independent safeguard results](independent-safeguard-results.md)
+- [Mutation attribution and gate](mutation-attribution.md)
+- [Contract quality advisory](contract-quality-advisory.md)
 
 Use the root [context glossary](../../CONTEXT.md) for shared terms.

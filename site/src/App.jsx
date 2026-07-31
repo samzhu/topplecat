@@ -20,7 +20,7 @@ import stageFloorLayer from "./assets/scene/tabletop.svg";
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.8"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.9"';
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(
@@ -94,7 +94,7 @@ const copyByLocale = {
           label: "Mutation Testing",
           detailLabel: "Changed code",
           title: "Break the implementation on purpose.",
-          body: "If public acceptance tests stay green, they were not guarding that behaviour.",
+          body: "See whether each public Acceptance Method ran against the changed code and whether that same method detected it.",
           className: "mutation",
         },
         {
@@ -137,7 +137,7 @@ const copyByLocale = {
         {
           title: "Contract Review",
           detail:
-            "Before handoff, the reviewer sees the accepted ACs, readable Scenario steps, public rows, and expected results.",
+            "Before handoff, the reviewer sees the accepted ACs, readable Scenario steps, public rows, expected results, and non-blocking quality prompts.",
           className: "contract",
         },
         {
@@ -149,7 +149,7 @@ const copyByLocale = {
         {
           title: "Verification Evidence",
           detail:
-            "The reviewer gets current-run gate results and private diagnostics. Safe agent feedback reveals the failing gate, never the hidden answer.",
+            "The reviewer gets current-run gate results, exact PIT method attribution, and private diagnostics. Safe agent feedback reveals the failing gate, never the hidden answer.",
           className: "evidence",
         },
       ],
@@ -273,7 +273,7 @@ const copyByLocale = {
           label: "變異測試",
           detailLabel: "變更後的程式碼",
           title: "刻意破壞實作。",
-          body: "若公開驗收測試仍為綠燈，代表它們沒有守住那個行為。",
+          body: "確認每個公開 Acceptance Method 是否執行到被改壞的程式，以及同一方法是否真的偵測到改變。",
           className: "mutation",
         },
         {
@@ -316,7 +316,7 @@ const copyByLocale = {
         {
           title: "契約審查",
           detail:
-            "交付前，審查者會看到已接受的 AC、可讀的 Scenario 步驟、公開案例列與預期結果。",
+            "交付前，審查者會看到已接受的 AC、可讀的 Scenario 步驟、公開案例列、預期結果與非阻擋的品質提醒。",
           className: "contract",
         },
         {
@@ -328,7 +328,7 @@ const copyByLocale = {
         {
           title: "驗證證據",
           detail:
-            "審查者取得本次執行的 gate 結果與私有診斷；安全的 agent 回饋只顯示失敗 gate，絕不揭露隱藏答案。",
+            "審查者取得本次執行的 gate 結果、精確的 PIT 方法歸因與私有診斷；安全的 agent 回饋只顯示失敗 gate，絕不揭露隱藏答案。",
           className: "evidence",
         },
       ],
@@ -819,7 +819,7 @@ function App() {
         </div>
         <div className="install-actions">
           <a className="button button-amber" href={`${repositoryUrl}/tree/main/samples/junit-cart-orders`} target="_blank" rel="noreferrer">{copy.install.sample} <Arrow /></a>
-          <a className="button button-dark" href={`${repositoryUrl}#install-007`} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
+          <a className="button button-dark" href={`${repositoryUrl}#install-009`} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
           <a className="acceptance-skill-link" href={`${repositoryUrl}/tree/main/.agents/skills/topplecat-acceptance`} target="_blank" rel="noreferrer">
             {copy.install.skill} <Arrow />
           </a>

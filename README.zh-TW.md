@@ -15,7 +15,7 @@ JSON/YAML 案例資料列是可執行合約；產生的 JSON 與 HTML 只是投�
 | 功能 | 自己的輸入與問題 | Gate |
 | --- | --- | --- |
 | **隱藏測試** | 審閱者保管的有型別案例：獨立設計的例子是否通過？ | `REVIEWER_JUNIT` |
-| **突變測試** | 公開驗收測試與 PIT 結果：公開例子是否能發現正式程式行為被改壞？ | `MUTATION` |
+| **突變測試** | 精確的公開 Acceptance Method 與 PIT 完整矩陣：每個方法是否能發現自己執行到的 mutant？ | `MUTATION` |
 | **性質導向測試（Property-Based Testing，PBT）** | 有界的 `@ToppleProperty`：核准的不變量能否通過產生的輸入？ | `PROPERTY` |
 
 三者只共用合約完整性、範圍選擇、報告與整體判定；任何一者都不能替另一者
@@ -58,6 +58,11 @@ ToppleCat 不管理任務、Spec 生命週期、組織簽核、CI 隔離或作�
 多份文件，未指定時選取全部驗收條件。`--all-hidden-tests` 只把隱藏測試從
 選定 AC 擴大到全部 AC。性質導向測試依選定 AC 執行；突變測試永遠使用完整
 公開驗收合約。
+
+突變測試會保留 PIT 原始的 status 與 selector 關係。每個 AC 的 detection rate，是某個
+公開 Acceptance Method 出現在 `killingTests` 的 mutant 數，除以同一方法出現在
+`coveringTests` 的 mutant 數；它不是 PIT 的全域 mutation threshold。僅供審閱者查看的
+Verification Evidence 會呈現原始 PIT 摘要，安全回饋則只停留在 Gate 層級。
 
 ## 撰寫驗收合約
 
@@ -130,22 +135,26 @@ toppleCat {
 | `build/topplecat/evidence.json` | 審閱者 / CI | machine verdict 與 gate 摘要值。 |
 | `build/topplecat/agent-feedback.json` | 實作代理 | 只有 gate 層級的安全回饋。 |
 
+Contract Review 也可能顯示 reviewer-only、非阻擋的提醒，指出隱藏 expected output
+shape 或疑似 opaque identifier literal 值得人工檢查。它們不推測業務規則，也不會改變
+可執行契約、Seal、Verify evidence、公開交接內容或任何 Gate。
+
 每次正式執行都記錄 `CONTRACT_INTEGRITY`、`JUNIT`、`REVIEWER_JUNIT`、
 `EXPECTED_CONSUMPTION`、`PROPERTY` 與 `MUTATION`。整體結果為 `PASS`、`FAIL`
 或 `INCOMPLETE`；只有本次執行的 `PASS` 才能接受完成宣稱。
 
-## 安裝 0.0.8
+## 安裝 0.0.9
 
 ToppleCat 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.8"
+    id("io.github.samzhu.topplecat") version "0.0.9"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.8")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.9")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -161,7 +170,7 @@ tasks.test { useJUnitPlatform() }
 - [文件索引](docs/README.md)
 - [共同語言](CONTEXT.md)
 - [架構](docs/architecture.md)
-- [0.0.8 release notes](docs/releases/0.0.8.md)
+- [0.0.9 release notes](docs/releases/0.0.9.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

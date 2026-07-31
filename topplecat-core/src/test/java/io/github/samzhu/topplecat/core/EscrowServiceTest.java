@@ -73,6 +73,6 @@ class EscrowServiceTest {
                 "src/test/java/example/CouponAcceptanceTest.java", "a".repeat(64))),
         "b".repeat(64),
         new VerificationPolicy(
-            "0.0.8", true, true, true, true, 100, MutationProducerKind.DEFAULT, null));
+            "0.0.9", true, true, true, true, 100, MutationProducerKind.DEFAULT, null));
   }
 }

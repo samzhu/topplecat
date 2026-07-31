@@ -7,23 +7,29 @@ import java.util.List;
 /** Reviewer-visible per-AC mutation result derived from PIT's full mutation matrix. */
 public record PitMutationAssessment(
     String acId,
-    List<String> testClasses,
-    int threshold,
-    int totalMutations,
-    int detectedMutations,
-    int mutationScore,
+    List<String> acceptanceMethods,
+    int coveredMutantCount,
+    int killedByAcceptanceMethodMutantCount,
+    int sealedThreshold,
+    int detectionRate,
+    List<PitOutcomeCount> pitOutcomeCounts,
     EvidenceVerdict verdict) {
   public PitMutationAssessment {
     if (acId == null || acId.isBlank()) {
       throw new ToppleCatException("Mutation assessment AC id is required.");
     }
-    if (threshold < 0 || threshold > 100) {
+    if (sealedThreshold < 0 || sealedThreshold > 100) {
       throw new ToppleCatException("Mutation assessment threshold must be between 0 and 100.");
     }
-    if (totalMutations < 0 || detectedMutations < 0 || detectedMutations > totalMutations) {
+    if (coveredMutantCount < 0
+        || killedByAcceptanceMethodMutantCount < 0
+        || killedByAcceptanceMethodMutantCount > coveredMutantCount
+        || detectionRate < 0
+        || detectionRate > 100) {
       throw new ToppleCatException("Mutation assessment counts are invalid for " + acId + ".");
     }
-    testClasses = List.copyOf(testClasses == null ? List.of() : testClasses);
+    acceptanceMethods = List.copyOf(acceptanceMethods == null ? List.of() : acceptanceMethods);
+    pitOutcomeCounts = List.copyOf(pitOutcomeCounts == null ? List.of() : pitOutcomeCounts);
     if (verdict == null) {
       throw new ToppleCatException("Mutation assessment verdict is required.");
     }

@@ -1,6 +1,7 @@
 package io.github.samzhu.topplecat.report;
 
 import io.github.samzhu.topplecat.core.EvidenceGate;
+import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import java.time.Instant;
 import java.util.List;
 
@@ -12,8 +13,9 @@ public record VerificationView(
     boolean expectedConsumptionEnforced,
     List<EvidenceGate> gates,
     List<VerificationAcceptanceCondition> acceptanceConditions,
-    DeliveryScope deliveryScope) {
-  public static final String SCHEMA_VERSION = "topplecat.verification-view.v7";
+    DeliveryScope deliveryScope,
+    PitMutationAttribution mutationAttribution) {
+  public static final String SCHEMA_VERSION = "topplecat.verification-view.v8";
 
   public VerificationView {
     if (!SCHEMA_VERSION.equals(schemaVersion)) {
@@ -37,6 +39,7 @@ public record VerificationView(
         expectedConsumptionEnforced,
         gates,
         acceptanceConditions,
+        null,
         null);
   }
 }

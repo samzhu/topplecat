@@ -185,6 +185,31 @@
     if (projection === 'review') return `<section class="property-section"><h3>Property-Based Testing</h3><p class="panel-help">Properties are supplementary safeguards and do not replace typed acceptance examples.</p>${properties.map(property => `<article class="property-card"><h4>${e(property.title)} ${propertyLabel()}</h4>${propertyStatic(property)}${property.sourceCode ? `<details class="source method-panel"><summary>View matching <code>@ToppleProperty</code></summary><pre class="java"><code>${highlightJava(property.sourceCode)}</code></pre></details>` : ''}</article>`).join('')}</section>`;
     return `<section class="property-section"><h3>Property-Based Testing</h3>${properties.map(property => `<article class="property-card"><h4>${e(property.title)}</h4>${propertyStatic(property)}</article>`).join('')}</section>`;
   };
+  const pitOutcomeTable = (heading, outcomes) => !outcomes?.length ? '' : `<section class="mutation-outcomes"><h4>${e(heading)}</h4>
+    <div class="table-scroll"><table class="case-matrix"><thead><tr><th>PIT status</th><th>PIT detected</th><th>Mutants</th></tr></thead>
+    <tbody>${outcomes.map(outcome => `<tr><td><code>${e(outcome.status)}</code></td><td>${e(outcome.detected)}</td><td>${e(outcome.count)}</td></tr>`).join('')}</tbody></table></div></section>`;
+  const selectorList = selectors => selectors?.length ? `<ul>${selectors.map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul>` : '<p class="meta">None reported by PIT.</p>';
+  const mutationSummary = () => {
+    const mutation = data.mutationAttribution; if (projection !== 'verification' || !mutation) return '';
+    const assessments = mutation.assessments || [];
+    return `<section class="mutation-summary"><h2>Mutation attribution</h2>
+      <p class="panel-help">PIT’s <code>status</code> and <code>detected</code> values are shown unchanged; see <a href="https://pitest.org/quickstart/basic_concepts/" target="_blank" rel="noopener">PIT’s official mutation outcome definitions</a>. ToppleCat’s contract-scoped detection rate is based only on the exact Acceptance Method selectors in PIT <code>killingTests</code>, divided by its exact <code>coveringTests</code> selectors.</p>
+      <p><strong>${e(mutation.producerMutationCount)}</strong> producer mutants · <strong>${e(mutation.uniquelyAttributedMutationCount)}</strong> uniquely attributed to public Acceptance Methods · <strong>${e(mutation.unattributedMutationCount)}</strong> unattributed</p>
+      ${pitOutcomeTable('All producer outcomes', mutation.producerOutcomeCounts)}${pitOutcomeTable('Unattributed producer outcomes', mutation.unattributedOutcomeCounts)}
+      <section><h3>Per-Ac contract detection</h3><div class="table-scroll"><table class="case-matrix"><thead><tr><th>AC</th><th>Covered mutants</th><th>Killed by this Acceptance Method</th><th>Sealed threshold</th><th>Detection rate</th><th>Verdict</th></tr></thead>
+      <tbody>${assessments.map(assessment => `<tr><td>${e(assessment.acId)}</td><td>${e(assessment.coveredMutantCount)}</td><td>${e(assessment.killedByAcceptanceMethodMutantCount)}</td><td>${e(assessment.sealedThreshold)}%</td><td>${e(assessment.detectionRate)}%</td><td>${status(assessment.verdict)}</td></tr>`).join('')}</tbody></table></div></section>
+      ${assessments.map(assessment => pitOutcomeTable(`${assessment.acId} PIT outcomes`, assessment.pitOutcomeCounts)).join('')}
+      <details class="raw-case"><summary>View PIT selector relationships</summary>${(mutation.mutations || []).map((item, index) => `<section class="mutation-selector"><h4>Mutant ${index + 1}: <code>${e(item.status)}</code> · detected ${e(item.detected)}</h4><p class="meta">Mutated class: <code>${e(item.mutatedClass)}</code> · attributed ACs: ${e((item.attributedAcceptanceConditionIds || []).join(', ') || 'none')}</p><h5>coveringTests</h5>${selectorList(item.coveringTests)}<h5>killingTests</h5>${selectorList(item.killingTests)}<h5>succeedingTests</h5>${selectorList(item.succeedingTests)}</section>`).join('')}</details>
+    </section>`;
+  };
+  const contractQualityAdvisories = () => {
+    const advisories = data.contractQualityAdvisories || []; if (projection !== 'review' || !advisories.length) return '';
+    return `<section class="contract-quality-advisories"><h2>Contract quality advisory</h2>
+      <p class="panel-help">These reviewer-only observations are non-blocking. They do not add a business rule, alter the executable contract, or change a Gate.</p>
+      <div class="table-scroll"><table class="case-matrix"><thead><tr><th>Rule</th><th>AC</th><th>Expected path</th><th>Public count</th><th>Reviewer count</th></tr></thead><tbody>
+      ${advisories.map(advisory => `<tr><td><code>${e(advisory.ruleCode)}</code></td><td>${e(advisory.acId)}</td><td><code>${e(advisory.expectedPath)}</code></td><td>${e(advisory.publicCount)}</td><td>${e(advisory.hiddenCount)}</td></tr>`).join('')}
+      </tbody></table></div></section>`;
+  };
   const title = projection === 'review' ? 'Contract review' : projection === 'verification' ? 'Verification evidence' : 'Public contract';
   document.getElementById('title').textContent = title;
   document.getElementById('notice').textContent = projection === 'review'
@@ -223,8 +248,8 @@
     });
     if (query) visible.forEach(ac => expanded.add(ac.acId));
     document.getElementById('summary').innerHTML = projection === 'review'
-      ? `${scopeSummary()}<span>${visible.length} acceptance conditions</span>${visible.map(counts).join('')}`
-      : `${scopeSummary()}${data.verdict ? `<span>${status(data.verdict)}</span>` : `<span>${visible.length} acceptance conditions</span>`}${gateNotices}`;
+      ? `${scopeSummary()}<span>${visible.length} acceptance conditions</span>${visible.map(counts).join('')}${contractQualityAdvisories()}`
+      : `${scopeSummary()}${data.verdict ? `<span>${status(data.verdict)}</span>` : `<span>${visible.length} acceptance conditions</span>`}${gateNotices}${mutationSummary()}`;
     document.getElementById('report').innerHTML = visible.map(ac => {
       const current = selected(ac); const isOpen = expanded.has(ac.acId);
       return `<details class="ac" data-ac-details="${e(ac.acId)}" ${isOpen ? 'open' : ''}><summary>

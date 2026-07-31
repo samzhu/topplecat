@@ -9,7 +9,7 @@ interpretation.
 
 | Artifact | Audience | Content |
 | --- | --- | --- |
-| Contract Review | Reviewer | Selected Spec context, public and reviewer rows, Step sentences, Properties, and acceptance source. |
+| Contract Review | Reviewer | Selected Spec context, public and reviewer rows, Step sentences, Properties, acceptance source, and non-blocking quality advisories. |
 | Public Spec | Public | Safe projection of the public executable contract. |
 | Verification Evidence | Reviewer | Current execution, private failures, Property classifications, and counterexamples. |
 | Current-run Evidence | Reviewer / CI | Machine aggregate verdict and independent gate results. |
@@ -24,6 +24,11 @@ Build the implementation handoff from an export containing public source,
 public rows, Properties, and selected Spec context only. Keep reviewer source,
 build output, local custody state, and Git history containing reviewer material
 inside the reviewer boundary.
+
+Quality advisories are reviewer prompts, not inferred requirements. They show
+only their rule code, AC, expected path, and public/reviewer counts. Keep them
+out of the executable contract, Seal, Verification Evidence, Public Spec, and
+safe feedback.
 
 External workflow automation or humans create and inspect these artifacts. The
 acceptance-authoring skill prepares readable source material; it does not treat

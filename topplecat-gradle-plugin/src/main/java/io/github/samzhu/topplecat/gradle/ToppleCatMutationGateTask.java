@@ -1,8 +1,7 @@
 package io.github.samzhu.topplecat.gradle;
 
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
-import io.github.samzhu.topplecat.core.EvidenceVerdict;
-import io.github.samzhu.topplecat.pitest.PitMutationAssessment;
+import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import io.github.samzhu.topplecat.pitest.PitMutationAttributor;
 import io.github.samzhu.topplecat.pitest.PitMutationParser;
 import java.io.IOException;
@@ -10,17 +9,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.RegularFile;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
 /** Turns a public-contract PIT full mutation matrix into automatic, reviewer-visible AC results. */
@@ -31,8 +34,25 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
   @org.gradle.api.tasks.InputFile
   public abstract RegularFileProperty getDefinitionFile();
 
+  /** Configured location used by the action to report a missing current PIT producer output. */
   @Internal
   public abstract RegularFileProperty getPitReportFile();
+
+  /**
+   * Current PIT producer output. This is a real tracked input when it exists; an absent optional
+   * report deliberately reaches the task action so it can mark the current run incomplete.
+   */
+  @org.gradle.api.tasks.InputFile
+  @Optional
+  @PathSensitive(PathSensitivity.NONE)
+  public Provider<RegularFile> getPitReportInput() {
+    return getProject()
+        .provider(
+            () -> {
+              RegularFile report = getPitReportFile().getOrNull();
+              return report != null && report.getAsFile().isFile() ? report : null;
+            });
+  }
 
   @OutputFile
   public abstract RegularFileProperty getResultsFile();
@@ -79,10 +99,10 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
       return;
     }
     Map<String, Set<String>> testsByAc = canonicalMethodsByAc();
-    List<PitMutationAssessment> assessments;
+    PitMutationAttribution attribution;
     try {
-      assessments =
-          PitMutationAttributor.assess(
+      attribution =
+          PitMutationAttributor.attribute(
               new PitMutationParser().parse(report), testsByAc, getThreshold().get());
     } catch (RuntimeException exception) {
       VerificationRunArtifacts.markCompleted(
@@ -96,30 +116,23 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
     Path output = getResultsFile().get().getAsFile().toPath();
     try {
       Files.createDirectories(output.getParent());
-      Files.writeString(
-          output,
-          MutationGateResults.write(
-              new MutationGateResults(MutationGateResults.SCHEMA_VERSION, assessments)));
+      Files.writeString(output, MutationGateResults.write(MutationGateResults.from(attribution)));
     } catch (IOException exception) {
       throw new GradleException("Cannot write ToppleCat mutation results: " + output, exception);
     }
     VerificationRunArtifacts.markCompleted(
         getRunDirectory().get().getAsFile().toPath(), VerificationRunArtifacts.MUTATION);
-    List<String> failed =
-        assessments.stream()
-            .filter(result -> result.verdict() != EvidenceVerdict.PASS)
-            .map(PitMutationAssessment::acId)
-            .toList();
-    if (!failed.isEmpty()) {
+    MutationGateResults results = MutationGateResults.from(attribution);
+    if (results.verdict() != io.github.samzhu.topplecat.core.EvidenceVerdict.PASS) {
       deferOrThrow(
-          "ToppleCat mutation gate failed for "
-              + String.join(", ", failed)
-              + ". Inspect "
+          "ToppleCat mutation gate did not meet the sealed public-contract detection policy."
+              + " Inspect "
               + output
-              + " for the per-AC mutation score and test attribution.");
+              + " for exact per-AC coverage, detection, and PIT producer outcomes.");
       return;
     }
-    getLogger().lifecycle("ToppleCat mutation gate passed for {} ACs.", assessments.size());
+    getLogger()
+        .lifecycle("ToppleCat mutation gate passed for {} ACs.", attribution.assessments().size());
   }
 
   private void deferOrThrow(String message) {

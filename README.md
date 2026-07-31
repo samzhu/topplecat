@@ -17,7 +17,7 @@ It keeps three independent safeguards separate:
 | Safeguard | Input and question | Gate |
 | --- | --- | --- |
 | **Hidden Tests** | Reviewer-owned typed case rows: do independently chosen examples pass? | `REVIEWER_JUNIT` |
-| **Mutation Testing** | Public acceptance tests and PIT output: do public examples detect changed production behaviour? | `MUTATION` |
+| **Mutation Testing** | Exact public Acceptance Methods and PIT's full matrix: does each method detect the mutants it covered? | `MUTATION` |
 | **Property-Based Testing (PBT)** | Bounded `@ToppleProperty` declarations: does an approved invariant survive generated inputs? | `PROPERTY` |
 
 None supplies evidence for another. They share contract integrity, scope
@@ -65,6 +65,13 @@ sandbox.
 it for multiple documents; no `--spec` selects all acceptance conditions.
 `--all-hidden-tests` broadens only hidden typed rows. Public Properties follow
 the selected ACs; Mutation Testing remains the full public acceptance contract.
+
+For Mutation Testing, ToppleCat preserves PIT's producer status and selector
+relationships. Its per-AC detection rate counts the mutants a specific public
+Acceptance Method appears in `killingTests` for, divided by the mutants that
+same method appears in `coveringTests` for. It is not PIT's global mutation
+threshold. Reviewer-only Verification Evidence shows the raw PIT summary;
+safe feedback stays at Gate level.
 
 ## Write an acceptance contract
 
@@ -144,23 +151,28 @@ must explicitly disable Hidden Tests and reseal that policy; then evidence shows
 | `build/topplecat/evidence.json` | Reviewer / CI | Machine verdict and gate digests. |
 | `build/topplecat/agent-feedback.json` | Implementation agent | Gate-level safe feedback only. |
 
+Contract Review can also show non-blocking reviewer advisories about hidden
+expected-output shapes and likely opaque identifier literals. They are prompts
+to examine the selected examples, not inferred business rules: they never
+change the executable contract, Seal, evidence, public handoff, or a Gate.
+
 Every formal run records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
 `EXPECTED_CONSUMPTION`, `PROPERTY`, and `MUTATION`. The aggregate verdict is
 `PASS`, `FAIL`, or `INCOMPLETE`; accept a done claim only when the current run
 is `PASS`.
 
-## Install 0.0.8
+## Install 0.0.9
 
 ToppleCat requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.8"
+    id("io.github.samzhu.topplecat") version "0.0.9"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.8")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.9")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -176,7 +188,7 @@ tasks.test { useJUnitPlatform() }
 - [Documentation index](docs/README.md)
 - [Context glossary](CONTEXT.md)
 - [Architecture](docs/architecture.md)
-- [0.0.8 release notes](docs/releases/0.0.8.md)
+- [0.0.9 release notes](docs/releases/0.0.9.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 

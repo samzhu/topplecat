@@ -55,6 +55,16 @@ earlier safeguard fails. `REVIEWER_JUNIT` is `PASS` only when current-run
 hidden typed rows executed. When enabled but those rows are missing it is
 `INCOMPLETE`; an explicit policy decision is `DISABLED`.
 
+Mutation attribution uses PIT's complete `coveringTests`, `killingTests`, and
+`succeedingTests` selector matrix. A mutant is mapped only when its selector's
+class, method, overload, and full parameter types exactly match a compiled
+public Acceptance Method. `coveringTests` supplies contract-scoped execution;
+`killingTests` supplies that same method's contract-scoped detection; and
+`succeedingTests` remains reviewer evidence. PIT `status` and `detected` stay
+unmodified. The sole reviewer-only `topplecat.mutation-results.v1` artifact
+directly keeps producer, unattributed, and per-AC outcome summaries plus raw
+relationships.
+
 ## Scope and custody
 
 `--spec` is the sole selection input. It maps external Spec ACs to executable
@@ -65,7 +75,7 @@ Mutation Testing remains full-contract.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.8 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.9 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
@@ -107,6 +117,13 @@ does not run Review, Seal, or update approval.
   classifications, replay tokens, and private failures when applicable.
 - `agent-feedback.json` has gate-level safe reasons only—no hidden values,
   IDs, paths, source names, tokens, attachments, or raw failures.
+
+Direct `toppleCatCheck` logs reviewer-only, non-blocking Contract Quality
+Advisories about hidden expected-output shapes and opaque identifier literals,
+and Contract Review displays them in its reviewer report. The Check that runs
+inside formal `toppleCatVerify` suppresses advisory output. Advisories do not
+enter the ContractDefinition, Mechanical Seal, Verify evidence, Public Spec,
+`agent-feedback.json`, or any Gate.
 
 The aggregate verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Individual gates may
 also be `DISABLED` or `NOT_APPLICABLE`; neither is a passing result.

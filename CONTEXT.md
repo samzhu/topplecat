@@ -5,6 +5,12 @@ glossary of product concepts, not an implementation guide or delivery plan.
 
 ## Executable contract
 
+**Executable Contract／可執行契約**:
+The human-authored Acceptance Methods and Typed Case Rows that define what
+ToppleCat mechanically verifies. Humans remain responsible for whether its
+business rules and examples are correct and complete.
+_Avoid_: BDD executable file, generated report, inferred requirement
+
 **Acceptance Condition (AC)／驗收條件**:
 A stable, externally chosen `AC-...` rule that ToppleCat binds to executable
 acceptance work. ToppleCat does not invent an omitted rule.
@@ -45,6 +51,17 @@ The safeguard that changes production behavior and measures whether public
 acceptance work detects the change. Its evidence is independent of other
 safeguards.
 
+**Mutation Attribution／突變歸因**:
+ToppleCat's mapping of a Mutation Testing result to the exact public Acceptance
+Method and Acceptance Condition whose execution covered it. Attribution
+preserves the producer's mutation outcome and does not infer business meaning
+from missing coverage.
+
+**Contract Quality Advisory／契約品質提醒**:
+A reviewer-only, non-blocking reminder of a possible expected-projection
+quality risk. It does not infer business rules, affect the Seal, Verify evidence,
+or any Gate, and never appears in the public report or `agent-feedback.json`.
+
 **Property-Based Testing／性質導向測試**:
 The safeguard that exercises a human-approved invariant with bounded generated
 inputs. It is testing evidence, not proof and not a hidden variant.
@@ -58,6 +75,12 @@ earlier safeguard fails.
 _Avoid_: a passing gate used as coverage for a different gate
 
 ## Delivery and evidence
+
+**Evidence Fidelity／證據忠實性**:
+The requirement that ToppleCat projections preserve observed contract and
+producer outcomes without adding, omitting, renaming, or reinterpreting them.
+A failing or incomplete result remains valid evidence when it truthfully
+records what happened.
 
 **Delivery Scope／交付範圍**:
 The Acceptance Conditions selected by the human or external workflow for one

@@ -31,7 +31,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.8 custody and approval schemas are current-only. A prior schema is not
+The 0.0.9 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -55,9 +55,27 @@ must explicitly disable `hiddenTests`, reseal the policy, and receives
 `REVIEWER_JUNIT=DISABLED` with the actual `PROPERTY` result.
 
 The managed PIT producer uses public acceptance classes only. Consumer-owned
-`targetTests` and custom producer tasks are preserved. A usable report that
-does not cover a public acceptance method is `MUTATION=FAIL`; missing,
-malformed, or interrupted mutation output is `MUTATION=INCOMPLETE`.
+`targetTests` and custom producer tasks are preserved. Its full matrix must
+contain PIT's `coveringTests`, `killingTests`, and `succeedingTests` groups.
+Before a formal Verify run, ToppleCat clears the configured PIT report and the
+prior run workspace. The producer report is a tracked Mutation Gate input, and
+formal Verify disables task-output and build-cache reuse for both the producer
+and the Gate, so the result and its completion marker belong to the same run.
+Direct diagnostic Gate execution keeps ordinary Gradle reuse behavior while
+still tracking report changes.
+ToppleCat attributes a result only to the exact public Acceptance Method whose
+class, method, overload, and parameter types match the PIT selector.
+`coveringTests` says the method ran against that mutant; `killingTests` says
+that same method detected it. If PIT produced mutants but none can be exactly
+attributed to any public Acceptance Method, the Mutation Gate fails
+(`MUTATION=FAIL`). Once at least one mutant is exactly attributed, any remaining
+unattributed mutants stay in reviewer evidence and do not directly affect the
+Gate. Each AC independently passes or fails from its own covered mutants,
+matching `killingTests`, and sealed threshold. An AC with no covered mutant or
+a detection rate below its sealed threshold makes the Gate fail. Missing, malformed,
+interrupted, ambiguous, or zero-mutant producer evidence makes it incomplete.
+PIT's own status and `detected` value remain visible without being turned into
+a ToppleCat score.
 
 Contract integrity is the only precondition. Verify first runs the current Check
 to rebuild the compiler definition it compares with the Mechanical Seal. If it
@@ -127,10 +145,12 @@ build/topplecat/reports/verification/index.html
 ```
 
 Verification Evidence can show Property classifications, generator choices,
-shrunk counterexamples, and replay tokens. It also shows disabled safeguards
-as `DISABLED`. Public Spec and `agent-feedback.json` never expose reviewer case
-IDs, values, source names or paths, Property trial material, tokens,
-attachments, or raw private failures.
+shrunk counterexamples, replay tokens, and the reviewer-only PIT attribution
+matrix. It also shows disabled safeguards as `DISABLED`. Contract Review may
+show non-blocking expected-output quality advisories. Public Spec and
+`agent-feedback.json` never expose reviewer case IDs, values, source names or
+paths, Property trial material, tokens, attachments, raw private failures, or
+quality-advisory output.
 
 `build/topplecat/evidence.json` is the machine verdict for the current run.
 Each run starts in `build/topplecat/runs/current/`, receives a fresh UUID when

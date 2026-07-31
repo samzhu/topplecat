@@ -1028,6 +1028,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
       // gate that reads its report. Its Integrity onlyIf must not race a missing current-run
       // integrity result in a parallel Gradle build.
       producer.mustRunAfter(contractIntegrity, verificationTest, hiddenTest, propertyTest);
+      producer.mustRunAfter(project.getTasks().named("toppleCatPrepareRun"));
       producer
           .getOutputs()
           .upToDateWhen(ignored -> !project.getGradle().getTaskGraph().hasTask(verify.get()));
@@ -1036,6 +1037,19 @@ public final class ToppleCatPlugin implements Plugin<Project> {
           .doNotCacheIf(
               "ToppleCat Verify requires current-run mutation producer evidence.",
               ignored -> project.getGradle().getTaskGraph().hasTask(verify.get()));
+      mutationGate.configure(
+          task -> {
+            // A formal verification workspace is discarded before every run. Its report, result,
+            // and completion marker must therefore be produced together in this graph rather than
+            // supplied by Gradle's previous task-output snapshot or build cache. A direct Gate
+            // invocation retains normal diagnostic up-to-date behaviour and now tracks PIT XML.
+            task.getOutputs()
+                .upToDateWhen(ignored -> !project.getGradle().getTaskGraph().hasTask(verify.get()));
+            task.getOutputs()
+                .doNotCacheIf(
+                    "ToppleCat Verify requires current-run mutation gate evidence.",
+                    ignored -> project.getGradle().getTaskGraph().hasTask(verify.get()));
+          });
       project
           .getTasks()
           .named("toppleCatPrepareRun", ToppleCatPrepareRunTask.class)

@@ -39,18 +39,32 @@ public final class PitMutationParser {
     try {
       Document document =
           factory().newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
+      if (!"mutations".equals(document.getDocumentElement().getTagName())) {
+        throw new ToppleCatException("PIT mutations.xml root element must be mutations.");
+      }
       NodeList nodes = document.getDocumentElement().getElementsByTagName("mutation");
       List<PitMutation> mutations = new ArrayList<>(nodes.getLength());
-      boolean matrix = nodes.getLength() > 0;
+      boolean matrix = true;
       for (int index = 0; index < nodes.getLength(); index++) {
         Element mutation = (Element) nodes.item(index);
-        matrix &= directChild(mutation, "coveringTests") != null;
+        String status = requiredAttribute(mutation, "status");
+        Element covering = directChild(mutation, "coveringTests");
+        Element killing = directChild(mutation, "killingTests");
+        Element succeeding = directChild(mutation, "succeedingTests");
+        // PIT legitimately omits coveringTests for NO_COVERAGE. The other selector groups are
+        // required by fullMutationMatrix even when they contain no selectors.
+        matrix &=
+            (covering != null || "NO_COVERAGE".equals(status))
+                && killing != null
+                && succeeding != null;
         mutations.add(
             new PitMutation(
                 booleanAttribute(mutation, "detected"),
-                requiredAttribute(mutation, "status"),
+                status,
                 requiredChild(mutation, "mutatedClass"),
-                testNames(mutation, "coveringTests")));
+                testNames(covering),
+                testNames(killing),
+                testNames(succeeding)));
       }
       return new PitMutationReport(mutations, matrix);
     } catch (ParserConfigurationException | SAXException | IOException exception) {
@@ -92,8 +106,7 @@ public final class PitMutationParser {
     return value.trim();
   }
 
-  private static List<String> testNames(Element element, String name) {
-    Element container = directChild(element, name);
+  private static List<String> testNames(Element container) {
     if (container == null
         || container.getTextContent() == null
         || container.getTextContent().isBlank()) {

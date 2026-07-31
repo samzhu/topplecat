@@ -3,61 +3,207 @@ package io.github.samzhu.topplecat.pitest;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ToppleCatException;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/** Assigns PIT mutants to ACs from the exact acceptance methods that cover each mutant. */
+/**
+ * Attributes PIT's full selector matrix to the exact public Acceptance Methods that executed it.
+ */
 public final class PitMutationAttributor {
   private PitMutationAttributor() {}
 
   /**
-   * Evaluates every AC using PIT's full mutation matrix. Each mutant belongs to every covering
-   * JUnit invocation whose class and method signature match the compiled acceptance contract. Class
-   * membership alone is deliberately insufficient: one Java acceptance-test class may contain
-   * several AC methods.
+   * Keeps PIT's raw outcomes and test relationships while calculating coverage and detection for
+   * each exact compiled Acceptance Method. It deliberately never infers a kill from a status or
+   * boolean flag: only {@code killingTests} supplies contract-scoped detection evidence.
    */
-  public static List<PitMutationAssessment> assess(
+  public static PitMutationAttribution attribute(
       PitMutationReport report,
       Map<String, ? extends Set<String>> canonicalMethodsByAc,
-      int threshold) {
+      int sealedThreshold) {
     if (report == null || !report.coverageMatrix()) {
       throw new ToppleCatException(
-          "PIT fullMutationMatrix=true is required for automatic per-AC attribution.");
+          "PIT fullMutationMatrix=true with coveringTests, killingTests, and succeedingTests is"
+              + " required for automatic per-AC attribution.");
     }
-    if (threshold < 0 || threshold > 100) {
+    if (sealedThreshold < 0 || sealedThreshold > 100) {
       throw new ToppleCatException("PIT mutation threshold must be between 0 and 100.");
     }
-    List<PitMutationAssessment> assessments = new ArrayList<>();
+
+    List<MethodBinding> bindings = bindings(canonicalMethodsByAc);
+    Map<String, AcCounts> countsByAc = new TreeMap<>();
     for (String acId : canonicalMethodsByAc.keySet().stream().sorted().toList()) {
-      List<CanonicalTestMethod> methods =
-          canonicalMethodsByAc.get(acId).stream()
-              .map(CanonicalTestMethod::parse)
-              .sorted(Comparator.comparing(CanonicalTestMethod::identity))
-              .toList();
-      List<PitMutation> selected =
-          report.mutations().stream()
-              .filter(
-                  mutation ->
-                      mutation.coveringTests().stream()
-                          .anyMatch(
-                              test -> methods.stream().anyMatch(method -> method.matches(test))))
-              .toList();
-      int detected = (int) selected.stream().filter(PitMutation::killed).count();
-      int score = selected.isEmpty() ? 0 : (detected * 100) / selected.size();
-      EvidenceVerdict verdict =
-          !selected.isEmpty() && score >= threshold ? EvidenceVerdict.PASS : EvidenceVerdict.FAIL;
-      List<String> testClasses =
-          methods.stream().map(CanonicalTestMethod::className).distinct().toList();
-      assessments.add(
-          new PitMutationAssessment(
-              acId, testClasses, threshold, selected.size(), detected, score, verdict));
+      countsByAc.put(acId, new AcCounts(methodsFor(acId, bindings)));
     }
-    return assessments.stream().sorted(Comparator.comparing(PitMutationAssessment::acId)).toList();
+
+    List<PitMutationEvidence> evidence = new ArrayList<>();
+    Map<Outcome, Integer> producerOutcomes = new TreeMap<>();
+    Map<Outcome, Integer> unattributedOutcomes = new TreeMap<>();
+    int attributed = 0;
+    for (PitMutation mutation : report.mutations()) {
+      Set<String> covered = matchedAcceptanceConditions(mutation.coveringTests(), bindings);
+      Set<String> killed = matchedAcceptanceConditions(mutation.killingTests(), bindings);
+      // Parse succeeding selectors even though they are not score input. An ambiguous selector is
+      // unusable reviewer evidence and must not silently disappear from the matrix.
+      matchedAcceptanceConditions(mutation.succeedingTests(), bindings);
+
+      Outcome outcome = new Outcome(mutation.status(), mutation.detected());
+      increment(producerOutcomes, outcome);
+      if (covered.isEmpty()) {
+        increment(unattributedOutcomes, outcome);
+      } else {
+        attributed++;
+      }
+      for (String acId : covered) {
+        AcCounts counts = countsByAc.get(acId);
+        counts.covered++;
+        increment(counts.outcomes, outcome);
+        if (killed.contains(acId)) {
+          counts.killed++;
+        }
+      }
+      evidence.add(
+          new PitMutationEvidence(
+              mutation.detected(),
+              mutation.status(),
+              mutation.mutatedClass(),
+              mutation.coveringTests(),
+              mutation.killingTests(),
+              mutation.succeedingTests(),
+              covered.stream().sorted().toList()));
+    }
+
+    List<PitMutationAssessment> assessments =
+        countsByAc.entrySet().stream()
+            .map(
+                entry -> {
+                  String acId = entry.getKey();
+                  AcCounts counts = entry.getValue();
+                  int rate = counts.covered == 0 ? 0 : (counts.killed * 100) / counts.covered;
+                  EvidenceVerdict verdict =
+                      counts.covered > 0 && rate >= sealedThreshold
+                          ? EvidenceVerdict.PASS
+                          : EvidenceVerdict.FAIL;
+                  return new PitMutationAssessment(
+                      acId,
+                      counts.acceptanceMethods,
+                      counts.covered,
+                      counts.killed,
+                      sealedThreshold,
+                      rate,
+                      outcomeCounts(counts.outcomes),
+                      verdict);
+                })
+            .toList();
+    return new PitMutationAttribution(
+        report.mutations().size(),
+        attributed,
+        report.mutations().size() - attributed,
+        outcomeCounts(producerOutcomes),
+        outcomeCounts(unattributedOutcomes),
+        assessments,
+        evidence);
+  }
+
+  private static List<MethodBinding> bindings(
+      Map<String, ? extends Set<String>> canonicalMethodsByAc) {
+    if (canonicalMethodsByAc == null) {
+      throw new ToppleCatException("Canonical Acceptance Method identities are required.");
+    }
+    List<MethodBinding> bindings = new ArrayList<>();
+    for (String acId : canonicalMethodsByAc.keySet().stream().sorted().toList()) {
+      if (acId == null || acId.isBlank()) {
+        throw new ToppleCatException("Canonical Acceptance Condition id is required.");
+      }
+      Set<String> identities = canonicalMethodsByAc.get(acId);
+      if (identities == null || identities.isEmpty()) {
+        throw new ToppleCatException(
+            "Canonical Acceptance Method identity is required for " + acId + ".");
+      }
+      for (String identity : identities.stream().sorted().toList()) {
+        bindings.add(new MethodBinding(acId, CanonicalTestMethod.parse(identity)));
+      }
+    }
+    return List.copyOf(bindings);
+  }
+
+  private static List<String> methodsFor(String acId, List<MethodBinding> bindings) {
+    return bindings.stream()
+        .filter(binding -> binding.acId.equals(acId))
+        .map(binding -> binding.method.identity)
+        .sorted()
+        .toList();
+  }
+
+  private static Set<String> matchedAcceptanceConditions(
+      List<String> selectors, List<MethodBinding> bindings) {
+    Set<String> result = new LinkedHashSet<>();
+    for (String selector : selectors) {
+      for (MethodBinding binding : bindings) {
+        SelectorMatch match = binding.method.matches(selector);
+        if (match == SelectorMatch.MALFORMED) {
+          throw new ToppleCatException(
+              "PIT full mutation matrix contains an unparseable Acceptance Method selector: "
+                  + selector);
+        }
+        if (match == SelectorMatch.MATCH) {
+          result.add(binding.acId);
+        }
+      }
+    }
+    return result;
+  }
+
+  private static void increment(Map<Outcome, Integer> counts, Outcome outcome) {
+    counts.merge(outcome, 1, Integer::sum);
+  }
+
+  private static List<PitOutcomeCount> outcomeCounts(Map<Outcome, Integer> counts) {
+    return counts.entrySet().stream()
+        .map(
+            entry ->
+                new PitOutcomeCount(
+                    entry.getKey().status, entry.getKey().detected, entry.getValue()))
+        .toList();
+  }
+
+  private record MethodBinding(String acId, CanonicalTestMethod method) {}
+
+  private static final class AcCounts {
+    private final List<String> acceptanceMethods;
+    private final Map<Outcome, Integer> outcomes = new TreeMap<>();
+    private int covered;
+    private int killed;
+
+    private AcCounts(List<String> acceptanceMethods) {
+      this.acceptanceMethods = List.copyOf(acceptanceMethods);
+    }
+  }
+
+  private record Outcome(String status, boolean detected) implements Comparable<Outcome> {
+    @Override
+    public int compareTo(Outcome other) {
+      int statusOrder = status.compareTo(other.status);
+      return statusOrder != 0 ? statusOrder : Boolean.compare(detected, other.detected);
+    }
+  }
+
+  private enum SelectorMatch {
+    MATCH,
+    NO_MATCH,
+    MALFORMED
   }
 
   private record CanonicalTestMethod(String identity, String className, String junitSignature) {
+    private static final Pattern CLASS_SELECTOR = Pattern.compile("\\[class:([^\\]]+)]");
+    private static final Pattern METHOD_SIGNATURE =
+        Pattern.compile("^([A-Za-z_$][A-Za-z0-9_$]*)\\((.*)\\)$");
+
     private static CanonicalTestMethod parse(String identity) {
       if (identity == null) {
         throw invalidIdentity(null);
@@ -67,28 +213,70 @@ public final class PitMutationAttributor {
       int parametersEnd = identity.indexOf(')', parametersStart + 1);
       if (methodSeparator < 1
           || parametersStart <= methodSeparator + 1
-          || parametersEnd < parametersStart) {
+          || parametersEnd < parametersStart
+          || parametersEnd + 1 >= identity.length()) {
         throw invalidIdentity(identity);
       }
       String className = identity.substring(0, methodSeparator);
       String methodName = identity.substring(methodSeparator + 1, parametersStart);
+      if (!methodName.matches("[A-Za-z_$][A-Za-z0-9_$]*")) {
+        throw invalidIdentity(identity);
+      }
       String parameters =
           descriptorParameters(identity.substring(parametersStart + 1, parametersEnd), identity);
       return new CanonicalTestMethod(identity, className, methodName + "(" + parameters + ")");
     }
 
-    private boolean matches(String pitName) {
+    private SelectorMatch matches(String pitName) {
       if (pitName == null) {
-        return false;
+        return SelectorMatch.NO_MATCH;
       }
-      String normalized = pitName.trim();
-      if (!(normalized.equals(className)
-          || normalized.startsWith(className + ".")
-          || normalized.startsWith(className + "["))) {
-        return false;
+      String normalizedName = pitName.trim();
+      Matcher classSelector = CLASS_SELECTOR.matcher(normalizedName);
+      if (!classSelector.find()) {
+        return selectorStart(normalizedName) >= 0
+            ? SelectorMatch.MALFORMED
+            : SelectorMatch.NO_MATCH;
       }
-      return normalized.contains("[test-template:" + junitSignature + "]")
-          || normalized.contains("[method:" + junitSignature + "]");
+      if (!className.equals(classSelector.group(1))) {
+        return SelectorMatch.NO_MATCH;
+      }
+      int template = normalizedName.indexOf("[test-template:");
+      int method = normalizedName.indexOf("[method:");
+      int start = earliest(template, method);
+      if (start < 0) {
+        // A class-only selector is never enough to attribute a mutant.
+        return SelectorMatch.NO_MATCH;
+      }
+      int prefixLength = normalizedName.startsWith("[test-template:", start) ? 15 : 8;
+      int closing = normalizedName.indexOf(")]", start + prefixLength);
+      if (closing < 0) {
+        return SelectorMatch.MALFORMED;
+      }
+      String signature = normalizedName.substring(start + prefixLength, closing + 1);
+      Matcher parsed = METHOD_SIGNATURE.matcher(signature);
+      if (!parsed.matches()) {
+        return SelectorMatch.MALFORMED;
+      }
+      String parameters = parsed.group(2);
+      String normalized = parameters.replaceAll("\\s*,\\s*", ",");
+      return junitSignature.equals(parsed.group(1) + "(" + normalized + ")")
+          ? SelectorMatch.MATCH
+          : SelectorMatch.NO_MATCH;
+    }
+
+    private static int selectorStart(String selector) {
+      return earliest(selector.indexOf("[test-template:"), selector.indexOf("[method:"));
+    }
+
+    private static int earliest(int first, int second) {
+      if (first < 0) {
+        return second;
+      }
+      if (second < 0) {
+        return first;
+      }
+      return Math.min(first, second);
     }
 
     private static String descriptorParameters(String descriptor, String identity) {

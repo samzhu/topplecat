@@ -4,6 +4,7 @@ import io.github.samzhu.topplecat.core.AcceptanceContract;
 import io.github.samzhu.topplecat.core.CaseDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
+import io.github.samzhu.topplecat.core.ContractQualityAdvisor;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.report.DeliveryScope;
 import io.github.samzhu.topplecat.report.HtmlBundleWriter;
@@ -114,6 +115,13 @@ public abstract class ToppleCatReviewTask extends ToppleCatScopedTask {
                 Instant.now(),
                 deliveryScope),
             properties);
+    view =
+        ReportViews.withContractQualityAdvisories(
+            view,
+            ContractQualityAdvisor.analyze(
+                definition.acceptanceConditions().stream()
+                    .flatMap(contract -> contract.cases().stream())
+                    .toList()));
     Path review = getReviewRoot().get().getAsFile().toPath();
     HtmlBundleWriter.review(review, view);
     getLogger().lifecycle("ToppleCat reviewer review written: {}", review.resolve("index.html"));

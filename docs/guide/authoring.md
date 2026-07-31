@@ -122,3 +122,11 @@ language or source of executable truth.
 Run `./gradlew toppleCatCheck` before handoff. An authorized reviewer then runs
 `./gradlew toppleCatReview`; its output contains reviewer material and must not
 be given to an implementation agent.
+
+Check can emit a reviewer-only Contract Quality Advisory when a hidden row has
+an expected-output shape unlike every public variant, or when public and hidden
+rows expose distinct nonblank literals at the same `...Id`, `...Key`, or
+`...Token` expected field. This does not say the rule is wrong or incomplete;
+it is a prompt to review the approved examples. The advisory contains only its
+rule code, AC, expected path, and counts, and never changes the contract,
+approval, or verification result.

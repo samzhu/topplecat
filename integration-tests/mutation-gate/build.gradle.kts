@@ -1,6 +1,6 @@
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.8"
+    id("io.github.samzhu.topplecat") version "0.0.9"
 }
 
 java {
@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.8")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.9")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -42,7 +42,9 @@ tasks.register("writePitFixture") {
             <mutations>
               <mutation detected="false" status="SURVIVED">
                 <mutatedClass>integration.mutation.CouponService</mutatedClass>
-                <coveringTests>integration.mutation.CouponAcceptanceTest.[engine:junit-jupiter]/[class:integration.mutation.CouponAcceptanceTest]/[test-template:acceptsThePublicCase(io.github.samzhu.topplecat.junit.ToppleCase)]/[test-template-invocation:#1]</coveringTests>
+                <coveringTests>integration.mutation.CouponAcceptanceTest.[engine:junit-jupiter]/[class:integration.mutation.CouponAcceptanceTest]/[test-template:acceptsThePublicCase(io.github.samzhu.topplecat.junit.ToppleCase,io.github.samzhu.topplecat.junit.ToppleScenario,integration.mutation.CouponAcceptanceTest${'$'}CouponStage)]/[test-template-invocation:#1]</coveringTests>
+                <killingTests></killingTests>
+                <succeedingTests>integration.mutation.CouponAcceptanceTest.[engine:junit-jupiter]/[class:integration.mutation.CouponAcceptanceTest]/[test-template:acceptsThePublicCase(io.github.samzhu.topplecat.junit.ToppleCase,io.github.samzhu.topplecat.junit.ToppleScenario,integration.mutation.CouponAcceptanceTest${'$'}CouponStage)]/[test-template-invocation:#1]</succeedingTests>
               </mutation>
             </mutations>
             """.trimIndent()

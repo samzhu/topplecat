@@ -31,6 +31,7 @@ import io.github.samzhu.topplecat.core.VerificationRun;
 import io.github.samzhu.topplecat.core.VerificationRunJson;
 import io.github.samzhu.topplecat.core.VerificationScope;
 import io.github.samzhu.topplecat.core.VerificationScopeJson;
+import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import io.github.samzhu.topplecat.report.CaseResultStatus;
 import io.github.samzhu.topplecat.report.DeliveryScope;
 import io.github.samzhu.topplecat.report.HtmlBundleWriter;
@@ -76,9 +77,12 @@ import tools.jackson.databind.json.JsonMapper;
 /** Writes safe and reviewer-only reports after verification test tasks, then feeds evidence. */
 public abstract class ToppleCatReportTask extends DefaultTask {
   private static final Pattern CASE_DISPLAY_NAME = Pattern.compile("\\[case:([^]]+)]");
-  private static final String MUTATION_COVERAGE_MISSING =
-      "Mutation verification did not exercise the required public acceptance contract. "
-          + "Check PIT test targeting and public acceptance coverage.";
+  private static final String MUTATION_NO_MUTANTS =
+      "Mutation Testing produced no mutants for this verification run, so the public contract"
+          + " could not be evaluated.";
+  private static final String MUTATION_NO_PUBLIC_ATTRIBUTION =
+      "Mutation Testing did not exactly attribute any producer mutant to a public Acceptance"
+          + " Method.";
   private static final JsonMapper JSON = JsonMapper.builder().build();
   private static final String CONTRACT_CHANGED =
       "The public executable contract or verification policy changed after reviewer approval.";
@@ -98,8 +102,9 @@ public abstract class ToppleCatReportTask extends DefaultTask {
       "Mutation Testing did not complete in this verification run.";
   private static final String MUTATION_EVIDENCE_INCOMPLETE =
       "Mutation Testing current-run evidence was missing or could not be read.";
-  private static final String MUTATION_SURVIVOR =
-      "Mutation Testing found one or more surviving mutants in this run.";
+  private static final String MUTATION_CONTRACT_DETECTION_FAILED =
+      "Mutation Testing found a public Acceptance Method without enough contract-scoped"
+          + " detection evidence.";
 
   @Internal
   public abstract DirectoryProperty getProjectRoot();
@@ -369,6 +374,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 properties.publicCount()));
     verification =
         ReportViews.withVerificationProperties(verification, verificationProperties(properties));
+    verification = ReportViews.withMutationAttribution(verification, mutationAttribution());
     Path reports = runDirectory.resolve("reports");
     if (integrityPassed) {
       HtmlBundleWriter.spec(reports.resolve("public"), spec);
@@ -1099,19 +1105,39 @@ public abstract class ToppleCatReportTask extends DefaultTask {
       if (mutationResults.verdict() == EvidenceVerdict.PASS) {
         return GateOutcome.pass();
       }
-      // A usable PIT report that contains no mutant covered by a public acceptance
-      // acceptance test is a target-selection failure. Keep the remediation generic:
-      // reviewer-only names, case values, and raw PIT details never enter feedback.
-      if (mutationResults.assessments().stream()
-          .anyMatch(
-              assessment ->
-                  assessment.verdict() == EvidenceVerdict.FAIL
-                      && assessment.totalMutations() == 0)) {
-        return GateOutcome.fail(MUTATION_COVERAGE_MISSING);
+      if (mutationResults.producerMutationCount() == 0) {
+        return GateOutcome.incomplete(MUTATION_NO_MUTANTS);
       }
-      return GateOutcome.fail(MUTATION_SURVIVOR);
+      if (mutationResults.uniquelyAttributedMutationCount() == 0) {
+        return GateOutcome.fail(MUTATION_NO_PUBLIC_ATTRIBUTION);
+      }
+      return GateOutcome.fail(MUTATION_CONTRACT_DETECTION_FAILED);
     } catch (IOException | RuntimeException exception) {
       return GateOutcome.incomplete(MUTATION_EVIDENCE_INCOMPLETE);
+    }
+  }
+
+  /**
+   * The detailed mutation artifact is reviewer evidence only and is never required to draw a gate.
+   */
+  private PitMutationAttribution mutationAttribution() {
+    Path results = getMutationResultsFile().get().getAsFile().toPath();
+    if (!Files.isRegularFile(results)) {
+      return null;
+    }
+    try {
+      MutationGateResults value = MutationGateResults.read(Files.readString(results));
+      return new PitMutationAttribution(
+          value.producerMutationCount(),
+          value.uniquelyAttributedMutationCount(),
+          value.unattributedMutationCount(),
+          value.producerOutcomeCounts(),
+          value.unattributedOutcomeCounts(),
+          value.assessments(),
+          value.mutations());
+    } catch (IOException | RuntimeException ignored) {
+      // mutationVerdict records malformed evidence as INCOMPLETE; do not fabricate a projection.
+      return null;
     }
   }
 

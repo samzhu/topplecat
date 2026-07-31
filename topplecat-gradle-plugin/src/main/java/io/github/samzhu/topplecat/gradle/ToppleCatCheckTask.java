@@ -5,6 +5,8 @@ import io.github.samzhu.topplecat.core.CompilerPropertyDescriptor;
 import io.github.samzhu.topplecat.core.CompilerScenarioDescriptor;
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
+import io.github.samzhu.topplecat.core.ContractQualityAdvisor;
+import io.github.samzhu.topplecat.core.ContractQualityAdvisory;
 import io.github.samzhu.topplecat.core.SelectedSpecScopeJson;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.core.ToppleCaseReader;
@@ -131,6 +133,19 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
     validateSelectedBindings(scope, descriptors);
     writeDefinition(definition);
     writeScope(scope);
+    if (!formalVerifyRequested()) {
+      reviewerAdvisories(definition, scope)
+          .forEach(
+              advisory ->
+                  getLogger()
+                      .warn(
+                          "ToppleCat reviewer advisory {} for {} at {} ({} public, {} hidden).",
+                          advisory.ruleCode(),
+                          advisory.acId(),
+                          advisory.expectedPath(),
+                          advisory.publicCount(),
+                          advisory.hiddenCount()));
+    }
     getLogger()
         .lifecycle(
             "ToppleCat check passed: {} ACs, {} case rows, {} Properties, definition {}.",
@@ -200,6 +215,18 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
                       + acId
                       + "\") before review.");
             });
+  }
+
+  private static List<ContractQualityAdvisory> reviewerAdvisories(
+      ContractDefinition definition, SpecScopeResolver.ResolvedSpecScope scope) {
+    return ContractQualityAdvisor.analyze(
+        definition.acceptanceConditions().stream()
+            .filter(
+                contract ->
+                    !scope.scope().selected()
+                        || scope.scope().acceptanceConditionIds().contains(contract.acId()))
+            .flatMap(contract -> contract.cases().stream())
+            .toList());
   }
 
   private static void deleteReview(Path reviewRoot) {

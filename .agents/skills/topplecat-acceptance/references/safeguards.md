@@ -28,8 +28,11 @@ public acceptance contract notices. Write public cases whose assertions would
 fail if an important comparison, return value, condition, or calculation were
 changed.
 
-Mutation strength comes from public acceptance methods and public rows. Hidden
-rows and Properties do not improve its result.
+Mutation strength comes from public acceptance methods and public rows. PIT
+attribution distinguishes the methods that execute a mutant (`coveringTests`)
+from the exact method that detects it (`killingTests`); one AC never receives
+detection credit from another. Hidden rows and Properties do not improve this
+result.
 
 ## Property-Based Testing
 
