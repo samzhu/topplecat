@@ -2,7 +2,7 @@
 name: topplecat-acceptance
 description: Author ToppleCat executable Java/JUnit acceptance contracts from SDD Specs. Use when a Java delivery needs Acceptance Conditions, public or reviewer-owned Typed Case Rows, or Property-Based Testing declarations.
 metadata:
-  topplecat-version: "0.0.10"
+  topplecat-version: "0.0.11"
 ---
 
 # ToppleCat acceptance
@@ -78,7 +78,7 @@ Produce separate public and reviewer handoffs. Reviewer-only values,
 identifiers, paths, and source names stay in the reviewer handoff.
 
 External workflow automation and humans execute ToppleCat tasks, inspect the
-Contract Review, Public Spec, Verification Evidence, and machine verdict, then
+Spec Review, Verification Report, and machine verdict, then
 decide whether to accept the final result.
 
 Complete this step only when the mapping accounts for every selected AC and

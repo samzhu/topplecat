@@ -8,15 +8,18 @@ import java.util.List;
 public record ReviewView(
     String schemaVersion,
     Instant generatedAt,
+    List<ReviewDocument> selectedSpecDocuments,
     List<ReviewAcceptanceCondition> acceptanceConditions,
     DeliveryScope deliveryScope,
     List<ContractQualityAdvisory> contractQualityAdvisories) {
-  public static final String SCHEMA_VERSION = "topplecat.review-view.v6";
+  public static final String SCHEMA_VERSION = "topplecat.review-view.v7";
 
   public ReviewView {
     if (!SCHEMA_VERSION.equals(schemaVersion)) {
       throw new IllegalArgumentException("Unsupported review-view schema: " + schemaVersion);
     }
+    selectedSpecDocuments =
+        List.copyOf(selectedSpecDocuments == null ? List.of() : selectedSpecDocuments);
     acceptanceConditions = List.copyOf(acceptanceConditions);
     contractQualityAdvisories =
         List.copyOf(contractQualityAdvisories == null ? List.of() : contractQualityAdvisories);
@@ -26,6 +29,6 @@ public record ReviewView(
       String schemaVersion,
       Instant generatedAt,
       List<ReviewAcceptanceCondition> acceptanceConditions) {
-    this(schemaVersion, generatedAt, acceptanceConditions, null, List.of());
+    this(schemaVersion, generatedAt, List.of(), acceptanceConditions, null, List.of());
   }
 }

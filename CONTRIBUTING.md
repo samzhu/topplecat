@@ -57,8 +57,9 @@ tag; the maintainer publishes Maven Central and the GitHub Release.
 - Do not replace Java/JUnit with another test framework or authoring syntax.
 - Do not add a natural-language scenario runtime or a second executable
   specification format.
-- Keep `src/hiddenTest` reviewer-only. Public reports and agent feedback must
-  not reveal private values, IDs, source names, paths, or failure details.
+- Keep `src/hiddenTest` reviewer-only. Public handoff material and agent
+  feedback must not reveal private values, IDs, source names, paths, or failure
+  details.
 - Keep mutation attribution automatic from PIT coverage data; users must not
   hand-maintain a second AC-to-mutation map.
 

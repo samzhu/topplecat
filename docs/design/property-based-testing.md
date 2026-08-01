@@ -114,9 +114,9 @@ Properties follow the selected ACs and run in their own formal task.
 `--all-hidden-tests` affects only hidden typed rows and never changes Property
 selection. Property execution cannot read, depend on, or generate hidden rows.
 
-Contract Review may show Property declarations beside typed cases and mutation
-policy. Public Spec shows those declarations. Reviewer-only Verification
-Evidence shows result state, classifications, generator choices,
+Spec Review may show Property declarations beside typed cases and mutation
+policy. Reviewer-only Verification Report shows result state, classifications,
+generator choices,
 counterexamples, and replay token. `agent-feedback.json` supplies only a
 generic Property remediation reason and never generated values, AC IDs, labels,
 paths, seeds, tokens, or raw failures.
@@ -136,7 +136,7 @@ the safeguard is enabled but no declarations apply to the effective scope.
 4. Property output cannot affect PIT targeting, mutation attribution, hidden
    typed-row coverage, or expected-consumption state.
 5. Counterexamples use retained JSON choices, shrink reproducibly, and stay out
-   of Public Spec and safe feedback.
+   of safe public feedback.
 6. Reports show the three capabilities side by side without blended coverage or
    score.
 7. Property execution cannot read, depend on, or generate hidden rows.

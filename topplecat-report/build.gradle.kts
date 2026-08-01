@@ -9,9 +9,9 @@ java {
 }
 
 dependencies {
-    // Public report projections accept ToppleCaseData values.
+    // Reviewer report projections accept ToppleCaseData values.
     api(project(":topplecat-core"))
-    // Public report case records expose JsonNode values.
+    // Reviewer report case records expose JsonNode values.
     api(libs.jackson.databind)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.htmlunit)

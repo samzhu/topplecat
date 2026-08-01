@@ -88,6 +88,9 @@ class ToppleCatPluginFunctionalTest {
 
     assertEquals(
         TaskOutcome.SUCCESS, runner("toppleCatSeal").build().task(":toppleCatSeal").getOutcome());
+    Path stalePublic = project.resolve("build/topplecat/reports/public/stale.html");
+    Files.createDirectories(stalePublic.getParent());
+    Files.writeString(stalePublic, "retired public report");
     var verify = runner("toppleCatVerify").build();
 
     assertEquals(TaskOutcome.SUCCESS, verify.task(":toppleCatVerificationTest").getOutcome());
@@ -98,7 +101,7 @@ class ToppleCatPluginFunctionalTest {
     assertTrue(Files.isRegularFile(project.resolve("build/topplecat/reports/review/index.html")));
     assertTrue(
         Files.isRegularFile(project.resolve("build/topplecat/reports/verification/index.html")));
-    assertTrue(Files.isRegularFile(project.resolve("build/topplecat/reports/public/index.html")));
+    assertFalse(Files.exists(project.resolve("build/topplecat/reports/public")));
     assertFalse(Files.exists(project.resolve("build/topplecat/reports/spec")));
     assertFalse(Files.exists(project.resolve("src/hiddenTest")));
   }
@@ -397,11 +400,11 @@ class ToppleCatPluginFunctionalTest {
                         && item.mutator()
                             .equals(
                                 "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator")));
-    String publicReport =
-        Files.readString(project.resolve("build/topplecat/reports/public/data.json"));
+    String verificationReport =
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
     String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
     for (String rawMutationDetail : List.of("VoidMethodCallMutator", "SURVIVED", "CouponService")) {
-      assertFalse(publicReport.contains(rawMutationDetail));
+      assertTrue(verificationReport.contains(rawMutationDetail));
       assertFalse(feedback.contains(rawMutationDetail));
     }
     assertFalse(Files.exists(project.resolve("src/hiddenTest")));
@@ -427,8 +430,8 @@ class ToppleCatPluginFunctionalTest {
     assertTrue(
         Files.isRegularFile(project.resolve("build/topplecat/reports/verification/index.html")));
     assertTrue(Files.isRegularFile(project.resolve("build/topplecat/agent-feedback.json")));
-    String publicReport =
-        Files.readString(project.resolve("build/topplecat/reports/public/data.json"));
+    String verificationReport =
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
     String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
     MutationGateResults mutation =
         MutationGateResults.read(
@@ -456,7 +459,9 @@ class ToppleCatPluginFunctionalTest {
             "coveredMutantCount",
             "killedByAcceptanceMethodMutantCount",
             "detectionRate")) {
-      assertFalse(publicReport.contains(reviewerOnly), "public report leaked: " + reviewerOnly);
+      assertTrue(
+          verificationReport.contains(reviewerOnly),
+          "verification report omitted: " + reviewerOnly);
       assertFalse(feedback.contains(reviewerOnly), "agent feedback leaked: " + reviewerOnly);
     }
     assertFalse(Files.exists(project.resolve("src/hiddenTest")));
@@ -602,7 +607,7 @@ class ToppleCatPluginFunctionalTest {
 
     assertEquals(TaskOutcome.SUCCESS, verify.task(":toppleCatVerificationTest").getOutcome());
     assertTrue(
-        Files.readString(project.resolve("build/topplecat/reports/public/data.json"))
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"))
             .contains("AC-COUPON"));
     String tasks = runner("tasks", "--all").build().getOutput();
     assertTrue(tasks.contains("toppleCatSeal"));
@@ -703,7 +708,7 @@ class ToppleCatPluginFunctionalTest {
     assertEquals(EvidenceVerdict.NOT_APPLICABLE, gate("PROPERTY"));
     assertEquals(EvidenceVerdict.PASS, evidence().verdict());
     assertFalse(
-        Files.readString(project.resolve("build/topplecat/reports/public/data.json"))
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"))
             .contains("onlyBHasAProperty"));
   }
 
@@ -733,7 +738,7 @@ class ToppleCatPluginFunctionalTest {
 
     runner("toppleCatReview").build();
     String review = Files.readString(project.resolve("build/topplecat/reports/review/data.json"));
-    assertTrue(review.contains("topplecat.review-view.v6"));
+    assertTrue(review.contains("topplecat.review-view.v7"));
     assertTrue(review.contains("contractQualityAdvisories"));
     assertTrue(review.contains("EXPECTED_SHAPE_VARIANT_MISSING"));
 
@@ -750,7 +755,7 @@ class ToppleCatPluginFunctionalTest {
         Files.readString(project.resolve("build/topplecat/agent-feedback.json"))
             .contains("EXPECTED_SHAPE_VARIANT_MISSING"));
     assertFalse(
-        Files.readString(project.resolve("build/topplecat/reports/public/data.json"))
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"))
             .contains("EXPECTED_SHAPE_VARIANT_MISSING"));
   }
 

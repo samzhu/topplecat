@@ -20,7 +20,7 @@ import stageFloorLayer from "./assets/scene/tabletop.svg";
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.10"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.11"';
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(
@@ -130,26 +130,20 @@ const copyByLocale = {
       codeAriaLabel: "ToppleScenario acceptance example",
     },
     views: {
-      heading: "One executable contract. Three honest views.",
+      heading: "One executable contract. Two human reports.",
       summary:
-        "Review and report pages project the checked Java contract for the right audience. They never become another source of truth.",
+        "The reviewer reads the complete selected Spec before handoff, then gets one failure-first report from formal verification. Neither becomes another source of truth.",
       items: [
         {
-          title: "Contract Review",
+          title: "Spec Review",
           detail:
-            "Before handoff, the reviewer sees the accepted ACs, readable Scenario steps, public rows, expected results, and non-blocking quality prompts.",
+            "Before handoff, the reviewer reads the complete selected Markdown, diagrams, executable Scenario, public and reviewer rows, Properties, and Acceptance Method source.",
           className: "contract",
         },
         {
-          title: "Public Spec",
+          title: "Verification Report",
           detail:
-            "After Verify, agents and contributors can read the safe public contract without reviewer-only cases or diagnostics.",
-          className: "boundary",
-        },
-        {
-          title: "Verification Evidence",
-          detail:
-            "The reviewer gets current-run gate results, exact PIT method attribution, and private diagnostics. Safe agent feedback reveals the failing gate, never the hidden answer.",
+            "After Verify, the reviewer sees the delivery conclusion first, then separate public, hidden, Property, mutation, and integrity findings. Safe agent feedback reveals the failing gate, never the hidden answer.",
           className: "evidence",
         },
       ],
@@ -171,7 +165,7 @@ const copyByLocale = {
           command: "toppleCatReview --spec specs/023-checkout/spec.md",
           label: "Review",
           title: "Read exactly what will run",
-          body: "Generate a reviewer-only view of the executable contract before any implementation handoff.",
+          body: "Render the complete selected Spec and its bound executable material before any implementation handoff.",
         },
         {
           command: "toppleCatSeal --spec specs/023-checkout/spec.md",
@@ -309,26 +303,20 @@ const copyByLocale = {
       codeAriaLabel: "ToppleScenario 驗收範例",
     },
     views: {
-      heading: "一份可執行契約，三種忠實視圖。",
+      heading: "一份可執行契約，兩份人類報告。",
       summary:
-        "審查與報告頁面，為正確的讀者投影已檢查的 Java 契約；它們絕不成為第二個真實來源。",
+        "交付前，審閱者閱讀完整的已選 Spec；正式驗證後，再從一份問題優先的報告查看結果。兩者都不會成為第二個事實來源。",
       items: [
         {
-          title: "契約審查",
+          title: "Spec Review",
           detail:
-            "交付前，審查者會看到已接受的 AC、可讀的 Scenario 步驟、公開案例列、預期結果與非阻擋的品質提醒。",
+            "交付前，審閱者會看到完整的已選 Markdown、圖表、可執行 Scenario、公開與隱藏案例、Properties，以及 Acceptance Method 原始碼。",
           className: "contract",
         },
         {
-          title: "公開 Spec",
+          title: "Verification Report",
           detail:
-            "Verify 後，agent 與貢獻者可閱讀安全的公開契約，不會看到僅限審查者的案例或診斷資訊。",
-          className: "boundary",
-        },
-        {
-          title: "驗證證據",
-          detail:
-            "審查者取得本次執行的 gate 結果、精確的 PIT 方法歸因與私有診斷；安全的 agent 回饋只顯示失敗 gate，絕不揭露隱藏答案。",
+            "Verify 後先顯示交付結論，再分開呈現公開驗收、隱藏測試、Property、Mutation 與 Integrity 問題；安全的 agent 回饋只顯示失敗 gate，絕不揭露隱藏答案。",
           className: "evidence",
         },
       ],
@@ -350,7 +338,7 @@ const copyByLocale = {
           command: "toppleCatReview --spec specs/023-checkout/spec.md",
           label: "Review",
           title: "閱讀即將執行的完整內容",
-          body: "在任何實作交付前，產生僅限審查者的可執行契約視圖。",
+          body: "在任何實作交付前，呈現完整的已選 Spec 與其綁定的可執行材料。",
         },
         {
           command: "toppleCatSeal --spec specs/023-checkout/spec.md",
@@ -819,7 +807,7 @@ function App() {
         </div>
         <div className="install-actions">
           <a className="button button-amber" href={`${repositoryUrl}/tree/main/samples/junit-cart-orders`} target="_blank" rel="noreferrer">{copy.install.sample} <Arrow /></a>
-          <a className="button button-dark" href={`${repositoryUrl}#install-0010`} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
+          <a className="button button-dark" href={`${repositoryUrl}#install-0011`} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
           <a className="acceptance-skill-link" href={`${repositoryUrl}/tree/main/.agents/skills/topplecat-acceptance`} target="_blank" rel="noreferrer">
             {copy.install.skill} <Arrow />
           </a>

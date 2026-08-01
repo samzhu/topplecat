@@ -1,10 +1,13 @@
 package io.github.samzhu.topplecat.junit;
 
 import io.github.samzhu.topplecat.core.CaseVisibility;
+import io.github.samzhu.topplecat.core.ExpectedActualComparison;
+import io.github.samzhu.topplecat.core.JsonContractComparison;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.core.ToppleCatException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -15,6 +18,7 @@ public final class ToppleCase {
 
   private final ToppleCaseData data;
   private final Map<String, ExpectedConsumption> consumption = new LinkedHashMap<>();
+  private Consumer<ExpectedActualComparison> comparisonRecorder = ignored -> {};
 
   public ToppleCase(ToppleCaseData data) {
     this.data = data;
@@ -80,6 +84,7 @@ public final class ToppleCase {
           "Topple case " + caseId() + " cannot serialize actual for expected." + key, exception);
     }
     if (!JsonContractEquality.equivalent(expected, actualNode)) {
+      comparisonRecorder.accept(JsonContractComparison.compare(key, expected, actualNode));
       throw new AssertionError(
           "Topple case "
               + caseId()
@@ -104,6 +109,11 @@ public final class ToppleCase {
         .map(Map.Entry::getKey)
         .findFirst()
         .orElse(null);
+  }
+
+  /** Binds reviewer-only mismatch diagnostics to the active compiler-described Scenario Step. */
+  void bindComparisonRecorder(Consumer<ExpectedActualComparison> recorder) {
+    comparisonRecorder = recorder == null ? ignored -> {} : recorder;
   }
 
   private <T> T convert(String side, JsonNode payload, String key, Class<T> type) {

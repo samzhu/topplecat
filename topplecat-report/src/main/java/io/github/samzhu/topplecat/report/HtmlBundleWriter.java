@@ -14,12 +14,14 @@ public final class HtmlBundleWriter {
 
   private HtmlBundleWriter() {}
 
-  public static void spec(Path output, SpecView view) {
-    write(output, ReportJson.writeSpec(view));
-  }
-
   public static void review(Path output, ReviewView view) {
     write(output, ReportJson.writeReview(view));
+  }
+
+  /** Writes a Spec Review and copies only parser-approved repository-local image assets. */
+  public static void review(Path output, ReviewView view, Path projectRoot) {
+    write(output, ReportJson.writeReview(view));
+    copyReviewAssets(output, view, projectRoot);
   }
 
   public static void verification(Path output, VerificationView view) {
@@ -33,6 +35,7 @@ public final class HtmlBundleWriter {
       Files.writeString(output.resolve("index.html"), shell, StandardCharsets.UTF_8);
       Files.writeString(output.resolve("data.json"), json, StandardCharsets.UTF_8);
       copy("assets/report.css", output.resolve("assets/report.css"));
+      copy("assets/mermaid.js", output.resolve("assets/mermaid.js"));
       copy("assets/report.js", output.resolve("assets/report.js"));
     } catch (IOException exception) {
       throw new IllegalStateException(
@@ -56,6 +59,35 @@ public final class HtmlBundleWriter {
         throw new IOException("Missing bundled report resource " + name);
       }
       Files.copy(input, output, StandardCopyOption.REPLACE_EXISTING);
+    }
+  }
+
+  private static void copyReviewAssets(Path output, ReviewView view, Path projectRoot) {
+    if (view.selectedSpecDocuments().isEmpty()) {
+      return;
+    }
+    Path root = projectRoot.toAbsolutePath().normalize();
+    try {
+      Path realRoot = root.toRealPath();
+      for (ReviewDocument document : view.selectedSpecDocuments()) {
+        for (ReviewDocumentAsset asset : document.assets()) {
+          Path source = root.resolve(asset.sourcePath()).normalize();
+          Path target = output.resolve(asset.bundlePath()).normalize();
+          if (!source.startsWith(root)
+              || !target.startsWith(output.normalize())
+              || !Files.isRegularFile(source)
+              || !source.toRealPath().startsWith(realRoot)) {
+            throw new IOException("Review document asset escaped its approved bundle boundary.");
+          }
+          Files.createDirectories(target.getParent());
+          Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+      }
+    } catch (IOException exception) {
+      throw new IllegalStateException(
+          "Cannot copy safe selected-Spec assets into the ToppleCat review bundle: "
+              + exception.getMessage(),
+          exception);
     }
   }
 

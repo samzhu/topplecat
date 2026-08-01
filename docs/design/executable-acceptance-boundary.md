@@ -55,9 +55,9 @@ the compiler semantic definition. It excludes production source and unrelated
 ordinary test source. Check fails closed when an in-project test helper used by
 the acceptance closure cannot be traced by javac symbols.
 
-Review and Verification reports are reviewer-only. The safe public projection
-is `reports/public/index.html`; it and `agent-feedback.json` contain no hidden
-identifiers, source locations, generated trial material, or raw failures.
+Spec Review and Verification Report are reviewer-only. `agent-feedback.json`
+is the only safe public projection; it contains no hidden identifiers, source
+locations, generated trial material, or raw failures.
 
 ## Consequences
 

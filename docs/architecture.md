@@ -10,7 +10,7 @@ HTML are evidence projections.
 | --- | --- |
 | `topplecat-core` | Case, evidence, custody, approval, Property, and safe-feedback models. |
 | `topplecat-junit` | `@ToppleAcceptanceTest`, typed rows, compiler-described Scenario/Stage proxies, expected consumption, and PBT engine. |
-| `topplecat-report` | Contract Review, safe Public Spec, and reviewer-only Verification Evidence projections. |
+| `topplecat-report` | Reviewer-only Spec Review and Verification Report projections. |
 | `topplecat-gradle-plugin` | Commands, task wiring, scope, custody, policy, integrity, and mutation orchestration. |
 
 ## Execution boundary
@@ -87,7 +87,7 @@ Mutation Testing remains full-contract.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.10 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.11 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
@@ -123,18 +123,30 @@ consumption and writes reports before its one aggregate Gradle failure exit.
 Verify reuses an existing Mechanical Seal through an internal custody check; it
 does not run Review, Seal, or update approval.
 
-- Contract Review is reviewer-only and precedes handoff.
-- Public Spec is a safe post-Verify projection under `reports/public/`.
-- Verification Evidence is reviewer-only and contains results, counterexamples,
+- Spec Review is reviewer-only, precedes handoff, and presents complete selected Markdown documents with their bound executable material.
+- Verification Report is reviewer-only and contains results, counterexamples,
   classifications, replay tokens, and private failures when applicable.
 - `agent-feedback.json` has gate-level safe reasons only—no hidden values,
   IDs, paths, source names, tokens, attachments, or raw failures.
 
+Spec Review is a document reader, not an execution dashboard: it renders every
+selected Markdown document in order before the AC-bound Scenario, public and
+reviewer Typed Case Rows, Properties, and the one public Acceptance Method.
+Raw Markdown HTML and unsafe URLs are escaped, repository-local image assets
+stay inside the offline bundle, and Mermaid has an escaped source fallback.
+
+Verification Report leads with the aggregate conclusion and a Problems Summary.
+It keeps Contract Integrity, Public Acceptance (including Expected Consumption),
+Hidden Tests, Property-Based Testing, and Mutation Testing in separate sections.
+When a `ToppleCase.verify(...)` comparison differs, the active compiler Step
+receives reviewer-only structured expected/actual field differences; that data
+never enters evidence feedback for the implementation agent.
+
 Direct `toppleCatCheck` logs reviewer-only, non-blocking Contract Quality
 Advisories about hidden expected-output shapes and opaque identifier literals,
-and Contract Review displays them in its reviewer report. The Check that runs
+and Spec Review displays them in its reviewer report. The Check that runs
 inside formal `toppleCatVerify` suppresses advisory output. Advisories do not
-enter the ContractDefinition, Mechanical Seal, Verify evidence, Public Spec,
+enter the ContractDefinition, Mechanical Seal, Verify evidence, Verification Report,
 `agent-feedback.json`, or any Gate.
 
 The aggregate verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Individual gates may

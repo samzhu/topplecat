@@ -2,7 +2,7 @@ package io.github.samzhu.topplecat.report;
 
 import java.util.List;
 
-/** Canonical generator-choice JSON for one Property failure in Verification Evidence. */
+/** Canonical generator-choice JSON for one Property failure in Verification Report. */
 public record VerificationCounterexample(String choicesJson, List<Integer> shrinkPath) {
   public VerificationCounterexample {
     if (choicesJson == null || choicesJson.isBlank()) {

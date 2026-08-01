@@ -61,7 +61,7 @@ Before changing supported behavior, read:
 - Do not introduce a second authoring language, a command-line interface, or a
   new compatibility surface.
 - Never put reviewer-only values, identifiers, paths, source names, or raw
-  failures in the public report or `agent-feedback.json`.
+  failures in public handoff material or `agent-feedback.json`.
 
 ## Verification
 

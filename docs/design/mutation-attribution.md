@@ -64,7 +64,7 @@ passes.
 This decision adds no mutation configuration API, task manager, CLI, approval
 workflow, or compatibility reader. It keeps public reports and
 `agent-feedback.json` at gate-level, generic remediation only. Reviewer-only
-mutation results and Verification Evidence may show the detailed, unaltered
+mutation results and Verification Report may show the detailed, unaltered
 PIT summary and PIT's official outcome labels.
 
 ## Visible interface and behavior

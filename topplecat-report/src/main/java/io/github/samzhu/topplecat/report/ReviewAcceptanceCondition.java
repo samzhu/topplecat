@@ -6,13 +6,13 @@ import java.util.List;
 public record ReviewAcceptanceCondition(
     String acId,
     String title,
+    ReviewAcLocation location,
     List<ReviewCase> cases,
-    List<SpecMarkdownBlock> specNarrative,
     ReviewMethod method,
     List<ReviewProperty> properties) {
   public ReviewAcceptanceCondition {
     cases = List.copyOf(cases);
-    specNarrative = List.copyOf(specNarrative == null ? List.of() : specNarrative);
+    location = location == null ? ReviewAcLocation.unavailable() : location;
     method = method == null ? new ReviewMethod(List.of(), "") : method;
     properties = List.copyOf(properties == null ? List.of() : properties);
   }
@@ -20,9 +20,14 @@ public record ReviewAcceptanceCondition(
   public ReviewAcceptanceCondition(
       String acId,
       String title,
+      ReviewAcLocation location,
       List<ReviewCase> cases,
-      List<SpecMarkdownBlock> specNarrative,
       ReviewMethod method) {
-    this(acId, title, cases, specNarrative, method, List.of());
+    this(acId, title, location, cases, method, List.of());
+  }
+
+  public ReviewAcceptanceCondition(
+      String acId, String title, List<ReviewCase> cases, ReviewMethod method) {
+    this(acId, title, ReviewAcLocation.unavailable(), cases, method, List.of());
   }
 }

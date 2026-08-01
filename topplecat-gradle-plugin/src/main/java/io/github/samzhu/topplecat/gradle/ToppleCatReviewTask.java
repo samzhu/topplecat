@@ -71,7 +71,10 @@ public abstract class ToppleCatReviewTask extends ToppleCatScopedTask {
               sourceCode(
                   getPublicTestSourceRoot().get().getAsFile().toPath(),
                   contract.scenario().sourceRef().file(),
-                  contract.scenario().sourceRef().line())));
+                  contract.scenario().sourceRef().line()),
+              contract.scenario().acceptanceTestMethodIdentity(),
+              contract.scenario().sourceRef().file(),
+              contract.scenario().sourceRef().line()));
       properties.put(
           contract.acId(),
           contract.properties().stream()
@@ -109,7 +112,8 @@ public abstract class ToppleCatReviewTask extends ToppleCatScopedTask {
             ReportViews.review(
                 titles,
                 cases,
-                scope.parsedSpecs().narratives(),
+                scope.parsedSpecs().documents(),
+                scope.parsedSpecs().locations(),
                 methods,
                 templates,
                 Instant.now(),
@@ -123,7 +127,7 @@ public abstract class ToppleCatReviewTask extends ToppleCatScopedTask {
                     .flatMap(contract -> contract.cases().stream())
                     .toList()));
     Path review = getReviewRoot().get().getAsFile().toPath();
-    HtmlBundleWriter.review(review, view);
+    HtmlBundleWriter.review(review, view, root);
     getLogger().lifecycle("ToppleCat reviewer review written: {}", review.resolve("index.html"));
   }
 

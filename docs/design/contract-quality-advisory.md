@@ -43,18 +43,18 @@ hidden count, sorted deterministically. It includes no value, case ID, source
 path, or failure. Advisories are computed from public/reviewer rows by the
 shared core analyzer. A direct `toppleCatCheck` logs reviewer warnings; the
 internal Check executed as part of `toppleCatVerify` suppresses that output.
-Contract Review displays the advisories and its schema is bumped.
+Spec Review displays the advisories and its schema is bumped.
 
 Advisories are neither contract fields nor executable contract input. They do
 not enter the ContractDefinition, approval, Seal digest, Verify evidence,
-Public Spec, public handoff, or `agent-feedback.json`; they never alter any
+public handoff or `agent-feedback.json`; they never alter any
 Gate or aggregate verdict. This adds no configuration API, source language,
 CLI, workflow, or hidden business rule.
 
 ## Visible interface and behavior
 
 The reviewer sees a stable sorted advisory list in direct Check output and in
-Contract Review. A no-warning review has an empty list. A Verify-created
+Spec Review. A no-warning review has an empty list. A Verify-created
 reviewer definition may calculate no advisory output because Verify is an
 evidence run, not a reviewer authoring checkpoint.
 

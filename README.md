@@ -77,7 +77,7 @@ specific public Acceptance Method appears in `killingTests` for, divided by the
 mutants that same method appears in `coveringTests` for; it is not PIT's global
 mutation threshold. An AC with no covered managed-profile mutant is a
 reviewer-visible attribution gap, not automatic passing evidence. Reviewer-only
-Verification Evidence shows the raw matrix; safe feedback stays at Gate level.
+The reviewer-only Verification Report shows the raw matrix; safe feedback stays at Gate level.
 See the [managed mutation profile design](docs/design/managed-mutation-profile.md)
 for the fixed 12 operators and Gate rules.
 
@@ -126,7 +126,7 @@ void payableTotalIsNeverNegative(PropertyTrials trials) {
 Properties live under `src/test`, but ordinary `./gradlew test` excludes them.
 `toppleCatVerify` runs Properties for the selected ACs in the independent
 `PROPERTY` gate. A reproducible failure records generator choices, a shrunk
-counterexample, and a replay token in the reviewer-only Verification Evidence
+counterexample, and a replay token in the reviewer-only Verification Report
 report. Safe feedback never contains generated inputs, identifiers, tokens,
 paths, or raw failures.
 
@@ -153,13 +153,12 @@ must explicitly disable Hidden Tests and reseal that policy; then evidence shows
 
 | Artifact | Audience | Purpose |
 | --- | --- | --- |
-| `build/topplecat/reports/review/index.html` | Reviewer | Contract Review before handoff. |
-| `build/topplecat/reports/public/index.html` | Public | Safe public acceptance projection after Verify. |
-| `build/topplecat/reports/verification/index.html` | Reviewer | Verification Evidence, including private results. |
+| `build/topplecat/reports/review/index.html` | Reviewer | Spec Review before handoff: the complete selected Markdown document and its bound executable material. |
+| `build/topplecat/reports/verification/index.html` | Reviewer | Failure-first Verification Report for one formal run, including private diagnostics. |
 | `build/topplecat/evidence.json` | Reviewer / CI | Machine verdict and gate digests. |
 | `build/topplecat/agent-feedback.json` | Implementation agent | Gate-level safe feedback only. |
 
-Contract Review can also show non-blocking reviewer advisories about hidden
+Spec Review can also show non-blocking reviewer advisories about hidden
 expected-output shapes and likely opaque identifier literals. They are prompts
 to examine the selected examples, not inferred business rules: they never
 change the executable contract, Seal, evidence, public handoff, or a Gate.
@@ -169,18 +168,18 @@ Every formal run records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
 `PASS`, `FAIL`, or `INCOMPLETE`; accept a done claim only when the current run
 is `PASS`.
 
-## Install 0.0.10
+## Install 0.0.11
 
 ToppleCat requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.10"
+    id("io.github.samzhu.topplecat") version "0.0.11"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.10")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.11")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -196,7 +195,7 @@ tasks.test { useJUnitPlatform() }
 - [Documentation index](docs/README.md)
 - [Context glossary](CONTEXT.md)
 - [Architecture](docs/architecture.md)
-- [0.0.10 release notes](docs/releases/0.0.10.md)
+- [0.0.11 release notes](docs/releases/0.0.11.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 

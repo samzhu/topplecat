@@ -8,7 +8,6 @@ import io.github.samzhu.topplecat.core.ScenarioTemplateRenderer;
 import io.github.samzhu.topplecat.core.SourceRef;
 import io.github.samzhu.topplecat.core.StepTemplate;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
-import io.github.samzhu.topplecat.core.ToppleCatException;
 import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -21,107 +20,18 @@ import java.util.Map;
 public final class ReportViews {
   private ReportViews() {}
 
-  public static SpecView spec(
-      Map<String, String> titles, List<ToppleCaseData> cases, Instant generatedAt) {
-    return spec(titles, cases, Map.of(), Map.of(), generatedAt);
-  }
-
-  public static SpecView spec(
+  public static VerificationView verification(
       Map<String, String> titles,
       List<ToppleCaseData> cases,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
+      Map<String, CaseExecution> executions,
       Instant generatedAt) {
-    return spec(titles, cases, specNarratives, Map.of(), generatedAt);
-  }
-
-  public static SpecView spec(
-      Map<String, String> titles,
-      List<ToppleCaseData> cases,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
-      Map<String, List<String>> scenarios,
-      Instant generatedAt) {
-    if (cases.stream().anyMatch(testCase -> testCase.visibility() != CaseVisibility.PUBLIC)) {
-      throw new ToppleCatException(
-          "Spec view accepts public cases only. Hidden case data must never enter this model.");
-    }
-    Map<String, List<ToppleCaseData>> byAc = group(cases);
-    List<SpecAcceptanceCondition> acs = new ArrayList<>();
-    byAc.forEach(
-        (acId, rows) ->
-            acs.add(
-                new SpecAcceptanceCondition(
-                    acId,
-                    title(titles, acId),
-                    scenarios.getOrDefault(acId, List.of()),
-                    rows.stream()
-                        .map(row -> new SpecCase(row.caseId(), row.inputs(), row.expected()))
-                        .toList(),
-                    specNarratives.getOrDefault(acId, List.of()))));
-    return new SpecView(SpecView.SCHEMA_VERSION, generatedAt, acs);
-  }
-
-  /** Adds only public static Property metadata to the agent-safe Spec projection. */
-  public static SpecView withSpecProperties(
-      SpecView view, Map<String, List<SpecProperty>> properties) {
-    List<SpecAcceptanceCondition> acceptanceConditions =
-        view.acceptanceConditions().stream()
-            .map(
-                ac ->
-                    new SpecAcceptanceCondition(
-                        ac.acId(),
-                        ac.title(),
-                        ac.scenario(),
-                        ac.publicCases(),
-                        ac.specNarrative(),
-                        properties.getOrDefault(ac.acId(), List.of())))
-            .toList();
-    return new SpecView(SpecView.SCHEMA_VERSION, view.generatedAt(), acceptanceConditions);
+    return verification(titles, cases, executions, true, List.of(), generatedAt);
   }
 
   public static VerificationView verification(
       Map<String, String> titles,
       List<ToppleCaseData> cases,
       Map<String, CaseExecution> executions,
-      Instant generatedAt) {
-    return verification(
-        titles, cases, executions, Map.of(), Map.of(), true, List.of(), generatedAt);
-  }
-
-  public static VerificationView verification(
-      Map<String, String> titles,
-      List<ToppleCaseData> cases,
-      Map<String, CaseExecution> executions,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
-      Instant generatedAt) {
-    return verification(
-        titles, cases, executions, specNarratives, Map.of(), true, List.of(), generatedAt);
-  }
-
-  public static VerificationView verification(
-      Map<String, String> titles,
-      List<ToppleCaseData> cases,
-      Map<String, CaseExecution> executions,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
-      boolean expectedConsumptionEnforced,
-      List<EvidenceGate> gates,
-      Instant generatedAt) {
-    return verification(
-        titles,
-        cases,
-        executions,
-        specNarratives,
-        Map.of(),
-        expectedConsumptionEnforced,
-        gates,
-        generatedAt);
-  }
-
-  public static VerificationView verification(
-      Map<String, String> titles,
-      List<ToppleCaseData> cases,
-      Map<String, CaseExecution> executions,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
-      Map<String, List<String>> scenarios,
       boolean expectedConsumptionEnforced,
       List<EvidenceGate> gates,
       Instant generatedAt) {
@@ -129,8 +39,7 @@ public final class ReportViews {
         titles,
         cases,
         executions,
-        specNarratives,
-        scenarios,
+        Map.of(),
         Map.of(),
         Map.of(),
         expectedConsumptionEnforced,
@@ -144,7 +53,6 @@ public final class ReportViews {
       Map<String, String> titles,
       List<ToppleCaseData> cases,
       Map<String, CaseExecution> executions,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
       Map<String, List<StepTemplate>> scenarios,
       boolean expectedConsumptionEnforced,
       List<EvidenceGate> gates,
@@ -153,7 +61,6 @@ public final class ReportViews {
         titles,
         cases,
         executions,
-        specNarratives,
         scenarios,
         expectedConsumptionEnforced,
         gates,
@@ -169,7 +76,6 @@ public final class ReportViews {
       Map<String, String> titles,
       List<ToppleCaseData> cases,
       Map<String, CaseExecution> executions,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
       Map<String, List<StepTemplate>> scenarios,
       boolean expectedConsumptionEnforced,
       List<EvidenceGate> gates,
@@ -205,7 +111,6 @@ public final class ReportViews {
         titles,
         cases,
         executions,
-        specNarratives,
         templates,
         sources,
         phases,
@@ -219,7 +124,6 @@ public final class ReportViews {
       Map<String, String> titles,
       List<ToppleCaseData> cases,
       Map<String, CaseExecution> executions,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
       Map<String, List<String>> scenarios,
       Map<String, Map<String, SourceRef>> stepSources,
       Map<String, Map<String, io.github.samzhu.topplecat.core.StepPhase>> stepPhases,
@@ -272,7 +176,6 @@ public final class ReportViews {
               scenarios.getOrDefault(entry.getKey(), List.of()),
               status,
               rows,
-              specNarratives.getOrDefault(entry.getKey(), List.of()),
               stepSources.getOrDefault(entry.getKey(), Map.of()),
               stepPhases.getOrDefault(entry.getKey(), Map.of())));
     }
@@ -289,6 +192,7 @@ public final class ReportViews {
         gates,
         acs,
         deliveryScope,
+        null,
         null);
   }
 
@@ -321,7 +225,6 @@ public final class ReportViews {
                       ac.scenario(),
                       status,
                       ac.cases(),
-                      ac.specNarrative(),
                       ac.stepSources(),
                       ac.stepPhases(),
                       attached);
@@ -341,7 +244,8 @@ public final class ReportViews {
         view.gates(),
         acceptanceConditions,
         view.deliveryScope(),
-        view.mutationAttribution());
+        view.mutationAttribution(),
+        view.run());
   }
 
   /** Adds reviewer-only raw PIT attribution after the mutation producer result is available. */
@@ -355,7 +259,42 @@ public final class ReportViews {
         view.gates(),
         view.acceptanceConditions(),
         view.deliveryScope(),
-        mutationAttribution);
+        mutationAttribution,
+        view.run());
+  }
+
+  /** Adds run identity and counts after all case and Gate evidence is available. */
+  public static VerificationView withRun(
+      VerificationView view, String runId, Instant startedAt, Instant finishedAt) {
+    int failedGates =
+        (int) view.gates().stream().filter(gate -> gate.verdict() == EvidenceVerdict.FAIL).count();
+    int incompleteGates =
+        (int)
+            view.gates().stream()
+                .filter(gate -> gate.verdict() == EvidenceVerdict.INCOMPLETE)
+                .count();
+    int failedAcs =
+        (int)
+            view.acceptanceConditions().stream()
+                .filter(ac -> ac.status() == CaseResultStatus.FAIL)
+                .count();
+    int failedCases =
+        (int)
+            view.acceptanceConditions().stream()
+                .flatMap(ac -> ac.cases().stream())
+                .filter(testCase -> testCase.status() == CaseResultStatus.FAIL)
+                .count();
+    return new VerificationView(
+        VerificationView.SCHEMA_VERSION,
+        view.generatedAt(),
+        view.verdict(),
+        view.expectedConsumptionEnforced(),
+        view.gates(),
+        view.acceptanceConditions(),
+        view.deliveryScope(),
+        view.mutationAttribution(),
+        new VerificationRunSummary(
+            runId, startedAt, finishedAt, failedGates, incompleteGates, failedAcs, failedCases));
   }
 
   private static CaseResultStatus suiteVerdict(
@@ -377,32 +316,14 @@ public final class ReportViews {
     return !incompleteGate && completeCases ? CaseResultStatus.PASS : CaseResultStatus.NOT_REPORTED;
   }
 
-  /** Builds a reviewer-only source projection without case outcomes or other execution state. */
+  /**
+   * Builds the document-first reviewer projection from selected Markdown and executable material.
+   */
   public static ReviewView review(
       Map<String, String> titles,
       List<ToppleCaseData> cases,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
-      Map<String, ReviewMethod> methods,
-      Instant generatedAt) {
-    return review(titles, cases, specNarratives, methods, Map.of(), generatedAt);
-  }
-
-  /** Builds reviewer-only per-case scenarios from compiler templates and typed row values. */
-  public static ReviewView review(
-      Map<String, String> titles,
-      List<ToppleCaseData> cases,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
-      Map<String, ReviewMethod> methods,
-      Map<String, List<StepTemplate>> templates,
-      Instant generatedAt) {
-    return review(titles, cases, specNarratives, methods, templates, generatedAt, null);
-  }
-
-  /** Builds reviewer-only per-case scenarios and the selected delivery-scope projection. */
-  public static ReviewView review(
-      Map<String, String> titles,
-      List<ToppleCaseData> cases,
-      Map<String, List<SpecMarkdownBlock>> specNarratives,
+      List<ReviewDocument> documents,
+      Map<String, ReviewAcLocation> locations,
       Map<String, ReviewMethod> methods,
       Map<String, List<StepTemplate>> templates,
       Instant generatedAt,
@@ -411,7 +332,7 @@ public final class ReportViews {
     java.util.TreeSet<String> acIds = new java.util.TreeSet<>();
     acIds.addAll(titles.keySet());
     acIds.addAll(byAc.keySet());
-    acIds.addAll(specNarratives.keySet());
+    acIds.addAll(locations.keySet());
     acIds.addAll(methods.keySet());
     List<ReviewAcceptanceCondition> acceptanceConditions = new ArrayList<>();
     for (String acId : acIds) {
@@ -437,12 +358,17 @@ public final class ReportViews {
           new ReviewAcceptanceCondition(
               acId,
               title(titles, acId),
+              locations.getOrDefault(acId, ReviewAcLocation.unavailable()),
               rows,
-              specNarratives.getOrDefault(acId, List.of()),
               methods.getOrDefault(acId, new ReviewMethod(List.of(), ""))));
     }
     return new ReviewView(
-        ReviewView.SCHEMA_VERSION, generatedAt, acceptanceConditions, deliveryScope, List.of());
+        ReviewView.SCHEMA_VERSION,
+        generatedAt,
+        documents,
+        acceptanceConditions,
+        deliveryScope,
+        List.of());
   }
 
   /** Adds static Property source cards to a reviewer-only review projection. */
@@ -455,25 +381,27 @@ public final class ReportViews {
                     new ReviewAcceptanceCondition(
                         ac.acId(),
                         ac.title(),
+                        ac.location(),
                         ac.cases(),
-                        ac.specNarrative(),
                         ac.method(),
                         properties.getOrDefault(ac.acId(), List.of())))
             .toList();
     return new ReviewView(
         ReviewView.SCHEMA_VERSION,
         view.generatedAt(),
+        view.selectedSpecDocuments(),
         acceptanceConditions,
         view.deliveryScope(),
         view.contractQualityAdvisories());
   }
 
-  /** Adds reviewer-only, non-blocking expected-output observations to Contract Review. */
+  /** Adds reviewer-only, non-blocking expected-output observations to Spec Review. */
   public static ReviewView withContractQualityAdvisories(
       ReviewView view, List<io.github.samzhu.topplecat.core.ContractQualityAdvisory> advisories) {
     return new ReviewView(
         ReviewView.SCHEMA_VERSION,
         view.generatedAt(),
+        view.selectedSpecDocuments(),
         view.acceptanceConditions(),
         view.deliveryScope(),
         advisories);

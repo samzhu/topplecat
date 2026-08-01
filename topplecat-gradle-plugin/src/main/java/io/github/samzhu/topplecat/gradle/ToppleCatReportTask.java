@@ -36,8 +36,6 @@ import io.github.samzhu.topplecat.report.CaseResultStatus;
 import io.github.samzhu.topplecat.report.DeliveryScope;
 import io.github.samzhu.topplecat.report.HtmlBundleWriter;
 import io.github.samzhu.topplecat.report.ReportViews;
-import io.github.samzhu.topplecat.report.SpecProperty;
-import io.github.samzhu.topplecat.report.SpecView;
 import io.github.samzhu.topplecat.report.VerificationClassification;
 import io.github.samzhu.topplecat.report.VerificationCounterexample;
 import io.github.samzhu.topplecat.report.VerificationProperty;
@@ -223,25 +221,6 @@ public abstract class ToppleCatReportTask extends DefaultTask {
             .toList();
     List<ToppleCaseData> verificationCases = new ArrayList<>(publicCases);
     verificationCases.addAll(hiddenVerificationCases);
-    Map<String, String> publicTitles =
-        publicDefinition.acceptanceConditions().stream()
-            .collect(
-                java.util.stream.Collectors.toMap(
-                    AcceptanceContract::acId,
-                    AcceptanceContract::title,
-                    (left, right) -> left,
-                    LinkedHashMap::new));
-    Map<String, List<String>> publicScenarios =
-        publicDefinition.acceptanceConditions().stream()
-            .collect(
-                java.util.stream.Collectors.toMap(
-                    AcceptanceContract::acId,
-                    contract ->
-                        contract.scenario().steps().stream()
-                            .map(io.github.samzhu.topplecat.core.ScenarioTemplateRenderer::template)
-                            .toList(),
-                    (left, right) -> left,
-                    LinkedHashMap::new));
     Map<String, String> reviewerTitles =
         reviewerDefinition.acceptanceConditions().stream()
             .collect(
@@ -346,21 +325,11 @@ public abstract class ToppleCatReportTask extends DefaultTask {
             expectedConsumption.asEvidenceGate(VerificationRunArtifacts.EXPECTED_CONSUMPTION),
             property.asEvidenceGate(VerificationRunArtifacts.PROPERTY),
             mutation.asEvidenceGate(VerificationRunArtifacts.MUTATION));
-    SpecView spec =
-        ReportViews.withSpecProperties(
-            ReportViews.spec(
-                publicTitles,
-                publicCases,
-                selectedScope.parsedSpecs().narratives(),
-                publicScenarios,
-                generatedAt),
-            specProperties(publicDefinition, selectedScope.scope()));
     VerificationView verification =
         ReportViews.verificationFromTemplates(
             reviewerTitles,
             verificationCases,
             executions,
-            selectedScope.parsedSpecs().narratives(),
             reviewerScenarioTemplates,
             getExpectedConsumptionEnabled().get(),
             reviewerGates,
@@ -375,10 +344,9 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     verification =
         ReportViews.withVerificationProperties(verification, verificationProperties(properties));
     verification = ReportViews.withMutationAttribution(verification, mutationAttribution());
+    verification =
+        ReportViews.withRun(verification, runId, runStartedAt(runDirectory), generatedAt);
     Path reports = runDirectory.resolve("reports");
-    if (integrityPassed) {
-      HtmlBundleWriter.spec(reports.resolve("public"), spec);
-    }
     HtmlBundleWriter.verification(reports.resolve("verification"), verification);
     copyAttachments(verification, runDirectory, reports.resolve("verification"));
 
@@ -433,8 +401,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         evidencePath,
         feedbackPath,
         getMutationResultsFile().get().getAsFile().toPath(),
-        propertyResults,
-        integrityPassed);
+        propertyResults);
     VerificationRunWorkspace.archive(runDirectory, runId);
     getLogger().lifecycle("ToppleCat verification report written: {}", verdict);
     if (verdict != EvidenceVerdict.PASS) {
@@ -557,33 +524,6 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                         : PROPERTY_TASK_INCOMPLETE)
                 : GateOutcome.pass();
     return new PropertyCollection(effective, results, gate);
-  }
-
-  private static Map<String, List<SpecProperty>> specProperties(
-      ContractDefinition definition, io.github.samzhu.topplecat.core.SelectedSpecScope scope) {
-    Map<String, List<SpecProperty>> result = new LinkedHashMap<>();
-    for (AcceptanceContract contract : definition.acceptanceConditions()) {
-      if (scope.selected() && !scope.acceptanceConditionIds().contains(contract.acId())) {
-        continue;
-      }
-      List<SpecProperty> properties =
-          contract.properties().stream()
-              .map(
-                  property ->
-                      new SpecProperty(
-                          property.title(),
-                          property.methodIdentity(),
-                          property.sourceRef().file(),
-                          property.sourceRef().line(),
-                          property.tries(),
-                          property.maxDiscards(),
-                          property.maxShrinks()))
-              .toList();
-      if (!properties.isEmpty()) {
-        result.put(contract.acId(), properties);
-      }
-    }
-    return Map.copyOf(result);
   }
 
   private static Map<String, List<VerificationProperty>> verificationProperties(
@@ -1194,9 +1134,6 @@ public abstract class ToppleCatReportTask extends DefaultTask {
       Path verificationScope,
       Path propertyResults) {
     Map<String, String> digests = new LinkedHashMap<>();
-    if (Files.isRegularFile(reports.resolve("public/data.json"))) {
-      digest(digests, "public-data.json", reports.resolve("public/data.json"));
-    }
     digest(digests, "verification-data.json", reports.resolve("verification/data.json"));
     digest(digests, "contract-integrity.json", integrityResult);
     digest(digests, "verification-scope.json", verificationScope);
@@ -1236,14 +1173,10 @@ public abstract class ToppleCatReportTask extends DefaultTask {
       Path evidence,
       Path feedback,
       Path mutationResults,
-      Path propertyResults,
-      boolean publishPublicSpec) {
+      Path propertyResults) {
     Path stable = root.resolve("build/topplecat");
-    if (publishPublicSpec) {
-      replaceTree(reports.resolve("public"), stable.resolve("reports/public"));
-    } else {
-      deleteTree(stable.resolve("reports/public"));
-    }
+    // Only the retired fixed generated path is cleaned. No project path is inferred from input.
+    deleteTree(stable.resolve("reports/public"));
     replaceTree(reports.resolve("verification"), stable.resolve("reports/verification"));
     copy(evidence, stable.resolve("evidence.json"));
     copy(feedback, stable.resolve("agent-feedback.json"));

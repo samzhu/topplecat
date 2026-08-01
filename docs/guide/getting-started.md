@@ -8,11 +8,11 @@ handoff. During development, continue to use ordinary `./gradlew test`.
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.10"
+    id("io.github.samzhu.topplecat") version "0.0.11"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.10")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.11")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -76,6 +76,8 @@ aggregate Gradle failure. Public Properties follow the selected ACs. Use
 `--all-hidden-tests` only when a reviewer deliberately expands hidden rows
 beyond the selected ACs.
 
-Read `build/topplecat/evidence.json` for the machine verdict. The public report
-is at `build/topplecat/reports/public/index.html`; the review and verification
-reports are reviewer-only.
+Read `build/topplecat/evidence.json` for the machine verdict. Spec Review at
+`build/topplecat/reports/review/index.html` and Verification Report at
+`build/topplecat/reports/verification/index.html` are both reviewer-only.
+There is no public HTML report; `agent-feedback.json` is the safe generated
+result for the implementation agent.

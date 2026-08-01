@@ -24,7 +24,7 @@ final class SpecScopeResolver {
         documents.isEmpty()
             ? ExternalSpecDocumentReader.ParsedSpecs.empty()
             : ExternalSpecDocumentReader.read(root, documents);
-    if (commandLineSpecProvided && parsed.narratives().isEmpty()) {
+    if (commandLineSpecProvided && parsed.acceptanceConditionIds().isEmpty()) {
       throw new ToppleCatException(
           "Selected ToppleCat Spec documents contain no AC-... identifiers. Select a Markdown Spec"
               + " that anchors at least one executable acceptance condition.");
@@ -43,10 +43,7 @@ final class SpecScopeResolver {
     }
     SelectedSpecScope scope =
         SelectedSpecScope.create(
-            sealedDocuments,
-            commandLineSpecProvided
-                ? parsed.narratives().keySet().stream().sorted().toList()
-                : List.of());
+            sealedDocuments, commandLineSpecProvided ? parsed.acceptanceConditionIds() : List.of());
     return new ResolvedSpecScope(scope, parsed, documents, commandLineSpecProvided);
   }
 

@@ -14,8 +14,9 @@ public record VerificationView(
     List<EvidenceGate> gates,
     List<VerificationAcceptanceCondition> acceptanceConditions,
     DeliveryScope deliveryScope,
-    PitMutationAttribution mutationAttribution) {
-  public static final String SCHEMA_VERSION = "topplecat.verification-view.v8";
+    PitMutationAttribution mutationAttribution,
+    VerificationRunSummary run) {
+  public static final String SCHEMA_VERSION = "topplecat.verification-view.v9";
 
   public VerificationView {
     if (!SCHEMA_VERSION.equals(schemaVersion)) {
@@ -23,6 +24,7 @@ public record VerificationView(
     }
     gates = List.copyOf(gates);
     acceptanceConditions = List.copyOf(acceptanceConditions);
+    run = run == null ? VerificationRunSummary.unavailable() : run;
   }
 
   public VerificationView(
@@ -39,6 +41,7 @@ public record VerificationView(
         expectedConsumptionEnforced,
         gates,
         acceptanceConditions,
+        null,
         null,
         null);
   }

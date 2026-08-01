@@ -66,7 +66,8 @@ _Avoid_: user-configured formal producer, universal AI mutator standard
 **Contract Quality Advisory／契約品質提醒**:
 A reviewer-only, non-blocking reminder of a possible expected-projection
 quality risk. It does not infer business rules, affect the Seal, Verify evidence,
-or any Gate, and never appears in the public report or `agent-feedback.json`.
+or any Gate, and never appears in public handoff material or
+`agent-feedback.json`.
 
 **Property-Based Testing／性質導向測試**:
 The safeguard that exercises a human-approved invariant with bounded generated
@@ -81,6 +82,28 @@ earlier safeguard fails.
 _Avoid_: a passing gate used as coverage for a different gate
 
 ## Delivery and evidence
+
+**Spec Review／規格審閱**:
+A reviewer-only, human-readable projection shown before implementation
+verification. It presents each complete Selected Spec Document together with
+the public and reviewer-owned Executable Contract material bound to its
+Acceptance Conditions. It contains no execution result and does not judge
+whether the upstream Spec is complete.
+_Avoid_: Contract Review, Public Spec, Living Documentation
+
+**Selected Spec Document／已選規格文件**:
+A repository-relative Markdown document selected by the human or external
+workflow for one delivery. Its complete contents belong in Spec Review, and
+every `AC-...` identifier anchored in the document belongs to that delivery's
+Delivery Scope. ToppleCat does not select a second AC subset inside the
+document or manage the document's lifecycle.
+_Avoid_: partially selected Spec, ToppleCat-managed requirement
+
+**Verification Report／驗證報告**:
+The reviewer-only, human-readable projection of one formal Verify run and its
+diagnostics. It is distinct from machine-readable Current-run Evidence and safe
+agent feedback.
+_Avoid_: Verification Evidence, blended quality report
 
 **Evidence Fidelity／證據忠實性**:
 The requirement that ToppleCat projections preserve observed contract and

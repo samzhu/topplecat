@@ -198,6 +198,7 @@ final class ToppleScenarioSession implements ToppleScenario.Selector, AutoClosea
     }
     narrative =
         ToppleNarrative.startScenario(Objects.requireNonNull(testCase, "testCase"), descriptor);
+    testCase.bindComparisonRecorder(narrative::recordComparison);
   }
 
   synchronized State state() {

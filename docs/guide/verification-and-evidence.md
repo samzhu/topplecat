@@ -31,7 +31,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.10 custody and approval schemas are current-only. A prior schema is not
+The 0.0.11 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -137,23 +137,21 @@ recorded `INCOMPLETE`; no earlier artifact fills a gap.
 
 | Artifact | Purpose | Audience |
 | --- | --- | --- |
-| Contract Review | Static contract projection before handoff | Reviewer only |
-| Public Spec | Safe public contract projection after Verify | Public |
-| Verification Evidence | Current execution results and private diagnostics | Reviewer only |
+| Spec Review | Complete selected Markdown document and bound executable material before handoff | Reviewer only |
+| Verification Report | Current formal-run conclusion, failure-first diagnostics, and private evidence | Reviewer only |
 
 Their stable paths are respectively:
 
 ```text
 build/topplecat/reports/review/index.html
-build/topplecat/reports/public/index.html
 build/topplecat/reports/verification/index.html
 ```
 
-Verification Evidence can show Property classifications, generator choices,
+Verification Report can show Property classifications, generator choices,
 shrunk counterexamples, replay tokens, and the reviewer-only PIT attribution
-matrix. It also shows disabled safeguards as `DISABLED`. Contract Review may
-show non-blocking expected-output quality advisories. Public Spec and
-`agent-feedback.json` never expose reviewer case IDs, values, source names or
+matrix. It also shows disabled safeguards as `DISABLED`. Spec Review may show
+non-blocking expected-output quality advisories. There is no public HTML report;
+`agent-feedback.json` never exposes reviewer case IDs, values, source names or
 paths, Property trial material, tokens, attachments, raw private failures, or
 quality-advisory output.
 
@@ -161,6 +159,15 @@ quality-advisory output.
 Each run starts in `build/topplecat/runs/current/`, receives a fresh UUID when
 archived, and retains only a small recent archive set. Stable copies are for
 inspection, never inputs to a later verdict.
+
+Spec Review reads the complete selected SDD before executable material. It says
+that the specification is prepared but not executed. Verification Report starts
+with accepted, rejected, or incomplete, then lists concrete failed findings
+before incomplete findings. Its five separate sections preserve the meaning of
+Contract Integrity, Public Acceptance and Expected Consumption, Hidden Tests,
+Property-Based Testing, and Mutation Testing. A field-level expected/actual
+comparison is reviewer-only diagnostic context for the failed compiler Step; it
+does not alter the JUnit assertion or Expected Consumption result.
 
 ## Custody boundary
 

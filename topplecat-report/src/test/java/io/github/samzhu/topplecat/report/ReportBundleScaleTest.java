@@ -86,7 +86,6 @@ class ReportBundleScaleTest {
             titles,
             cases,
             executions,
-            Map.of(),
             templates,
             true,
             List.of(),

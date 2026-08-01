@@ -96,7 +96,7 @@ assertion can stop later expected values from being checked, which is precisely
 what the consumption gate reports.
 
 No hidden case identifier, value, source name/path, Property choice, replay
-token, or assertion text crosses into Public Spec or `agent-feedback.json`.
+token, or assertion text crosses into `agent-feedback.json`.
 
 ## Acceptance evidence
 

@@ -92,9 +92,8 @@ for required in \
 done
 
 for required in \
-  'Contract Review' \
-  'Public Spec' \
-  'Verification Evidence' \
+  'Spec Review' \
+  'Verification Report' \
   'Current-run Evidence' \
   'Safe agent feedback'; do
   grep -Fq -- "$required" "$skill_root/references/reports.md" \

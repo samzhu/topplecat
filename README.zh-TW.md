@@ -66,7 +66,7 @@ ToppleCat 不管理任務、Spec 生命週期、組織簽核、CI 隔離或作�
 與 selector 關係。每個 AC 的 detection rate，是某個公開 Acceptance Method 出現在
 `killingTests` 的 mutant 數，除以同一方法出現在 `coveringTests` 的 mutant 數；它不是
 PIT 的全域 mutation threshold。某個 AC 沒有被這個 profile 的 mutant 覆蓋時，會是供
-審閱者判斷的 attribution gap，不是假裝通過。僅供審閱者查看的 Verification Evidence
+審閱者判斷的 attribution gap，不是假裝通過。僅供審閱者查看的 Verification Report
 會呈現原始矩陣，安全回饋則只停留在 Gate 層級。固定的 12 個 operator 與 Gate 規則見
 [managed mutation profile design](docs/design/managed-mutation-profile.md)。
 
@@ -109,7 +109,7 @@ void payableTotalIsNeverNegative(PropertyTrials trials) {
 
 性質宣告放在 `src/test`，但一般 `./gradlew test` 不會執行。
 `toppleCatVerify` 會在獨立的 `PROPERTY` gate 中執行選定 AC 的性質導向測試。
-可重現的失敗會在僅供審閱者查看的 Verification Evidence 顯示產生器選擇、
+可重現的失敗會在僅供審閱者查看的 Verification Report 顯示產生器選擇、
 縮小後的反例與重播記號；安全回饋絕不包含產生的輸入、識別字、重播記號、
 路徑或原始失敗訊息。
 
@@ -135,13 +135,12 @@ toppleCat {
 
 | 產物 | 對象 | 用途 |
 | --- | --- | --- |
-| `build/topplecat/reports/review/index.html` | 審閱者 | 交付前的 Contract Review。 |
-| `build/topplecat/reports/public/index.html` | 公開 | Verify 後安全的公開驗收投影。 |
-| `build/topplecat/reports/verification/index.html` | 審閱者 | 含私有結果的 Verification Evidence。 |
+| `build/topplecat/reports/review/index.html` | 審閱者 | 交付前的 Spec Review：完整已選 Markdown 文件與其綁定的可執行材料。 |
+| `build/topplecat/reports/verification/index.html` | 審閱者 | 一次正式執行、以問題優先呈現的 Verification Report，包含私有診斷。 |
 | `build/topplecat/evidence.json` | 審閱者 / CI | machine verdict 與 gate 摘要值。 |
 | `build/topplecat/agent-feedback.json` | 實作代理 | 只有 gate 層級的安全回饋。 |
 
-Contract Review 也可能顯示 reviewer-only、非阻擋的提醒，指出隱藏 expected output
+Spec Review 也可能顯示 reviewer-only、非阻擋的提醒，指出隱藏 expected output
 shape 或疑似 opaque identifier literal 值得人工檢查。它們不推測業務規則，也不會改變
 可執行契約、Seal、Verify evidence、公開交接內容或任何 Gate。
 
@@ -149,18 +148,18 @@ shape 或疑似 opaque identifier literal 值得人工檢查。它們不推測�
 `EXPECTED_CONSUMPTION`、`PROPERTY` 與 `MUTATION`。整體結果為 `PASS`、`FAIL`
 或 `INCOMPLETE`；只有本次執行的 `PASS` 才能接受完成宣稱。
 
-## 安裝 0.0.10
+## 安裝 0.0.11
 
 ToppleCat 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.10"
+    id("io.github.samzhu.topplecat") version "0.0.11"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.10")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.11")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -176,7 +175,7 @@ tasks.test { useJUnitPlatform() }
 - [文件索引](docs/README.md)
 - [共同語言](CONTEXT.md)
 - [架構](docs/architecture.md)
-- [0.0.10 release notes](docs/releases/0.0.10.zh-TW.md)
+- [0.0.11 release notes](docs/releases/0.0.11.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

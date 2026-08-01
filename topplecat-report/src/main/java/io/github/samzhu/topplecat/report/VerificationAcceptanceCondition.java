@@ -12,14 +12,12 @@ public record VerificationAcceptanceCondition(
     List<String> scenario,
     CaseResultStatus status,
     List<VerificationCase> cases,
-    List<SpecMarkdownBlock> specNarrative,
     Map<String, SourceRef> stepSources,
     Map<String, StepPhase> stepPhases,
     List<VerificationProperty> properties) {
   public VerificationAcceptanceCondition {
     scenario = List.copyOf(scenario == null ? List.of() : scenario);
     cases = List.copyOf(cases);
-    specNarrative = List.copyOf(specNarrative == null ? List.of() : specNarrative);
     stepSources = Map.copyOf(stepSources == null ? Map.of() : stepSources);
     stepPhases = Map.copyOf(stepPhases == null ? Map.of() : stepPhases);
     properties = List.copyOf(properties == null ? List.of() : properties);
@@ -31,10 +29,9 @@ public record VerificationAcceptanceCondition(
       List<String> scenario,
       CaseResultStatus status,
       List<VerificationCase> cases,
-      List<SpecMarkdownBlock> specNarrative,
       Map<String, SourceRef> stepSources,
       Map<String, StepPhase> stepPhases) {
-    this(acId, title, scenario, status, cases, specNarrative, stepSources, stepPhases, List.of());
+    this(acId, title, scenario, status, cases, stepSources, stepPhases, List.of());
   }
 
   public VerificationAcceptanceCondition(
@@ -42,14 +39,13 @@ public record VerificationAcceptanceCondition(
       String title,
       List<String> scenario,
       CaseResultStatus status,
-      List<VerificationCase> cases,
-      List<SpecMarkdownBlock> specNarrative) {
-    this(acId, title, scenario, status, cases, specNarrative, Map.of(), Map.of());
+      List<VerificationCase> cases) {
+    this(acId, title, scenario, status, cases, Map.of(), Map.of());
   }
 
   public VerificationAcceptanceCondition(
       String acId, String title, CaseResultStatus status, List<VerificationCase> cases) {
-    this(acId, title, List.of(), status, cases, List.of(), Map.of(), Map.of());
+    this(acId, title, List.of(), status, cases, Map.of(), Map.of());
   }
 
   public VerificationAcceptanceCondition(
@@ -58,8 +54,7 @@ public record VerificationAcceptanceCondition(
       List<String> scenario,
       CaseResultStatus status,
       List<VerificationCase> cases,
-      List<SpecMarkdownBlock> specNarrative,
       Map<String, SourceRef> stepSources) {
-    this(acId, title, scenario, status, cases, specNarrative, stepSources, Map.of());
+    this(acId, title, scenario, status, cases, stepSources, Map.of());
   }
 }

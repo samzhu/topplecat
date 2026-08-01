@@ -8,13 +8,14 @@
   <link rel="stylesheet" href="assets/report.css">
 </head>
 <body>
-  <main class="shell">
-    <header class="masthead"><p class="eyebrow">ToppleCat</p><h1 id="title">Report</h1><p id="notice" class="notice"></p></header>
-    <section class="controls" id="controls"><label>Search <input id="query" type="search" autocomplete="off"></label><div id="filters"></div></section>
-    <section id="summary" class="summary"></section>
-    <section id="report" class="report"></section>
-  </main>
+  <a class="skip-link" href="#main-content">Skip to report content</a>
+  <header class="masthead"><div class="frame"><p class="product-name">ToppleCat</p><h1 id="title">Report</h1><p id="notice" class="notice"></p></div></header>
+  <div class="frame report-layout">
+    <aside id="outline" class="outline" aria-label="Report outline"></aside>
+    <main id="main-content" tabindex="-1"><section id="summary"></section><section id="report"></section></main>
+  </div>
   <script id="topplecat-report-data" type="application/json">__TOPPLECAT_DATA__</script>
+  <script src="assets/mermaid.js"></script>
   <script src="assets/report.js"></script>
 </body>
 </html>

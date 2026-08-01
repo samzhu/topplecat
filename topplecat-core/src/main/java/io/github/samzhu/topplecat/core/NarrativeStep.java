@@ -11,7 +11,8 @@ public record NarrativeStep(
     long durationNanos,
     List<JsonNode> actualArguments,
     List<AttachmentRef> attachments,
-    String failureRef) {
+    String failureRef,
+    List<ExpectedActualComparison> comparisons) {
   public NarrativeStep {
     stepId = stepId == null ? "" : stepId;
     sentence = sentence == null ? "" : sentence;
@@ -24,5 +25,25 @@ public record NarrativeStep(
                 : actualArguments.stream().map(JsonNode::deepCopy).toList());
     attachments = List.copyOf(attachments == null ? List.of() : attachments);
     failureRef = failureRef == null ? "" : failureRef;
+    comparisons = List.copyOf(comparisons == null ? List.of() : comparisons);
+  }
+
+  public NarrativeStep(
+      String stepId,
+      String sentence,
+      NarrativeStepStatus status,
+      long durationNanos,
+      List<JsonNode> actualArguments,
+      List<AttachmentRef> attachments,
+      String failureRef) {
+    this(
+        stepId,
+        sentence,
+        status,
+        durationNanos,
+        actualArguments,
+        attachments,
+        failureRef,
+        List.of());
   }
 }

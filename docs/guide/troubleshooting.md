@@ -51,7 +51,7 @@ attribution. When an AC did cover mutants but its own method did not kill enough
 of them for the sealed threshold, the Gate also fails. An AC with no covered
 managed-profile mutant is instead an attribution gap for reviewer judgment once
 another AC has exact attribution. Inspect the reviewer-only
-`mutation-results.json` and Verification Evidence to see the unmodified PIT
+`mutation-results.json` and Verification Report to see the unmodified PIT
 outcomes, mutators, descriptions, and selector relationships. Verify writes
 reports, safe feedback, and re-hides reviewer source before returning the
 aggregate failure; stale producer reports cannot be reused.
@@ -67,12 +67,14 @@ on its own.
 
 ## Custody cannot be restored
 
-The 0.0.10 custody state is reviewer-local under
+The 0.0.11 custody state is reviewer-local under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`. The project must be opened
 at the same resolved path and with the reviewer state available. Prior-format
 custody is not migrated; create a new sealed reviewer state.
 
-## The public report is absent
+## A retired public report path is absent
 
-`reports/public/index.html` is published only after a Verify run whose contract
-integrity passes. Contract Review is the pre-handoff reviewer-only report.
+`reports/public/index.html` is intentionally not published. Use reviewer-only
+Spec Review before handoff and the reviewer-only Verification Report after
+formal Verify. `agent-feedback.json` remains the only generated result intended
+for the implementation agent.

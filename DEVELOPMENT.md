@@ -43,7 +43,7 @@ additional reading.
 | --- | --- |
 | `topplecat-core/` | Case schema, evidence, custody metadata, and safe feedback model |
 | `topplecat-junit/` | JUnit annotations, Stage DSL, typed case injection, expected consumption, and runtime stage records |
-| `topplecat-report/` | Public and reviewer report projections and static HTML rendering |
+| `topplecat-report/` | Reviewer-only Spec Review and Verification Report projections and static HTML rendering |
 | `topplecat-gradle-plugin/` | Gradle lifecycle, verification runs, report publication, and mutation gate |
 | `samples/` | Independent consumer projects and reproducible walkthroughs |
 | `docs/` | User guides, architecture, troubleshooting, release notes, and validation records |
@@ -70,8 +70,8 @@ Keep these boundaries in mind:
   the reviewer is authoring it.
 - Generated reports and evidence must not add, omit, or reinterpret approved
   rules, cases, expected values, or scenario steps.
-- Public reports and `agent-feedback.json` must not reveal reviewer-only data,
-  identifiers, source names, paths, or raw failures.
+- Public handoff material and `agent-feedback.json` must not reveal
+  reviewer-only data, identifiers, source names, paths, or raw failures.
 - Humans remain responsible for the completeness of the approved contract.
 
 Read [`docs/architecture.md`](docs/architecture.md) for the full contract,

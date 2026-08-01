@@ -1,312 +1,168 @@
 (() => {
   const data = JSON.parse(document.getElementById('topplecat-report-data').textContent);
-  const projection = data.schemaVersion.includes('review')
-    ? 'review' : data.schemaVersion.includes('verification') ? 'verification' : 'spec';
+  const review = String(data.schemaVersion || '').includes('review');
+  const verification = String(data.schemaVersion || '').includes('verification');
   const e = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[character]);
-  const status = value => `<span class="badge ${e(value)}">${e(value)}</span>`;
   const pretty = value => e(JSON.stringify(value, null, 2));
-  const markdown = blocks => (blocks || []).map(block => block.kind === 'LIST'
-    ? `<ul>${(block.items || []).map(item => `<li>${e(item)}</li>`).join('')}</ul>`
-    : `<p>${e(block.text)}</p>`).join('');
-  const label = phase => ({ GIVEN: 'Given', WHEN: 'When', THEN: 'Then', AND: 'And' })[phase] || 'And';
-  const stripPhase = text => String(text || '').replace(/^(Given|When|Then|And)\s+/i, '');
-  const parseLegacy = text => {
-    const match = String(text || '').match(/^(Given|When|Then|And)\s+(.*)$/i);
-    return match ? { phase: match[1].toUpperCase(), sentence: match[2] } : { phase: 'AND', sentence: text };
+  const id = value => String(value ?? '').replace(/[^A-Za-z0-9_-]/g, '-');
+  const safeHref = raw => /^(https?:|mailto:|#)/i.test(String(raw || '')) ? String(raw) : '';
+  const inline = source => {
+    const escaped = e(source);
+    return escaped
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\[([^\]]+)]\(([^\s)]+)(?:\s+&quot;[^&]*&quot;)?\)/g, (_all, label, href) => {
+        const safe = safeHref(href.replace(/&amp;/g, '&'));
+        return safe ? `<a href="${e(safe)}" target="_blank" rel="noopener">${label}</a>` : `${label} <code>${e(href)}</code>`;
+      })
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
+      .replace(/_([^_]+)_/g, '<em>$1</em>');
   };
-  const presentationSteps = rows => {
+  const badge = value => `<span class="badge ${e(value)}">${e(value)}</span>`;
+  const phaseName = phase => ({ GIVEN: 'Given', WHEN: 'When', THEN: 'Then', AND: 'And' })[phase] || 'And';
+  const parsedStep = step => {
+    if (typeof step !== 'string') return step || {};
+    const match = step.match(/^(Given|When|Then|And)\s+(.*)$/i);
+    return match ? { phase: match[1].toUpperCase(), sentence: match[2] } : { phase: 'AND', sentence: step };
+  };
+  const scenario = (steps, live = false) => {
+    const rows = (steps || []).map(parsedStep);
+    if (!rows.length) return '<p class="meta">Scenario source is unavailable.</p>';
     let previous = '';
-    return (rows || []).map(row => {
-      const source = typeof row === 'string' ? parseLegacy(row) : row;
-      const phase = source.phase || 'AND';
-      const shown = previous === phase && phase !== 'AND' ? 'AND' : phase;
-      previous = phase;
-      return { ...source, phase: shown, sentence: stripPhase(source.sentence) };
+    return `<div class="scenario" aria-label="Given When Then scenario">${rows.map(step => {
+      const phase = step.phase || 'AND'; const shown = previous === phase && phase !== 'AND' ? 'AND' : phase; previous = phase;
+      const status = step.status ? ` ${e(step.status)}` : '';
+      const duration = live && step.durationNanos ? ` <span class="meta">${(step.durationNanos / 1e6).toFixed(1)} ms</span>` : '';
+      return `<div class="scenario-step${status}"><span class="bdd-keyword bdd-${e(shown.toLowerCase())}">${phaseName(shown)}</span><span class="bdd-sentence">${inline(String(step.sentence || '').replace(/^(Given|When|Then|And)\s+/i, ''))}${duration}</span></div>`;
+    }).join('')}</div>`;
+  };
+  const flatten = (value, path = '') => {
+    if (Array.isArray(value)) return value.length ? value.flatMap((item, index) => flatten(item, `${path}[${index}]`)) : [[path || 'value', '[]']];
+    if (value && typeof value === 'object') return Object.keys(value).sort().length
+      ? Object.keys(value).sort().flatMap(key => flatten(value[key], path ? `${path}.${key}` : key)) : [[path || 'value', '{}']];
+    return [[path || 'value', typeof value === 'string' ? value : JSON.stringify(value)]];
+  };
+  const values = value => `<dl class="key-values">${flatten(value).map(([path, entry]) => `<div><dt>${e(path)}</dt><dd>${e(entry)}</dd></div>`).join('')}</dl>`;
+  const highlighter = (language, source) => {
+    const raw = String(source || ''); const lang = String(language || '').toLowerCase();
+    if (lang === 'java') {
+      const keywords = new Set(['abstract','assert','boolean','break','byte','case','catch','char','class','const','continue','default','do','double','else','enum','extends','final','finally','float','for','if','implements','import','instanceof','int','interface','long','native','new','package','private','protected','public','record','return','sealed','short','static','strictfp','super','switch','synchronized','this','throw','throws','transient','try','var','void','volatile','while','yield']);
+      return e(raw).replace(/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/g, '<span class="tok-comment">$1</span>').replace(/(&quot;(?:\\.|[^&])*?&quot;|'(?:\\.|[^'])*?')/g, '<span class="tok-string">$1</span>').replace(/(@[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)/g, '<span class="tok-annotation">$1</span>').replace(/\b([A-Za-z_$][\w$]*)\b/g, word => keywords.has(word) ? `<span class="tok-keyword">${word}</span>` : (/^[A-Z]/.test(word) ? `<span class="tok-type">${word}</span>` : word));
+    }
+    if (lang === 'json') return e(raw).replace(/(&quot;[^&]*?&quot;)(\s*:)/g, '<span class="tok-json-key">$1</span>$2').replace(/\b(-?\d+(?:\.\d+)?)\b/g, '<span class="tok-number">$1</span>');
+    if (lang === 'yaml' || lang === 'yml') return e(raw).replace(/(^|\n)(\s*[\w.-]+:)/g, '$1<span class="tok-yaml-key">$2</span>');
+    if (lang === 'markdown' || lang === 'md') return e(raw).replace(/(^|\n)(#{1,6}|[-*+] |\d+\. )/g, '$1<span class="tok-markdown">$2</span>');
+    if (lang === 'mermaid') return `<span class="tok-mermaid">${e(raw)}</span>`;
+    return e(raw);
+  };
+  const code = (language, source) => `<pre><code>${highlighter(language, source)}</code></pre>`;
+  const markdownBlock = block => {
+    const anchor = block.anchorId ? ` id="ac-${id(block.anchorId)}"` : '';
+    switch (block.kind) {
+      case 'HEADING': { const level = Math.min(Math.max((block.headingLevel || 1) + 1, 2), 6); return `<h${level}${anchor}>${inline(block.text)}</h${level}>`; }
+      case 'PARAGRAPH': return `<p${anchor}>${inline(block.text)}</p>`;
+      case 'LIST': return `<ul${anchor}>${(block.items || []).map(item => `<li>${inline(item)}</li>`).join('')}</ul>`;
+      case 'ORDERED_LIST': return `<ol${anchor}>${(block.items || []).map(item => `<li>${inline(item)}</li>`).join('')}</ol>`;
+      case 'TASK_LIST': return `<ul class="task-list"${anchor}>${(block.items || []).map(item => { const checked = /^\[x]/i.test(item); return `<li><input type="checkbox" disabled ${checked ? 'checked' : ''}>${inline(item.replace(/^\[[ xX]]\s*/, ''))}</li>`; }).join('')}</ul>`;
+      case 'BLOCK_QUOTE': return `<blockquote${anchor}>${String(block.text || '').split('\n').map(line => `<p>${inline(line)}</p>`).join('')}</blockquote>`;
+      case 'HORIZONTAL_RULE': return '<hr>';
+      case 'TABLE': return `<div class="table-wrap"${anchor}><table><thead><tr>${(block.tableHeaders || []).map(head => `<th>${inline(head)}</th>`).join('')}</tr></thead><tbody>${(block.tableRows || []).map(row => `<tr>${row.map(cell => `<td>${inline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+      case 'IMAGE': {
+        const destination = String(block.destination || ''); const source = /^assets\/spec\/[a-f0-9]{64}\.[a-z0-9]+$/.test(destination);
+        if (source) return `<figure${anchor}><img src="${e(destination)}" alt="${e(block.text)}"${block.title ? ` title="${e(block.title)}"` : ''}><figcaption>${inline(block.text)}</figcaption></figure>`;
+        const safe = safeHref(destination); const link = safe ? ` <a href="${e(safe)}" target="_blank" rel="noopener">Open remote image</a>` : '';
+        return `<div class="image-placeholder"${anchor}><strong>Image unavailable.</strong> ${inline(block.text || 'No alternative text was authored.')} ${e(block.title || '')}${link}</div>`;
+      }
+      case 'MERMAID': return `<section class="mermaid-panel"${anchor}><div class="mermaid-diagram"><div class="mermaid-source" hidden>${e(block.text)}</div></div><details><summary>View Mermaid source</summary>${code('mermaid', block.text)}</details></section>`;
+      case 'CODE_FENCE': return `<section${anchor}>${code(block.language, block.text)}</section>`;
+      default: return `<section${anchor}><p class="meta">Content could not be rendered as Markdown. Its escaped source is preserved below.</p>${code(block.language || 'markdown', block.text)}</section>`;
+    }
+  };
+  const documentView = document => `<article class="document" id="document-${id(document.path)}"><p class="document-identity"><code>${e(document.path)}</code></p>${(document.blocks || []).map(markdownBlock).join('')}</article>`;
+  const visibility = value => value === 'HIDDEN' ? '<span class="badge HIDDEN">Reviewer case</span>' : '<span class="badge PUBLIC">Public case</span>';
+  const method = item => item?.sourceCode ? `<details><summary>Acceptance Method source</summary><p class="meta">Only the AC-bound acceptance method is shown. Stage, helper, and production source are excluded.</p>${item.methodIdentity ? `<p class="technical-meta"><code>${e(item.methodIdentity)}</code>${item.sourceFile ? `, ${e(item.sourceFile)}:${e(item.sourceLine)}` : ''}</p>` : ''}${code('java', item.sourceCode)}</details>` : '<p class="meta">Acceptance Method source is unavailable.</p>';
+  const reviewCase = item => `<article class="case-card"><p>${visibility(item.visibility)} <strong>${e(item.caseId)}</strong></p>${scenario(item.scenario?.length ? item.scenario : [], false)}<div class="case-grid"><section><h4>Inputs</h4>${values(item.inputs)}</section><section><h4>Expected result</h4>${values(item.expected)}</section></div></article>`;
+  const reviewProperties = properties => !(properties || []).length ? '' : `<section><h4>Property declarations</h4>${properties.map(property => `<article class="case-card"><strong>${e(property.title)}</strong><p class="meta"><code>${e(property.methodIdentity)}</code>. ${e(property.tries)} tries, at most ${e(property.maxDiscards)} discards and ${e(property.maxShrinks)} shrinks.</p><details><summary>Property source and technical details</summary><p class="technical-meta">${e(property.sourceFile)}:${e(property.sourceLine)}</p>${code('java', property.sourceCode)}</details></article>`).join('')}</section>`;
+  const advisories = () => !(data.contractQualityAdvisories || []).length ? '' : `<section class="report-section" id="contract-quality-advisories"><h2>Contract Quality Advisories</h2><p>These reviewer-only observations are non-blocking. They do not add a business rule, change an execution result, or alter a Gate.</p>${data.contractQualityAdvisories.map(advisory => `<div class="advisory"><p><strong>${e(advisory.ruleCode)}</strong> for <a href="#ac-${id(advisory.acId)}">${e(advisory.acId)}</a></p><p>${e(advisory.expectedPath)}. Public rows: ${e(advisory.publicCount)}. Reviewer rows: ${e(advisory.hiddenCount)}.</p></div>`).join('')}</section>`;
+  const reviewAc = item => `<article class="ac-review" id="review-${id(item.acId)}"><div class="ac-heading"><span class="ac-id">${e(item.acId)}</span><h3>${e(item.title)}</h3></div>${item.location?.documentPath ? `<p class="meta">Selected SDD: <code>${e(item.location.documentPath)}</code>, document position ${e(item.location.documentPosition)}.</p>` : '<p class="meta">No external Spec document was selected for this full-contract review.</p>'}<h4>Executable Scenario and typed cases</h4>${(item.cases || []).map(reviewCase).join('') || '<p class="meta">No typed case rows were recorded.</p>'}${reviewProperties(item.properties)}${method(item.method)}<details><summary>Technical and policy metadata</summary><p class="technical-meta">This report projects the checked executable contract. Its details do not add a rule or execution result.</p></details></article>`;
+  const reviewPage = () => {
+    document.title = 'Spec Review'; document.getElementById('title').textContent = 'Spec Review'; document.getElementById('notice').textContent = 'Specification prepared — not executed';
+    const docs = data.selectedSpecDocuments || [];
+    const docIntro = docs.length ? 'The complete selected SDD documents appear first. The executable material below is the Java/JUnit contract bound to their ACs.' : 'No external Spec document was selected. This is the complete executable contract, not an invented Markdown document.';
+    document.getElementById('summary').innerHTML = `<section class="report-intro"><h2>Specification prepared — not executed</h2><p>${docIntro}</p></section>`;
+    document.getElementById('report').innerHTML = `${docs.length ? `<section class="report-section" id="selected-documents"><h2>Selected SDD documents</h2>${docs.map(documentView).join('')}</section>` : ''}<section class="report-section" id="executable-material"><h2>Executable acceptance material</h2>${(data.acceptanceConditions || []).map(reviewAc).join('')}</section>${advisories()}`;
+    document.getElementById('outline').innerHTML = `<h2>On this page</h2>${docs.map(doc => `<a href="#document-${id(doc.path)}">${e(doc.path)}</a>`).join('')}<a href="#executable-material">Executable acceptance material</a>${(data.acceptanceConditions || []).map(ac => `<a href="#review-${id(ac.acId)}">${e(ac.acId)}</a>`).join('')}${(data.contractQualityAdvisories || []).length ? '<a href="#contract-quality-advisories">Advisories</a>' : ''}`;
+  };
+  const gate = (name, heading) => (data.gates || []).find(item => item.name === name) || { name, verdict: 'INCOMPLETE', reason: 'Current-run evidence is unavailable.' };
+  const gateCard = item => `<div class="gate-card ${e(item.verdict)}"><p>${badge(item.verdict)} <strong>${e(item.name)}</strong></p>${item.reason ? `<p>${e(item.reason)}</p>` : ''}</div>`;
+  const failedSteps = item => (item.steps || []).filter(step => step.status === 'FAIL');
+  const comparison = item => {
+    const step = failedSteps(item).find(candidate => (candidate.comparisons || []).length) || (item.steps || []).find(candidate => (candidate.comparisons || []).length);
+    const comparisons = step?.comparisons || [];
+    if (!comparisons.length) return '';
+    return `<section class="comparison"><h4>Field-level expected and actual comparison</h4><p class="meta">Bound to compiler Step <code>${e(step.stepId)}</code>.</p>${comparisons.map(entry => `<h5>Expected <code>${e(entry.expectedKey)}</code></h5><div class="table-wrap"><table><thead><tr><th>Path</th><th>Difference</th><th>Expected</th><th>Actual</th></tr></thead><tbody>${(entry.differences || []).map(diff => `<tr><td>${e(diff.path)}</td><td>${e(diff.kind)}</td><td>${e(JSON.stringify(diff.expected))}</td><td>${e(JSON.stringify(diff.actual))}</td></tr>`).join('')}</tbody></table></div>`).join('')}</section>`;
+  };
+  const lazyCases = new Map();
+  const verificationCaseContent = (ac, item) => `<h4>Public rule being checked</h4><p><a href="#verification-${id(ac.acId)}">${e(ac.acId)}: ${e(ac.title)}</a></p><h4>Scenario</h4>${scenario(item.steps?.length ? item.steps.map(step => ({ ...step, phase: ac.stepPhases?.[step.stepId] || 'AND' })) : ac.scenario, Boolean(item.steps?.length))}<h4>Failed or last reached Step</h4>${(() => { const last = failedSteps(item)[0] || (item.steps || []).filter(step => step.status !== 'SKIPPED').at(-1); return last ? `<p><code>${e(last.stepId)}</code> ${e(last.sentence)}</p>` : '<p class="meta">No Scenario Step was reached.</p>'; })()}${comparison(item)}<div class="case-grid"><section><h4>Inputs</h4>${values(item.inputs)}</section><section><h4>Complete expected result</h4>${values(item.expected)}</section></div><details class="raw-failure"><summary>Raw failure and technical metadata</summary>${item.failure ? `<pre>${e(item.failure)}</pre>` : '<p class="meta">No raw failure was recorded.</p>'}<h5>Expected consumption</h5>${values(item.expectedConsumption || {})}</details>`;
+  const verificationCase = (ac, item, open) => {
+    const key = JSON.stringify([ac.acId, item.caseId]);
+    lazyCases.set(key, { ac, item });
+    return `<details class="case-card" data-case-id="${e(item.caseId)}" data-case-status="${e(item.status)}" data-search="${e(`${ac.acId} ${ac.title} ${item.caseId}`.toLowerCase())}" data-lazy-case="${e(key)}"${open ? ' open' : ''} id="case-${id(item.caseId)}"><summary>${visibility(item.visibility)} <strong>${e(item.caseId)}</strong> ${badge(item.status)}</summary><div class="lazy-case-content">${open ? verificationCaseContent(ac, item) : ''}</div></details>`;
+  };
+  const acCases = (visibilityName, openFailure) => (data.acceptanceConditions || []).flatMap(ac => (ac.cases || []).filter(item => item.visibility === visibilityName).map(item => ({ ac, item }))).map(({ ac, item }, index) => verificationCase(ac, item, openFailure && index === 0 && item.status === 'FAIL')).join('') || '<p class="meta">No current rows were available for this area.</p>';
+  const integrityFailed = () => gate('CONTRACT_INTEGRITY').verdict !== 'PASS';
+  const propertyResults = () => (data.acceptanceConditions || []).flatMap(ac => (ac.properties || []).map(property => `<article class="case-card" id="property-${id(property.methodIdentity)}"><h3>${e(property.title)} ${badge(property.status)}</h3><p class="meta"><code>${e(property.methodIdentity)}</code>. ${e(property.completedTrials)}/${e(property.requestedTrials)} trials; ${e(property.discards)} discards.</p>${property.incompleteReason ? `<p>${e(property.incompleteReason)}</p>` : ''}${property.originalCounterexample ? `<h4>Original counterexample</h4>${code('json', property.originalCounterexample.choicesJson)}` : ''}${property.shrunkCounterexample ? `<h4>Shrunk counterexample</h4>${code('json', property.shrunkCounterexample.choicesJson)}` : ''}${property.replayToken ? `<p class="meta">Replay token <code>${e(property.replayToken)}</code></p>` : ''}</article>`)).join('') || '<p class="meta">No Property declaration applied to this scope.</p>';
+  const mutation = () => {
+    const value = data.mutationAttribution; const gateValue = gate('MUTATION');
+    if (!value) return `${gateCard(gateValue)}<p class="meta">No current managed PIT attribution was available.</p>`;
+    const outcome = rows => !rows?.length ? '' : `<div class="table-wrap"><table><thead><tr><th>PIT status</th><th>Detected</th><th>Mutants</th></tr></thead><tbody>${rows.map(row => `<tr><td><code>${e(row.status)}</code></td><td>${e(row.detected)}</td><td>${e(row.count)}</td></tr>`).join('')}</tbody></table></div>`;
+    return `${gateCard(gateValue)}<p>PIT <code>${e(value.pitVersion)}</code>, managed profile <code>${e(value.managedProfileId)}</code>.</p><p>${e(value.producerMutationCount)} producer mutants. ${e(value.uniquelyAttributedMutationCount)} uniquely attributed. ${e(value.unattributedMutationCount)} unattributed.</p><h3>Managed operator IDs</h3><ul>${(value.managedOperatorIds || []).map(operator => `<li><code>${e(operator)}</code></li>`).join('')}</ul><h3>Raw producer outcomes</h3>${outcome(value.producerOutcomeCounts)}<h3>Per-AC contract detection</h3><div class="table-wrap"><table><thead><tr><th>AC</th><th>Covered</th><th>Detected by Acceptance Method</th><th>Threshold</th><th>Detection rate</th></tr></thead><tbody>${(value.assessments || []).map(assessment => `<tr><td>${e(assessment.acId)}</td><td>${e(assessment.coveredMutantCount)}</td><td>${e(assessment.killedByAcceptanceMethodMutantCount)}</td><td>${e(assessment.sealedThreshold)}%</td><td>${e(assessment.detectionRate)}%</td></tr>`).join('')}</tbody></table></div>${(value.assessments || []).filter(assessment => assessment.attributionGap).map(assessment => `<p class="meta">${e(assessment.acId)} has no managed-profile attribution evidence in this run. Reviewer judgment is required.</p>`).join('')}<details><summary>Raw PIT findings</summary>${(value.mutations || []).map((item, index) => `<article class="case-card"><h4>Mutant ${index + 1}: <code>${e(item.status)}</code></h4><p>${e(item.description)}</p><p class="meta">Mutator <code>${e(item.mutator)}</code>. Detected: ${e(item.detected)}.</p><h5>coveringTests</h5><ul>${(item.coveringTests || []).map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul><h5>killingTests</h5><ul>${(item.killingTests || []).map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul><h5>succeedingTests</h5><ul>${(item.succeedingTests || []).map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul></article>`).join('')}</details>`;
+  };
+  const problems = () => {
+    if (data.verdict === 'PASS') return '';
+    const gates = integrityFailed()
+      ? [gate('CONTRACT_INTEGRITY')]
+      : (data.gates || []).filter(item => item.verdict === 'FAIL').concat((data.gates || []).filter(item => item.verdict === 'INCOMPLETE'));
+    const caseProblems = integrityFailed() ? [] : (data.acceptanceConditions || []).flatMap(ac => (ac.cases || []).filter(item => item.status === 'FAIL').map(item => ({ ac, item })));
+    const all = gates.map(item => `<li><a href="#${item.name === 'CONTRACT_INTEGRITY' ? 'contract-integrity' : item.name === 'JUNIT' || item.name === 'EXPECTED_CONSUMPTION' ? 'public-acceptance' : item.name === 'REVIEWER_JUNIT' ? 'hidden-tests' : item.name === 'PROPERTY' ? 'property-testing' : 'mutation-testing'}">${e(item.name)}</a>: ${e(item.reason || `This Gate recorded ${item.verdict} in the current run.`)}</li>`).concat(caseProblems.map(({ ac, item }) => `<li><a href="#case-${id(item.caseId)}">${e(ac.acId)} / ${e(item.caseId)}</a>: this ${item.visibility === 'HIDDEN' ? 'reviewer' : 'public'} typed row failed while executing its recorded Scenario.</li>`));
+    return `<section class="problem-summary" id="problems"><h2>Problems Summary</h2><ol>${all.join('') || '<li>Verification is incomplete because current-run evidence is unavailable.</li>'}</ol></section>`;
+  };
+  const verificationPage = () => {
+    document.title = 'Verification Report'; document.getElementById('title').textContent = 'Verification Report';
+    const conclusion = data.verdict === 'PASS' ? 'Delivery accepted — verification passed' : data.verdict === 'FAIL' ? 'Delivery rejected — verification failed' : 'Verification incomplete';
+    document.getElementById('notice').textContent = conclusion;
+    const run = data.run || {}; const scope = data.deliveryScope || {}; const selected = (scope.acceptanceConditionIds || []).join(', ') || 'Full executable contract';
+    document.getElementById('summary').innerHTML = `<section class="report-intro verification ${e(data.verdict)}"><h2>${e(conclusion)}</h2><p>Aggregate verdict: ${badge(data.verdict)}. Failed Gates: ${e(run.failedGateCount ?? 0)}. Incomplete Gates: ${e(run.incompleteGateCount ?? 0)}. Failed ACs: ${e(run.failedAcceptanceConditionCount ?? 0)}. Failed cases: ${e(run.failedCaseCount ?? 0)}.</p><p class="meta">Run ID: <code>${e(run.runId || 'unavailable')}</code>. Started: ${e(run.startedAt || 'unavailable')}. Finished: ${e(run.finishedAt || data.generatedAt || 'unavailable')}.</p><p class="meta">Selected and executed scope: ${e(selected)}. Hidden rows: ${e(scope.executedHiddenRows ?? 0)}. Properties: ${e(scope.executedPublicProperties ?? 0)}.</p></section><section class="filter-controls" aria-label="Verification report filters"><label>Find AC or case <input id="case-query" type="search" autocomplete="off"></label>${['FAIL','PASS','NOT_REPORTED'].map(status => `<button type="button" data-status-filter="${status}" aria-pressed="false">${status}</button>`).join('')}</section>${problems()}`;
+    const blocked = '<p class="suppressed">Not executed because Contract Integrity did not establish a trusted contract for this run.</p>';
+    document.getElementById('report').innerHTML = `<section class="report-section" id="contract-integrity"><h2>Contract Integrity</h2>${gateCard(gate('CONTRACT_INTEGRITY'))}</section><section class="report-section" id="public-acceptance"><h2>Public Acceptance</h2>${integrityFailed() ? blocked : `${gateCard(gate('JUNIT'))}${gateCard(gate('EXPECTED_CONSUMPTION'))}${acCases('PUBLIC', true)}`}</section><section class="report-section" id="hidden-tests"><h2>Hidden Tests</h2>${integrityFailed() ? blocked : `${gateCard(gate('REVIEWER_JUNIT'))}${acCases('HIDDEN', true)}`}</section><section class="report-section" id="property-testing"><h2>Property-Based Testing</h2>${integrityFailed() ? blocked : `${gateCard(gate('PROPERTY'))}${propertyResults()}`}</section><section class="report-section" id="mutation-testing"><h2>Mutation Testing</h2>${integrityFailed() ? blocked : mutation()}</section>`;
+    document.getElementById('outline').innerHTML = '<h2>Verification</h2><a href="#problems">Problems Summary</a><a href="#contract-integrity">Contract Integrity</a><a href="#public-acceptance">Public Acceptance</a><a href="#hidden-tests">Hidden Tests</a><a href="#property-testing">Property-Based Testing</a><a href="#mutation-testing">Mutation Testing</a>';
+  };
+  if (!review && !verification) throw new Error('Unsupported ToppleCat report projection.');
+  review ? reviewPage() : verificationPage();
+  if (verification) {
+    const statuses = new Set(); const query = document.getElementById('case-query');
+    const applyCaseFilters = () => document.querySelectorAll('[data-case-id]').forEach(item => {
+      const queryMatch = !query.value.trim() || item.dataset.search.includes(query.value.trim().toLowerCase());
+      const statusMatch = !statuses.size || statuses.has(item.dataset.caseStatus);
+      item.hidden = !(queryMatch && statusMatch);
     });
-  };
-  const scenario = (rows, sources, live) => {
-    const steps = presentationSteps(rows);
-    if (!steps.length) return '';
-    return `<section class="scenario-panel" aria-label="Given When Then scenario">
-      <p class="panel-label">${live ? 'Executed scenario' : 'Scenario for this case'}</p>
-      <div class="scenario">${steps.map(step => `<div class="scenario-step ${e(step.status || '')}">
-        <span class="scenario-phase">${e(label(step.phase))}</span>
-        <div class="scenario-sentence">${e(step.sentence)}
-          ${step.status ? ` ${status(step.status)}` : ''}
-          ${step.durationNanos ? `<span class="duration">${(step.durationNanos / 1e6).toFixed(1)} ms</span>` : ''}
-          ${sources?.[step.stepId] ? `<span class="source-ref">${e(sources[step.stepId].file)}:${e(sources[step.stepId].line)}</span>` : ''}
-          ${step.failureRef ? `<pre class="failure">${e(step.failureRef)}</pre>` : ''}
-          ${attachments(step.attachments)}
-        </div>
-      </div>`).join('')}</div>
-    </section>`;
-  };
-
-  const JAVA_KEYWORDS = new Set(['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class',
-    'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for',
-    'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private',
-    'protected', 'public', 'record', 'return', 'sealed', 'short', 'static', 'strictfp', 'super', 'switch',
-    'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'var', 'void', 'volatile', 'while', 'yield']);
-  const highlighted = (kind, value) => `<span class="tok-${kind}">${e(value)}</span>`;
-  const highlightJava = sourceCode => {
-    const source = String(sourceCode ?? '');
-    let output = ''; let index = 0;
-    while (index < source.length) {
-      const rest = source.slice(index); let match;
-      if (rest.startsWith('//')) {
-        const end = source.indexOf('\n', index); const boundary = end < 0 ? source.length : end;
-        output += highlighted('comment', source.slice(index, boundary)); index = boundary;
-      } else if (rest.startsWith('/*')) {
-        const end = source.indexOf('*/', index + 2); const boundary = end < 0 ? source.length : end + 2;
-        output += highlighted('comment', source.slice(index, boundary)); index = boundary;
-      } else if (rest.startsWith('"""')) {
-        const end = source.indexOf('"""', index + 3); const boundary = end < 0 ? source.length : end + 3;
-        output += highlighted('string', source.slice(index, boundary)); index = boundary;
-      } else if (source[index] === '"' || source[index] === "'") {
-        const quote = source[index]; let boundary = index + 1; let escaped = false;
-        while (boundary < source.length) {
-          const character = source[boundary++];
-          if (escaped) escaped = false;
-          else if (character === '\\') escaped = true;
-          else if (character === quote) break;
-        }
-        output += highlighted('string', source.slice(index, boundary)); index = boundary;
-      } else if ((match = rest.match(/^@[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*/))) {
-        output += highlighted('annotation', match[0]); index += match[0].length;
-      } else if ((match = rest.match(/^(?:0[xX][\da-fA-F_]+|0[bB][01_]+|\d[\d_]*(?:\.\d[\d_]*)?)(?:[eE][+-]?\d[\d_]*)?[fFdDlL]?/))) {
-        output += highlighted('number', match[0]); index += match[0].length;
-      } else if ((match = rest.match(/^[A-Za-z_$][\w$]*/))) {
-        const word = match[0]; const kind = JAVA_KEYWORDS.has(word) ? 'keyword' : /^[A-Z]/.test(word) ? 'type' : '';
-        output += kind ? highlighted(kind, word) : e(word); index += word.length;
-      } else { output += e(source[index]); index++; }
-    }
-    return output;
-  };
-
-  const attachmentPath = item => /^attachments\/[a-f0-9]{64}\.(png|jpg|json|txt)$/.test(item?.relativePath || '')
-    ? item.relativePath : '';
-  const attachments = rows => rows?.length ? `<div class="attachments">${rows.map(item => {
-    const rawPath = attachmentPath(item); if (!rawPath) return '';
-    const path = e(rawPath); const itemLabel = e(item.title);
-    return item.mediaType?.startsWith('image/')
-      ? `<a href="${path}" target="_blank" rel="noopener"><img src="${path}" alt="${itemLabel}"><span>${itemLabel}</span></a>`
-      : `<a href="${path}" target="_blank" rel="noopener">${itemLabel} (${e(item.mediaType)})</a>`;
-  }).join('')}</div>` : '';
-
-  const valueText = value => typeof value === 'string' ? value : JSON.stringify(value);
-  const flattened = (value, path = '') => {
-    if (Array.isArray(value)) {
-      return value.length ? value.flatMap((item, index) => flattened(item, `${path}[${index}]`)) : [[path, '[]']];
-    }
-    if (value && typeof value === 'object') {
-      const keys = Object.keys(value);
-      return keys.length ? keys.flatMap(key => flattened(value[key], path ? `${path}.${key}` : key)) : [[path, '{}']];
-    }
-    return [[path || 'value', valueText(value)]];
-  };
-  const keyValues = (value, compact = false) => `<dl class="key-values ${compact ? 'compact' : ''}">${flattened(value)
-    .map(([path, item]) => `<div><dt>${e(path)}</dt><dd>${e(item)}</dd></div>`).join('')}</dl>`;
-  const visibility = row => row.visibility === 'HIDDEN'
-    ? '<span class="badge HIDDEN">Reviewer case</span>' : '<span class="badge PUBLIC">Public case</span>';
-  const rawCase = row => `<details class="raw-case"><summary>View raw case data</summary><pre class="json">${pretty({
-    caseId: row.caseId, inputs: row.inputs, expected: row.expected
-  })}</pre></details>`;
-  const caseRows = ac => projection === 'spec'
-    ? (ac.publicCases || []).map(row => ({ ...row, visibility: 'PUBLIC', scenario: [] })) : (ac.cases || []);
-  const defaultCase = rows => rows.find(row => row.visibility === 'PUBLIC') || rows[0];
-  const selectedCases = new Map();
-  const expanded = new Set();
-  const selected = ac => {
-    const rows = caseRows(ac); const desired = rows.find(row => row.caseId === selectedCases.get(ac.acId));
-    const current = desired || defaultCase(rows);
-    if (current) selectedCases.set(ac.acId, current.caseId);
-    return current;
-  };
-  const selector = (ac, current) => {
-    const rows = caseRows(ac); if (!rows.length) return '';
-    return `<section class="case-selector-section"><p class="panel-label">Case selector</p>
-      <div class="case-selector" role="tablist" aria-label="Cases for ${e(ac.acId)}">${rows.map(row => `<button type="button"
-        role="tab" aria-selected="${row.caseId === current.caseId}" data-case-select data-ac="${e(ac.acId)}"
-        data-case="${e(row.caseId)}">${visibility(row)} <span>${e(row.caseId)}</span></button>`).join('')}</div></section>`;
-  };
-  const reviewScenario = (ac, current) => current?.scenario?.length
-    ? scenario(current.scenario, null, false) : scenario(ac.method?.staticSentences || [], null, false);
-  const verificationScenario = (ac, current) => current?.steps?.length
-    ? scenario(current.steps.map(step => ({ ...step, phase: ac.stepPhases?.[step.stepId] || 'AND' })), ac.stepSources, true)
-    : scenario(ac.scenario || [], null, false);
-  const caseDetail = (ac, current) => {
-    if (!current) return '<p class="meta">This acceptance condition has no cases.</p>';
-    const scenarioMarkup = projection === 'verification' ? verificationScenario(ac, current)
-      : projection === 'review' ? reviewScenario(ac, current) : scenario(ac.scenario || [], null, false);
-    return `<section class="case-detail" role="tabpanel" aria-label="Selected case ${e(current.caseId)}">
-      <div class="case-detail-heading"><div><p class="panel-label">Selected case</p><h3>${e(current.caseId)} ${visibility(current)}</h3></div>
-      ${projection === 'verification' ? status(current.status) : ''}</div>
-      ${scenarioMarkup}
-      <div class="io-grid"><section><h4>Inputs</h4>${keyValues(current.inputs)}</section>
-        <section><h4>Expected output</h4>${keyValues(current.expected)}</section></div>
-      ${projection === 'verification' ? `<section class="consumption"><h4>Expected consumption</h4>${keyValues(current.expectedConsumption || {})}
-        ${current.failure ? `<pre class="failure">${e(current.failure)}</pre>` : ''}</section>` : ''}
-      ${rawCase(current)}
-    </section>`;
-  };
-  const matrix = ac => {
-    const rows = caseRows(ac); if (!rows.length) return '';
-    return `<section class="case-matrix-section"><h3>All cases</h3><div class="table-scroll"><table class="case-matrix">
-      <thead><tr><th>Type</th><th>Case ID</th><th>Inputs</th><th>Expected output</th></tr></thead>
-      <tbody>${rows.map(row => `<tr tabindex="0" role="button" data-case-select data-ac="${e(ac.acId)}" data-case="${e(row.caseId)}"
-        aria-label="Select case ${e(row.caseId)}" class="${selected(ac)?.caseId === row.caseId ? 'selected' : ''}">
-        <td>${visibility(row)}</td><td>${e(row.caseId)}</td><td>${keyValues(row.inputs, true)}</td><td>${keyValues(row.expected, true)}</td></tr>`).join('')}</tbody>
-    </table></div></section>`;
-  };
-  const canonicalMethod = method => method?.sourceCode ? `<details class="source method-panel">
-    <summary>View matching <code>@ToppleAcceptanceTest</code></summary><p class="panel-help">Only the acceptance method bound to this AC is shown.</p>
-    <pre class="java"><code>${highlightJava(method.sourceCode)}</code></pre></details>` : '';
-  const counts = ac => {
-    const rows = caseRows(ac); const publicCount = rows.filter(row => row.visibility === 'PUBLIC').length;
-    return `<span>${publicCount} public cases</span><span>${rows.length - publicCount} reviewer cases</span><span>${(ac.properties || []).length} properties</span>`;
-  };
-  const propertyLabel = () => '<span class="badge PUBLIC">Property-Based Testing</span>';
-  const propertyStatic = property => `<p class="meta"><code>${e(property.methodIdentity)}</code> · ${e(property.tries)} trials · max discards ${e(property.maxDiscards)} · max shrinks ${e(property.maxShrinks)}
-    ${property.sourceFile ? ` · ${e(property.sourceFile)}:${e(property.sourceLine)}` : ''}</p>`;
-  const counterexample = (heading, value) => value ? `<section class="counterexample"><h5>${heading}</h5><pre class="json">${e(value.choicesJson)}</pre>
-    ${value.shrinkPath?.length ? `<p class="meta">Shrink path: ${e(value.shrinkPath.join(', '))}</p>` : ''}</section>` : '';
-  const verificationProperty = property => `<article class="property-card ${e(property.status)}">
-    <div class="case-detail-heading"><div><h4>${e(property.title)}</h4>${propertyLabel()}</div>${status(property.status)}</div>
-    ${propertyStatic(property)}<p class="meta">Completed ${e(property.completedTrials)}/${e(property.requestedTrials)} trials · edges ${e(property.edgeTrials)} · random ${e(property.randomTrials)} · discards ${e(property.discards)} · seed <code>${e(property.seed)}</code> · replay ${property.replayVerified ? 'verified' : 'not verified'}</p>
-    ${(property.classifications || []).length ? `<div class="table-scroll"><table class="case-matrix"><thead><tr><th>Classification</th><th>Count</th><th>Percent</th><th>Required</th></tr></thead><tbody>${property.classifications.map(item => `<tr><td>${e(item.label)}</td><td>${e(item.count)}</td><td>${e(item.percent.toFixed(2))}%</td><td>${item.minimumPercent == null ? '—' : `${e(item.minimumPercent)}%`}</td></tr>`).join('')}</tbody></table></div>` : ''}
-    ${counterexample('Original counterexample', property.originalCounterexample)}${counterexample('Shrunk counterexample', property.shrunkCounterexample)}
-    ${property.replayToken ? `<p class="meta">Replay token <code>${e(property.replayToken)}</code></p>` : ''}${property.incompleteReason ? `<p class="gate-notice INCOMPLETE">${e(property.incompleteReason)}</p>` : ''}
-  </article>`;
-  const propertyCards = ac => {
-    const properties = ac.properties || []; if (!properties.length) return '';
-    if (projection === 'verification') return `<section class="property-section"><h3>Property-Based Testing results</h3>${properties.map(verificationProperty).join('')}</section>`;
-    if (projection === 'review') return `<section class="property-section"><h3>Property-Based Testing</h3><p class="panel-help">Properties are supplementary safeguards and do not replace typed acceptance examples.</p>${properties.map(property => `<article class="property-card"><h4>${e(property.title)} ${propertyLabel()}</h4>${propertyStatic(property)}${property.sourceCode ? `<details class="source method-panel"><summary>View matching <code>@ToppleProperty</code></summary><pre class="java"><code>${highlightJava(property.sourceCode)}</code></pre></details>` : ''}</article>`).join('')}</section>`;
-    return `<section class="property-section"><h3>Property-Based Testing</h3>${properties.map(property => `<article class="property-card"><h4>${e(property.title)}</h4>${propertyStatic(property)}</article>`).join('')}</section>`;
-  };
-  const pitOutcomeTable = (heading, outcomes) => !outcomes?.length ? '' : `<section class="mutation-outcomes"><h4>${e(heading)}</h4>
-    <div class="table-scroll"><table class="case-matrix"><thead><tr><th>PIT status</th><th>PIT detected</th><th>Mutants</th></tr></thead>
-    <tbody>${outcomes.map(outcome => `<tr><td><code>${e(outcome.status)}</code></td><td>${e(outcome.detected)}</td><td>${e(outcome.count)}</td></tr>`).join('')}</tbody></table></div></section>`;
-  const selectorList = selectors => selectors?.length ? `<ul>${selectors.map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul>` : '<p class="meta">None reported by PIT.</p>';
-  const mutationSummary = () => {
-    if (projection !== 'verification') return '';
-    const mutation = data.mutationAttribution;
-    const mutationGate = (data.gates || []).find(gate => gate.name === 'MUTATION');
-    const gateVerdict = status(mutationGate?.verdict || 'INCOMPLETE');
-    const gateReason = mutationGate?.reason ? `<p class="meta">${e(mutationGate.reason)}</p>` : '';
-    if (!mutation) return `<section class="mutation-summary"><h2>Mutation Testing</h2><p>${gateVerdict}</p>${gateReason}
-      <p class="panel-help">No current managed PIT attribution was available for this formal Verify.</p></section>`;
-    const assessments = mutation.assessments || [];
-    const profile = (mutation.managedOperatorIds || []).map(operator => `<li><code>${e(operator)}</code></li>`).join('');
-    const mutators = mutation.perMutatorSummaries || [];
-    return `<section class="mutation-summary"><h2>Mutation Testing</h2><p>${gateVerdict}</p>${gateReason}
-      <p class="panel-help">PIT’s <code>status</code> and <code>detected</code> values are shown unchanged; see <a href="https://pitest.org/quickstart/basic_concepts/" target="_blank" rel="noopener">PIT’s official mutation outcome definitions</a>. ToppleCat’s contract-scoped detection rate is based only on the exact Acceptance Method selectors in PIT <code>killingTests</code>, divided by its exact <code>coveringTests</code> selectors.</p>
-      <p>PIT <code>${e(mutation.pitVersion)}</code> · managed profile <code>${e(mutation.managedProfileId)}</code></p>
-      <section><h3>Managed operator IDs</h3><ul>${profile}</ul></section>
-      <p><strong>${e(mutation.producerMutationCount)}</strong> producer mutants · <strong>${e(mutation.uniquelyAttributedMutationCount)}</strong> uniquely attributed to public Acceptance Methods · <strong>${e(mutation.unattributedMutationCount)}</strong> unattributed</p>
-      ${pitOutcomeTable('All producer outcomes', mutation.producerOutcomeCounts)}${pitOutcomeTable('Unattributed producer outcomes', mutation.unattributedOutcomeCounts)}
-      ${mutators.length ? `<section><h3>Per-mutator summary</h3><div class="table-scroll"><table class="case-matrix"><thead><tr><th>Raw PIT mutator</th><th>Mutants</th><th>Raw outcomes</th></tr></thead><tbody>${mutators.map(summary => `<tr><td><code>${e(summary.mutator)}</code></td><td>${e(summary.mutantCount)}</td><td>${e((summary.outcomeCounts || []).map(outcome => `${outcome.status}/${outcome.detected}: ${outcome.count}`).join(', '))}</td></tr>`).join('')}</tbody></table></div></section>` : ''}
-      <section><h3>Per-AC contract detection</h3><div class="table-scroll"><table class="case-matrix"><thead><tr><th>AC</th><th>Covered mutants</th><th>Detected by this Acceptance Method</th><th>Sealed threshold</th><th>Detection rate</th></tr></thead>
-      <tbody>${assessments.map(assessment => `<tr><td>${e(assessment.acId)}</td><td>${e(assessment.coveredMutantCount)}</td><td>${e(assessment.killedByAcceptanceMethodMutantCount)}</td><td>${e(assessment.sealedThreshold)}%</td><td>${e(assessment.detectionRate)}%</td></tr>`).join('')}</tbody></table></div>${assessments.filter(assessment => assessment.attributionGap).map(assessment => `<p class="panel-help"><code>${e(assessment.acId)}</code>：此 AC 沒有取得本次 managed mutation profile 的歸因證據，需要 reviewer 判斷。</p>`).join('')}</section>
-      ${assessments.map(assessment => pitOutcomeTable(`${assessment.acId} PIT outcomes`, assessment.pitOutcomeCounts)).join('')}
-      <details class="raw-case"><summary>View raw PIT mutant details</summary>${(mutation.mutations || []).map((item, index) => `<section class="mutation-selector"><h4>Mutant ${index + 1}: <code>${e(item.status)}</code> · detected ${e(item.detected)}</h4><p class="meta">Mutated class: <code>${e(item.mutatedClass)}</code> · raw mutator: <code>${e(item.mutator)}</code> · attributed ACs: ${e((item.attributedAcceptanceConditionIds || []).join(', ') || 'none')}</p><p>${e(item.description)}</p><h5>coveringTests</h5>${selectorList(item.coveringTests)}<h5>killingTests</h5>${selectorList(item.killingTests)}<h5>succeedingTests</h5>${selectorList(item.succeedingTests)}</section>`).join('')}</details>
-    </section>`;
-  };
-  const functionalSafeguardSections = () => {
-    if (projection !== 'verification') return '';
-    const gates = new Map((data.gates || []).map(gate => [gate.name, gate]));
-    const safeguard = (heading, gateName, explanation) => {
-      const gate = gates.get(gateName); const verdict = gate ? status(gate.verdict) : status('INCOMPLETE');
-      const reason = gate?.reason ? `<p class="meta">${e(gate.reason)}</p>` : '';
-      return `<section class="safeguard-summary"><h2>${heading}</h2><p>${verdict}</p><p class="panel-help">${explanation}</p>${reason}</section>`;
-    };
-    const integrity = gates.get('CONTRACT_INTEGRITY');
-    return `<section class="mechanical-seal-summary"><h2>Mechanical Seal / Contract Integrity</h2><p>${status(integrity?.verdict || 'INCOMPLETE')}</p>${integrity?.reason ? `<p class="meta">${e(integrity.reason)}</p>` : ''}</section>
-      ${safeguard('Hidden Tests', 'REVIEWER_JUNIT', 'Reviewer-owned typed rows provide evidence only for Hidden Tests.')}
-      ${safeguard('Property-Based Testing', 'PROPERTY', 'Bounded Properties provide evidence only for Property-Based Testing.')}
-      ${mutationSummary()}`;
-  };
-  const contractQualityAdvisories = () => {
-    const advisories = data.contractQualityAdvisories || []; if (projection !== 'review' || !advisories.length) return '';
-    return `<section class="contract-quality-advisories"><h2>Contract quality advisory</h2>
-      <p class="panel-help">These reviewer-only observations are non-blocking. They do not add a business rule, alter the executable contract, or change a Gate.</p>
-      <div class="table-scroll"><table class="case-matrix"><thead><tr><th>Rule</th><th>AC</th><th>Expected path</th><th>Public count</th><th>Reviewer count</th></tr></thead><tbody>
-      ${advisories.map(advisory => `<tr><td><code>${e(advisory.ruleCode)}</code></td><td>${e(advisory.acId)}</td><td><code>${e(advisory.expectedPath)}</code></td><td>${e(advisory.publicCount)}</td><td>${e(advisory.hiddenCount)}</td></tr>`).join('')}
-      </tbody></table></div></section>`;
-  };
-  const title = projection === 'review' ? 'Contract review' : projection === 'verification' ? 'Verification evidence' : 'Public contract';
-  document.getElementById('title').textContent = title;
-  document.getElementById('notice').textContent = projection === 'review'
-    ? 'Review the business scenario, one selected case, its inputs and expected output before reading source.'
-    : projection === 'verification' ? `Suite verdict: ${data.verdict}`
-      : 'Public contract projection. It contains no reviewer data or execution failure.';
-  const acceptanceConditions = data.acceptanceConditions || [];
-  const filters = document.getElementById('filters');
-  const enabledStatuses = new Set();
-  if (acceptanceConditions[0]) expanded.add(acceptanceConditions[0].acId);
-  filters.innerHTML = `<button type="button" data-action="expand">Expand all</button><button type="button" data-action="collapse">Collapse all</button>${projection === 'verification'
-    ? ['PASS', 'FAIL', 'NOT_REPORTED'].map(value => `<button type="button" data-status="${value}" aria-pressed="false">${value}</button>`).join('') : ''}`;
-  const gateNotices = (data.gates || []).filter(gate => gate.verdict !== 'PASS').map(gate =>
-    `<p class="gate-notice ${e(gate.verdict)}">${e(gate.name)}: ${status(gate.verdict)} ${e(gate.reason || '')}</p>`).join('');
-  const scopeSummary = () => {
-    const scope = data.deliveryScope; if (!scope) return '';
-    const documents = (scope.specDocuments || []).map(document =>
-      `<li><code>${e(document.path)}</code> <span class="meta">${e(document.sha256)}</span></li>`).join('')
-      || '<li>Compatibility scope: no external Spec document was selected.</li>';
-    const acIds = (scope.acceptanceConditionIds || []).join(', ') || 'All existing contract ACs';
-    return `<section class="scope-summary"><p class="panel-label">Delivery scope</p>
-      <p><strong>${(scope.acceptanceConditionIds || []).length}</strong> selected ACs: ${e(acIds)}</p>
-      <p>AC set digest: <code>${e(scope.acceptanceConditionSetDigest)}</code></p>
-      <ul>${documents}</ul>
-      ${(scope.reviewerWarnings || []).map(warning => `<p class="gate-notice INCOMPLETE">${e(warning)}</p>`).join('')}
-      ${projection === 'verification' ? `<p>Hidden Tests: <strong>${e(scope.hiddenMode)}</strong> (${e(scope.executedHiddenRows)} rows) · Property-Based Testing: <strong>${e(scope.publicPropertyMode)}</strong> (${e(scope.executedPublicProperties)} properties) · Mutation Testing: <strong>${e(scope.mutationMode)}</strong></p>` : ''}
-    </section>`;
-  };
-  const render = () => {
-    const query = document.getElementById('query').value.trim().toLowerCase();
-    const visible = acceptanceConditions.filter(ac => {
-      const rows = caseRows(ac);
-      const textMatches = !query || `${ac.acId} ${ac.title} ${rows.map(row => row.caseId).join(' ')} ${(ac.properties || []).map(property => `${property.title} ${property.methodIdentity} ${(property.classifications || []).map(item => item.label).join(' ')}`).join(' ')}`.toLowerCase().includes(query);
-      const statusMatches = !enabledStatuses.size || enabledStatuses.has(ac.status) || rows.some(row => enabledStatuses.has(row.status));
-      return textMatches && statusMatches;
-    });
-    if (query) visible.forEach(ac => expanded.add(ac.acId));
-    document.getElementById('summary').innerHTML = projection === 'review'
-      ? `${scopeSummary()}<span>${visible.length} acceptance conditions</span>${visible.map(counts).join('')}${contractQualityAdvisories()}`
-      : `${scopeSummary()}${data.verdict ? `<span>${status(data.verdict)}</span>` : `<span>${visible.length} acceptance conditions</span>`}${gateNotices}${functionalSafeguardSections()}`;
-    document.getElementById('report').innerHTML = visible.map(ac => {
-      const current = selected(ac); const isOpen = expanded.has(ac.acId);
-      return `<details class="ac" data-ac-details="${e(ac.acId)}" ${isOpen ? 'open' : ''}><summary>
-        <span><span class="eyebrow">${e(ac.acId)}</span><strong>${e(ac.title)}</strong></span><span class="ac-counts">${counts(ac)}</span>
-      </summary><div class="ac-body">
-        ${(ac.specNarrative || []).length ? `<section class="section external"><h3>External spec narrative</h3>${markdown(ac.specNarrative)}</section>` : ''}
-        ${selector(ac, current)}${caseDetail(ac, current)}${matrix(ac)}${projection === 'review' ? canonicalMethod(ac.method) : ''}${propertyCards(ac)}
-      </div></details>`;
-    }).join('') || '<p class="meta">No acceptance conditions match this query.</p>';
-  };
-  const selectCase = target => {
-    const choice = target.closest?.('[data-case-select]'); if (!choice) return false;
-    selectedCases.set(choice.dataset.ac, choice.dataset.case); expanded.add(choice.dataset.ac); render(); return true;
-  };
-  filters.addEventListener('click', event => {
-    const action = event.target?.dataset?.action;
-    if (action === 'expand') { acceptanceConditions.forEach(ac => expanded.add(ac.acId)); render(); return; }
-    if (action === 'collapse') { expanded.clear(); render(); return; }
-    const value = event.target?.dataset?.status; if (!value) return;
-    enabledStatuses.has(value) ? enabledStatuses.delete(value) : enabledStatuses.add(value);
-    filters.querySelectorAll('[data-status]').forEach(button => {
-      const active = enabledStatuses.has(button.dataset.status); button.setAttribute('aria-pressed', String(active)); button.classList.toggle('selected', active);
-    }); render();
+    query.addEventListener('input', applyCaseFilters);
+    document.querySelectorAll('[data-status-filter]').forEach(button => button.addEventListener('click', () => {
+      const status = button.dataset.statusFilter; statuses.has(status) ? statuses.delete(status) : statuses.add(status);
+      button.setAttribute('aria-pressed', String(statuses.has(status))); applyCaseFilters();
+    }));
+    document.querySelectorAll('details[data-lazy-case]').forEach(details => details.addEventListener('toggle', () => {
+      if (!details.open || details.dataset.loaded === 'true') return;
+      const record = lazyCases.get(details.dataset.lazyCase);
+      if (!record) return;
+      details.querySelector('.lazy-case-content').innerHTML = verificationCaseContent(record.ac, record.item);
+      details.dataset.loaded = 'true';
+    }));
+  }
+  document.querySelectorAll('.mermaid-diagram').forEach(container => {
+    const source = container.querySelector('.mermaid-source')?.textContent || '';
+    try { container.innerHTML = window.ToppleCatMermaid.render(source); } catch (_error) { container.innerHTML = '<p class="mermaid-error">Diagram could not be rendered. The escaped original Mermaid source is available below.</p>'; }
   });
-  document.getElementById('report').addEventListener('click', event => { selectCase(event.target); });
-  document.getElementById('report').addEventListener('keydown', event => {
-    if ((event.key === 'Enter' || event.key === ' ') && selectCase(event.target)) event.preventDefault();
-  });
-  document.getElementById('report').addEventListener('toggle', event => {
-    const detail = event.target; if (!(detail instanceof HTMLDetailsElement) || !detail.dataset.acDetails) return;
-    detail.open ? expanded.add(detail.dataset.acDetails) : expanded.delete(detail.dataset.acDetails);
-  }, true);
-  document.getElementById('query').addEventListener('input', render);
-  render();
 })();

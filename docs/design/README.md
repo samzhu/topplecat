@@ -67,5 +67,6 @@ This structure follows three complementary practices:
 - [Mutation attribution and gate](mutation-attribution.md)
 - [Managed mutation profile and verification evidence](managed-mutation-profile.md)
 - [Contract quality advisory](contract-quality-advisory.md)
+- [Human-readable Spec Review and Verification Report](human-readable-reports.md)
 
 Use the root [context glossary](../../CONTEXT.md) for shared terms.

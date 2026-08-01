@@ -12,71 +12,77 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class ExternalSpecDocumentReaderTest {
-  @TempDir Path project;
+  @TempDir Path root;
 
   @Test
-  void anchorsHeadingsAndParagraphsUntilTheirSectionBoundary() throws Exception {
-    Path specs = project.resolve("specs");
-    Files.createDirectories(specs);
+  void preservesCompleteSelectedMarkdownInDocumentOrderAndKeepsOnlyRealAcAnchors()
+      throws Exception {
+    Path specs = Files.createDirectories(root.resolve("specs"));
+    Files.write(specs.resolve("receipt.png"), new byte[] {1, 2, 3});
+    Path document = specs.resolve("checkout.md");
     Files.writeString(
-        specs.resolve("cart.md"),
+        document,
         """
-        # Cart orders
+        # Checkout AC-CHECKOUT
 
-        ## AC-CART-COUPON Apply a coupon
-        The order applies `SAVE100` exactly once.
-        - Keep the receipt total deterministic.
-        - Do not expose reviewer values.
+        A [safe link](https://example.test/spec) with `inline` code and **emphasis**.
 
-        This paragraph also anchors AC-CART-NO-COUPON.
+        - item
+        1. ordered item
+        - [x] completed task
 
-        ## Delivery
-        A later section must not be included.
-        """);
+        > quoted context
 
-    ExternalSpecDocumentReader.ParsedSpecs parsed =
-        ExternalSpecDocumentReader.read(project, List.of(specs));
+        | Amount | Result |
+        | --- | --- |
+        | 500 | accepted |
 
-    assertTrue(parsed.configured());
-    assertEquals(
-        List.of("AC-CART-COUPON", "AC-CART-NO-COUPON"),
-        parsed.narratives().keySet().stream().sorted().toList());
-    List<SpecMarkdownBlock> coupon = parsed.narratives().get("AC-CART-COUPON");
-    assertEquals(SpecMarkdownBlock.Kind.HEADING, coupon.getFirst().kind());
-    assertTrue(coupon.stream().anyMatch(block -> block.text().contains("SAVE100")));
-    assertTrue(
-        coupon.stream()
-            .anyMatch(
-                block ->
-                    block.kind() == SpecMarkdownBlock.Kind.LIST
-                        && block.items().contains("Keep the receipt total deterministic.")));
-    assertFalse(coupon.stream().anyMatch(block -> block.text().contains("later section")));
-    List<SpecMarkdownBlock> noCoupon = parsed.narratives().get("AC-CART-NO-COUPON");
-    assertTrue(
-        noCoupon.stream()
-            .anyMatch(block -> block.text().contains("AC-CART-COUPON Apply a coupon")));
-    assertFalse(noCoupon.stream().anyMatch(block -> block.text().contains("later section")));
-    assertEquals(List.of("specs/cart.md"), parsed.sources().get("AC-CART-COUPON"));
-  }
+        ![Receipt screenshot](receipt.png "Receipt")
+        ![Remote screenshot](https://example.test/receipt.png)
+        ![Traversal](../outside.png)
 
-  @Test
-  void ignoresAcLookingTextInFencedCodeAndRemainsSilentWhenUnconfigured() throws Exception {
-    Path spec = project.resolve("spec.md");
-    Files.writeString(
-        spec,
-        """
-        ```java
-        // AC-FAKE-CODE
+        ```json
+        {"AC-FAKE-CODE": "does not select scope"}
         ```
 
-        AC-REAL appears in normal prose.
+        ```mermaid
+        flowchart TD
+        A[Cart] --> B[Receipt]
+        ```
+
+        <script>window.injected = true</script>
         """);
 
     ExternalSpecDocumentReader.ParsedSpecs parsed =
-        ExternalSpecDocumentReader.read(project, List.of(spec));
+        ExternalSpecDocumentReader.read(root, List.of(document));
 
-    assertEquals(List.of("AC-REAL"), parsed.narratives().keySet().stream().toList());
-    assertFalse(parsed.narratives().containsKey("AC-FAKE-CODE"));
-    assertFalse(ExternalSpecDocumentReader.read(project, List.of()).configured());
+    assertEquals(List.of("AC-CHECKOUT"), parsed.acceptanceConditionIds());
+    assertFalse(parsed.locations().containsKey("AC-FAKE-CODE"));
+    assertEquals("specs/checkout.md", parsed.documents().getFirst().path());
+    List<SpecMarkdownBlock.Kind> kinds =
+        parsed.documents().getFirst().blocks().stream().map(SpecMarkdownBlock::kind).toList();
+    assertTrue(
+        kinds.containsAll(
+            List.of(
+                SpecMarkdownBlock.Kind.HEADING,
+                SpecMarkdownBlock.Kind.PARAGRAPH,
+                SpecMarkdownBlock.Kind.LIST,
+                SpecMarkdownBlock.Kind.ORDERED_LIST,
+                SpecMarkdownBlock.Kind.TASK_LIST,
+                SpecMarkdownBlock.Kind.BLOCK_QUOTE,
+                SpecMarkdownBlock.Kind.TABLE,
+                SpecMarkdownBlock.Kind.IMAGE,
+                SpecMarkdownBlock.Kind.CODE_FENCE,
+                SpecMarkdownBlock.Kind.MERMAID,
+                SpecMarkdownBlock.Kind.FALLBACK)));
+    assertEquals(1, parsed.documents().getFirst().assets().size());
+    assertTrue(
+        parsed.documents().getFirst().assets().getFirst().bundlePath().startsWith("assets/spec/"));
+    List<SpecMarkdownBlock> images =
+        parsed.documents().getFirst().blocks().stream()
+            .filter(block -> block.kind() == SpecMarkdownBlock.Kind.IMAGE)
+            .toList();
+    assertTrue(images.getFirst().destination().startsWith("assets/spec/"));
+    assertEquals("", images.getLast().destination());
   }
 }

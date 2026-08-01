@@ -20,7 +20,7 @@ independent safeguards challenge that delivery in different ways:
   subtraction with addition, and observes whether the exact public Acceptance
   Method detects the change.
 
-The Verification Evidence report must finish and show all three results. A
+The Verification Report must finish and show all three results. A
 passing Hidden Test or Property cannot give the public Acceptance Method credit
 for detecting a PIT mutant. Likewise, one failed safeguard does not stop the
 other enabled safeguards from producing their own current-run evidence.
@@ -216,7 +216,7 @@ precedent.
 
 ## Visible interface and behavior
 
-The reviewer-only Verification Evidence at
+The reviewer-only Verification Report at
 `build/topplecat/reports/verification/index.html` presents Hidden Tests,
 Property-Based Testing, and Mutation Testing as three peer functional-testing
 sections. The top summary retains their independent Gate verdicts and the
@@ -248,8 +248,8 @@ an explicit incomplete result. A Mutation `INCOMPLETE` does not change a Hidden
 or Property result; the aggregate is `INCOMPLETE` when no safeguard failed, and
 `FAIL` when any completed safeguard failed.
 
-The Public Spec and `agent-feedback.json` retain only safe, generic Gate-level
-mutation guidance. They never contain PIT versions, profile or operator IDs,
+`agent-feedback.json` retains only safe, generic Gate-level mutation guidance.
+It never contains PIT versions, profile or operator IDs,
 counts, descriptions, selectors, classes, methods, hidden values, Property
 trial material, or raw private failures.
 

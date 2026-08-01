@@ -3,6 +3,7 @@ package io.github.samzhu.topplecat.junit;
 import io.github.samzhu.topplecat.core.AttachmentRef;
 import io.github.samzhu.topplecat.core.CaseVisibility;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
+import io.github.samzhu.topplecat.core.ExpectedActualComparison;
 import io.github.samzhu.topplecat.core.ExpectedConsumptionExecution;
 import io.github.samzhu.topplecat.core.Hashing;
 import io.github.samzhu.topplecat.core.NarrativeExecution;
@@ -59,6 +60,10 @@ final class ToppleNarrative {
 
     void beginScenarioStep(String runtimeStepId, Object[] arguments) {
       execution.beginScenarioStep(runtimeStepId, arguments);
+    }
+
+    void recordComparison(ExpectedActualComparison comparison) {
+      execution.recordComparison(comparison);
     }
 
     void finishScenarioStep(Throwable failure) {
@@ -246,6 +251,14 @@ final class ToppleNarrative {
       }
     }
 
+    private void recordComparison(ExpectedActualComparison comparison) {
+      if (active == null || active.status != null) {
+        throw new ToppleCatException(
+            "ToppleCase.verify(...) mismatch must occur inside an active compiler-described Step.");
+      }
+      active.comparisons.add(comparison);
+    }
+
     private StepTemplate expected(String runtimeStepId) {
       if (nextStep >= scenario.steps().size()) {
         throw new ToppleCatException(
@@ -293,6 +306,7 @@ final class ToppleNarrative {
     private final String sentence;
     private final List<tools.jackson.databind.JsonNode> arguments;
     private final List<AttachmentRef> attachments = new ArrayList<>();
+    private final List<ExpectedActualComparison> comparisons = new ArrayList<>();
     private final long startedAt = System.nanoTime();
     private long durationNanos;
     private NarrativeStepStatus status;
@@ -329,7 +343,8 @@ final class ToppleNarrative {
           durationNanos,
           arguments,
           attachments,
-          "");
+          "",
+          comparisons);
     }
   }
 

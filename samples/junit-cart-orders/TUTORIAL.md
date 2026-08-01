@@ -27,9 +27,11 @@ After Verify, inspect:
 ```text
 build/topplecat/evidence.json
 build/topplecat/agent-feedback.json
-build/topplecat/reports/public/index.html
+build/topplecat/reports/review/index.html
 build/topplecat/reports/verification/index.html
 ```
 
-The failing run must not leak reviewer values into Public Spec or safe feedback.
-The Verification Evidence report is reviewer-only and shows the detailed result.
+Spec Review is reviewer-only and shows the complete selected Spec plus its
+executable contract before handoff. The failing run must not leak reviewer
+values into safe feedback. Verification Report is reviewer-only and shows the
+detailed result.
