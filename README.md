@@ -66,12 +66,20 @@ it for multiple documents; no `--spec` selects all acceptance conditions.
 `--all-hidden-tests` broadens only hidden typed rows. Public Properties follow
 the selected ACs; Mutation Testing remains the full public acceptance contract.
 
-For Mutation Testing, ToppleCat preserves PIT's producer status and selector
-relationships. Its per-AC detection rate counts the mutants a specific public
-Acceptance Method appears in `killingTests` for, divided by the mutants that
-same method appears in `coveringTests` for. It is not PIT's global mutation
-threshold. Reviewer-only Verification Evidence shows the raw PIT summary;
-safe feedback stays at Gate level.
+For Mutation Testing, formal Verify always runs ToppleCat's managed PIT 1.25.5
+producer with the fixed `topplecat-managed-v1` profile. It never consumes a
+project `pitest` task, a consumer-selected producer, or a consumer report path.
+Project-wide `tasks.withType(PitestTask)` conventions remain part of a separate
+project PIT workflow and cannot alter formal Verify.
+ToppleCat preserves PIT's raw `status`, `detected`, mutator, description, and
+selector relationships. Its per-AC detection rate counts the mutants a
+specific public Acceptance Method appears in `killingTests` for, divided by the
+mutants that same method appears in `coveringTests` for; it is not PIT's global
+mutation threshold. An AC with no covered managed-profile mutant is a
+reviewer-visible attribution gap, not automatic passing evidence. Reviewer-only
+Verification Evidence shows the raw matrix; safe feedback stays at Gate level.
+See the [managed mutation profile design](docs/design/managed-mutation-profile.md)
+for the fixed 12 operators and Gate rules.
 
 ## Write an acceptance contract
 
@@ -161,18 +169,18 @@ Every formal run records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
 `PASS`, `FAIL`, or `INCOMPLETE`; accept a done claim only when the current run
 is `PASS`.
 
-## Install 0.0.9
+## Install 0.0.10
 
 ToppleCat requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.9"
+    id("io.github.samzhu.topplecat") version "0.0.10"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.9")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.10")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -188,7 +196,7 @@ tasks.test { useJUnitPlatform() }
 - [Documentation index](docs/README.md)
 - [Context glossary](CONTEXT.md)
 - [Architecture](docs/architecture.md)
-- [0.0.9 release notes](docs/releases/0.0.9.md)
+- [0.0.10 release notes](docs/releases/0.0.10.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 

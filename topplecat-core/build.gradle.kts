@@ -14,5 +14,6 @@ dependencies {
     // YAML parsing is an internal reader implementation detail.
     implementation(libs.jackson.dataformat.yaml)
     testImplementation(libs.junit.jupiter)
+    testImplementation("org.pitest:pitest:1.25.5")
     testRuntimeOnly(libs.junit.platform.launcher)
 }

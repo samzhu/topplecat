@@ -1,6 +1,5 @@
 package io.github.samzhu.topplecat.pitest;
 
-import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ToppleCatException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -34,6 +33,7 @@ public final class PitMutationAttributor {
     if (sealedThreshold < 0 || sealedThreshold > 100) {
       throw new ToppleCatException("PIT mutation threshold must be between 0 and 100.");
     }
+    ToppleCatManagedMutationProfile.validate(report);
 
     List<MethodBinding> bindings = bindings(canonicalMethodsByAc);
     Map<String, AcCounts> countsByAc = new TreeMap<>();
@@ -44,6 +44,7 @@ public final class PitMutationAttributor {
     List<PitMutationEvidence> evidence = new ArrayList<>();
     Map<Outcome, Integer> producerOutcomes = new TreeMap<>();
     Map<Outcome, Integer> unattributedOutcomes = new TreeMap<>();
+    Map<String, Map<Outcome, Integer>> outcomesByMutator = new TreeMap<>();
     int attributed = 0;
     for (PitMutation mutation : report.mutations()) {
       Set<String> covered = matchedAcceptanceConditions(mutation.coveringTests(), bindings);
@@ -54,6 +55,9 @@ public final class PitMutationAttributor {
 
       Outcome outcome = new Outcome(mutation.status(), mutation.detected());
       increment(producerOutcomes, outcome);
+      increment(
+          outcomesByMutator.computeIfAbsent(mutation.mutator(), ignored -> new TreeMap<>()),
+          outcome);
       if (covered.isEmpty()) {
         increment(unattributedOutcomes, outcome);
       } else {
@@ -72,6 +76,8 @@ public final class PitMutationAttributor {
               mutation.detected(),
               mutation.status(),
               mutation.mutatedClass(),
+              mutation.mutator(),
+              mutation.description(),
               mutation.coveringTests(),
               mutation.killingTests(),
               mutation.succeedingTests(),
@@ -85,10 +91,6 @@ public final class PitMutationAttributor {
                   String acId = entry.getKey();
                   AcCounts counts = entry.getValue();
                   int rate = counts.covered == 0 ? 0 : (counts.killed * 100) / counts.covered;
-                  EvidenceVerdict verdict =
-                      counts.covered > 0 && rate >= sealedThreshold
-                          ? EvidenceVerdict.PASS
-                          : EvidenceVerdict.FAIL;
                   return new PitMutationAssessment(
                       acId,
                       counts.acceptanceMethods,
@@ -97,15 +99,19 @@ public final class PitMutationAttributor {
                       sealedThreshold,
                       rate,
                       outcomeCounts(counts.outcomes),
-                      verdict);
+                      counts.covered == 0);
                 })
             .toList();
     return new PitMutationAttribution(
+        ToppleCatManagedMutationProfile.PIT_VERSION,
+        ToppleCatManagedMutationProfile.PROFILE_ID,
+        ToppleCatManagedMutationProfile.operatorIds(),
         report.mutations().size(),
         attributed,
         report.mutations().size() - attributed,
         outcomeCounts(producerOutcomes),
         outcomeCounts(unattributedOutcomes),
+        mutatorSummaries(outcomesByMutator),
         assessments,
         evidence);
   }
@@ -169,6 +175,18 @@ public final class PitMutationAttributor {
             entry ->
                 new PitOutcomeCount(
                     entry.getKey().status, entry.getKey().detected, entry.getValue()))
+        .toList();
+  }
+
+  private static List<PitMutatorSummary> mutatorSummaries(
+      Map<String, Map<Outcome, Integer>> outcomesByMutator) {
+    return outcomesByMutator.entrySet().stream()
+        .map(
+            entry ->
+                new PitMutatorSummary(
+                    entry.getKey(),
+                    entry.getValue().values().stream().mapToInt(Integer::intValue).sum(),
+                    outcomeCounts(entry.getValue())))
         .toList();
   }
 

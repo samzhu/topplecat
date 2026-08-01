@@ -5,10 +5,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.samzhu.topplecat.core.CaseVisibility;
+import io.github.samzhu.topplecat.core.EvidenceGate;
+import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.NarrativeStep;
 import io.github.samzhu.topplecat.core.NarrativeStepStatus;
 import io.github.samzhu.topplecat.core.SourceRef;
 import io.github.samzhu.topplecat.core.StepPhase;
+import io.github.samzhu.topplecat.pitest.PitMutationAssessment;
+import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
+import io.github.samzhu.topplecat.pitest.PitMutationEvidence;
+import io.github.samzhu.topplecat.pitest.PitMutatorSummary;
+import io.github.samzhu.topplecat.pitest.PitOutcomeCount;
+import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -185,6 +193,168 @@ class ReportBundleDomTest {
       assertTrue(rendered.contains("case-level mismatch"));
       assertTrue(rendered.contains("ASSERTED"));
     }
+  }
+
+  @Test
+  void verificationBundleSeparatesMechanicalAndFunctionalSafeguards() throws Exception {
+    VerificationView view =
+        new VerificationView(
+            VerificationView.SCHEMA_VERSION,
+            Instant.parse("2026-07-28T00:00:00Z"),
+            CaseResultStatus.FAIL,
+            true,
+            List.of(
+                new EvidenceGate("CONTRACT_INTEGRITY", EvidenceVerdict.PASS),
+                new EvidenceGate("REVIEWER_JUNIT", EvidenceVerdict.PASS),
+                new EvidenceGate("PROPERTY", EvidenceVerdict.PASS),
+                new EvidenceGate("MUTATION", EvidenceVerdict.INCOMPLETE, "current report missing")),
+            List.of());
+    Path bundle = tempDir.resolve("safeguards");
+    HtmlBundleWriter.verification(bundle, view);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      String rendered = page.asNormalizedText();
+      assertTrue(rendered.contains("Mechanical Seal / Contract Integrity"));
+      assertTrue(rendered.contains("Hidden Tests"));
+      assertTrue(rendered.contains("Property-Based Testing"));
+      assertTrue(rendered.contains("Mutation Testing"));
+      assertTrue(rendered.contains("No current managed PIT attribution"));
+    }
+  }
+
+  @Test
+  void verificationBundleRendersNonemptyManagedPitAttributionOnlyInItsOwnReviewerSection()
+      throws Exception {
+    VerificationView view =
+        new VerificationView(
+            VerificationView.SCHEMA_VERSION,
+            Instant.parse("2026-08-01T00:00:00Z"),
+            CaseResultStatus.FAIL,
+            true,
+            List.of(
+                new EvidenceGate("CONTRACT_INTEGRITY", EvidenceVerdict.PASS),
+                new EvidenceGate("REVIEWER_JUNIT", EvidenceVerdict.PASS),
+                new EvidenceGate("PROPERTY", EvidenceVerdict.PASS),
+                new EvidenceGate("MUTATION", EvidenceVerdict.FAIL)),
+            List.of(),
+            null,
+            managedPitAttribution());
+    Path bundle = tempDir.resolve("managed-pit-attribution");
+    HtmlBundleWriter.verification(bundle, view);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      assertEquals(1, page.querySelectorAll("section.mechanical-seal-summary").size());
+      assertEquals(2, page.querySelectorAll("section.safeguard-summary").size());
+      assertEquals(1, page.querySelectorAll("section.mutation-summary").size());
+      ((HtmlDetails) page.querySelector("details.raw-case")).setOpen(true);
+      String rendered = page.asNormalizedText();
+      assertTrue(rendered.contains("Mechanical Seal / Contract Integrity"));
+      assertTrue(rendered.contains("Hidden Tests"));
+      assertTrue(rendered.contains("Property-Based Testing"));
+      assertTrue(rendered.contains("Mutation Testing"));
+      assertFalse(rendered.contains("Aggregate score"));
+      assertFalse(rendered.contains("Blended quality"));
+
+      assertTrue(rendered.contains("PIT 1.25.5"));
+      assertTrue(rendered.contains("topplecat-managed-v1"));
+      ToppleCatManagedMutationProfile.operatorIds()
+          .forEach(operator -> assertTrue(rendered.contains(operator)));
+      assertTrue(rendered.contains("2 producer mutants"));
+      assertTrue(rendered.contains("1 uniquely attributed to public Acceptance Methods"));
+      assertTrue(rendered.contains("1 unattributed"));
+      assertTrue(rendered.contains("Per-mutator summary"));
+      assertTrue(rendered.contains("MathMutator"));
+      assertTrue(rendered.contains("VoidMethodCallMutator"));
+
+      assertTrue(rendered.contains("AC-COVERED"));
+      assertTrue(rendered.contains("AC-GAP"));
+      assertTrue(rendered.contains("Covered mutants"));
+      assertTrue(rendered.contains("Detected by this Acceptance Method"));
+      assertTrue(rendered.contains("Sealed threshold"));
+      assertTrue(rendered.contains("Detection rate"));
+      assertTrue(rendered.contains("100%"));
+      assertTrue(rendered.contains("沒有取得本次 managed mutation profile 的歸因證據"));
+
+      assertTrue(rendered.contains("KILLED"));
+      assertTrue(rendered.contains("detected true"));
+      assertTrue(rendered.contains("MathMutator"));
+      assertTrue(rendered.contains("Replaced integer subtraction with addition"));
+      assertTrue(rendered.contains("coveringTests"));
+      assertTrue(rendered.contains("killingTests"));
+      assertTrue(rendered.contains("succeedingTests"));
+      assertTrue(rendered.contains("shop.CouponAcceptanceTest#appliesCoupon()V"));
+      assertTrue(
+          rendered.contains("shop.CouponAcceptanceTest#appliesCoupon()[method:public-case]"));
+    }
+  }
+
+  private static PitMutationAttribution managedPitAttribution() {
+    return new PitMutationAttribution(
+        ToppleCatManagedMutationProfile.PIT_VERSION,
+        ToppleCatManagedMutationProfile.PROFILE_ID,
+        ToppleCatManagedMutationProfile.operatorIds(),
+        2,
+        1,
+        1,
+        List.of(new PitOutcomeCount("KILLED", true, 1), new PitOutcomeCount("SURVIVED", false, 1)),
+        List.of(new PitOutcomeCount("SURVIVED", false, 1)),
+        List.of(
+            new PitMutatorSummary(
+                "org.pitest.mutationtest.engine.gregor.mutators.MathMutator",
+                1,
+                List.of(new PitOutcomeCount("KILLED", true, 1))),
+            new PitMutatorSummary(
+                "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                1,
+                List.of(new PitOutcomeCount("SURVIVED", false, 1)))),
+        List.of(
+            new PitMutationAssessment(
+                "AC-COVERED",
+                List.of("shop.CouponAcceptanceTest#appliesCoupon()V"),
+                1,
+                1,
+                100,
+                100,
+                List.of(new PitOutcomeCount("KILLED", true, 1)),
+                false),
+            new PitMutationAssessment(
+                "AC-GAP",
+                List.of("shop.OtherAcceptanceTest#notCovered()V"),
+                0,
+                0,
+                100,
+                0,
+                List.of(),
+                true)),
+        List.of(
+            new PitMutationEvidence(
+                true,
+                "KILLED",
+                "shop.CouponService",
+                "org.pitest.mutationtest.engine.gregor.mutators.MathMutator",
+                "Replaced integer subtraction with addition",
+                List.of("shop.CouponAcceptanceTest#appliesCoupon()V"),
+                List.of("shop.CouponAcceptanceTest#appliesCoupon()[method:public-case]"),
+                List.of("shop.CouponAcceptanceTest#appliesCoupon()[test-template:coupon]"),
+                List.of("AC-COVERED")),
+            new PitMutationEvidence(
+                false,
+                "SURVIVED",
+                "shop.CouponService",
+                "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator",
+                "removed call to audit",
+                List.of(),
+                List.of(),
+                List.of("shop.CouponAcceptanceTest#appliesCoupon()V"),
+                List.of())));
   }
 
   private static ReviewAcceptanceCondition acceptance(

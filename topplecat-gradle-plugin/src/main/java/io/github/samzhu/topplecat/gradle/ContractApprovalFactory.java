@@ -154,12 +154,6 @@ final class ContractApprovalFactory {
     if (approved.mutationEnabled() != current.mutationEnabled()) result.add("mutationEnabled");
     if (approved.mutationThreshold() != current.mutationThreshold())
       result.add("mutationThreshold");
-    if (approved.mutationProducerKind() != current.mutationProducerKind())
-      result.add("mutationProducerKind");
-    if (!java.util.Objects.equals(
-        approved.mutationProducerTaskPath(), current.mutationProducerTaskPath())) {
-      result.add("mutationProducerTaskPath");
-    }
     result.sort(Comparator.naturalOrder());
     return result;
   }

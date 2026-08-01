@@ -63,39 +63,18 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
   @Input
   public abstract Property<Integer> getThreshold();
 
-  @Input
-  public abstract Property<String> getProducerTaskName();
-
-  @Input
-  public abstract Property<Boolean> getProducerAvailable();
-
   /** Internal Verify-only switch: direct diagnostic execution still fails at this task. */
   @Internal
   public abstract Property<Boolean> getContinueAfterFailure();
 
   @TaskAction
   public void evaluateMutationGate() {
-    String producer = getProducerTaskName().get();
-    if (!getProducerAvailable().get()) {
-      deferOrThrow(
-          "ToppleCat mutation is enabled, but producer task '"
-              + producer
-              + "' was not found. ToppleCat configures PIT automatically for the default 'pitest'"
-              + " task; otherwise set toppleCat.mutationTesting.producerTask to a task that writes"
-              + " mutations.xml.");
-      return;
-    }
     Path report = getPitReportFile().get().getAsFile().toPath();
     if (!Files.isRegularFile(report)) {
       VerificationRunArtifacts.markCompleted(
           getRunDirectory().get().getAsFile().toPath(), VerificationRunArtifacts.MUTATION);
       deferOrThrow(
-          "ToppleCat mutation producer '"
-              + producer
-              + "' did not write PIT mutations.xml at "
-              + report
-              + ". Enable PIT fullMutationMatrix=true and configure"
-              + " toppleCat.mutationTesting.reportFile if needed.");
+          "ToppleCat-managed mutation producer did not write PIT mutations.xml at " + report + ".");
       return;
     }
     Map<String, Set<String>> testsByAc = canonicalMethodsByAc();
@@ -108,9 +87,8 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
       VerificationRunArtifacts.markCompleted(
           getRunDirectory().get().getAsFile().toPath(), VerificationRunArtifacts.MUTATION);
       deferOrThrow(
-          "ToppleCat mutation producer '"
-              + producer
-              + "' wrote an unusable current-run PIT mutations.xml report.");
+          "ToppleCat-managed mutation producer wrote an unusable current-run PIT mutations.xml"
+              + " report.");
       return;
     }
     Path output = getResultsFile().get().getAsFile().toPath();

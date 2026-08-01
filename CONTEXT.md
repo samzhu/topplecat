@@ -57,6 +57,12 @@ Method and Acceptance Condition whose execution covered it. Attribution
 preserves the producer's mutation outcome and does not infer business meaning
 from missing coverage.
 
+**ToppleCat Managed Mutation Profile／ToppleCat 託管突變設定**:
+The versioned, product-owned PIT version and exact operator set used by formal
+Verify's Mutation Testing producer. Other PIT workflows remain outside
+ToppleCat evidence and Gates.
+_Avoid_: user-configured formal producer, universal AI mutator standard
+
 **Contract Quality Advisory／契約品質提醒**:
 A reviewer-only, non-blocking reminder of a possible expected-projection
 quality risk. It does not infer business rules, affect the Seal, Verify evidence,

@@ -62,6 +62,8 @@ public final class PitMutationParser {
                 booleanAttribute(mutation, "detected"),
                 status,
                 requiredChild(mutation, "mutatedClass"),
+                requiredChild(mutation, "mutator"),
+                requiredChild(mutation, "description"),
                 testNames(covering),
                 testNames(killing),
                 testNames(succeeding)));
@@ -94,7 +96,7 @@ public final class PitMutationParser {
     if (value == null || value.isBlank()) {
       throw new ToppleCatException("PIT mutation attribute is required: " + name);
     }
-    return value.trim();
+    return value;
   }
 
   private static String requiredChild(Element element, String name) {
@@ -103,7 +105,7 @@ public final class PitMutationParser {
     if (value == null || value.isBlank()) {
       throw new ToppleCatException("PIT mutation element is required: " + name);
     }
-    return value.trim();
+    return value;
   }
 
   private static List<String> testNames(Element container) {
@@ -113,7 +115,6 @@ public final class PitMutationParser {
       return List.of();
     }
     return java.util.Arrays.stream(container.getTextContent().split("\\|"))
-        .map(String::trim)
         .filter(value -> !value.isEmpty())
         .toList();
   }

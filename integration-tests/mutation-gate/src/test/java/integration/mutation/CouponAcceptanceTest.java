@@ -13,7 +13,7 @@ class CouponAcceptanceTest {
 
   static class CouponStage extends ToppleStage {
     void matches_the_contract(ToppleCase c) {
-      c.verify("discount", c.input("discount", Integer.class));
+      c.verify("discount", CouponService.discountedTotal(c.input("discount", Integer.class) + 10));
     }
   }
 }

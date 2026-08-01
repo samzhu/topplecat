@@ -29,9 +29,10 @@ ACTIVE_TERMINOLOGY_PATHS = (
     "docs/design/topple-scenario-authoring.md",
     "docs/design/independent-safeguard-results.md",
     "docs/design/mutation-attribution.md",
+    "docs/design/managed-mutation-profile.md",
     "docs/design/contract-quality-advisory.md",
-    "docs/releases/0.0.9.md",
-    "docs/releases/0.0.9.zh-TW.md",
+    "docs/releases/0.0.10.md",
+    "docs/releases/0.0.10.zh-TW.md",
     "samples",
     ".agents/skills",
     "site/src",
@@ -73,9 +74,10 @@ EXPECTED_DESIGN_FILES = {
     "topple-scenario-authoring.md",
     "independent-safeguard-results.md",
     "mutation-attribution.md",
+    "managed-mutation-profile.md",
     "contract-quality-advisory.md",
 }
-CURRENT_RELEASE_FILES = {"0.0.9.md", "0.0.9.zh-TW.md"}
+CURRENT_RELEASE_FILES = {"0.0.10.md", "0.0.10.zh-TW.md"}
 RELEASE_NOTE = re.compile(r"^(\d+\.\d+\.\d+)(\.zh-TW)?\.md$")
 CONTEXT_TERMS = (
     "Executable Contract",
@@ -88,6 +90,7 @@ CONTEXT_TERMS = (
     "Hidden Tests",
     "Mutation Testing",
     "Mutation Attribution",
+    "ToppleCat Managed Mutation Profile",
     "Contract Quality Advisory",
     "Property-Based Testing",
     "Independent Safeguard",
@@ -229,7 +232,7 @@ def main() -> int:
             language = "zh-TW" if match.group(2) else "en"
             release_versions.setdefault(match.group(1), set()).add(language)
         if not CURRENT_RELEASE_FILES.issubset(release_files):
-            failures.append("docs/releases: missing 0.0.9 English or Traditional-Chinese notes")
+            failures.append("docs/releases: missing 0.0.10 English or Traditional-Chinese notes")
         for version, languages in sorted(release_versions.items()):
             if languages != {"en", "zh-TW"}:
                 failures.append(
@@ -293,29 +296,31 @@ def main() -> int:
             if re.search(pattern, text):
                 failures.append(f"{relative}: uses replaced terminology matching {pattern}; {replacement}")
 
-    english_release = ROOT / "docs/releases/0.0.9.md"
-    chinese_release = ROOT / "docs/releases/0.0.9.zh-TW.md"
+    english_release = ROOT / "docs/releases/0.0.10.md"
+    chinese_release = ROOT / "docs/releases/0.0.10.zh-TW.md"
     if english_release.is_file() and chinese_release.is_file():
         release_markers = (
             (
                 english_release,
                 (
+                    "PIT 1.25.5",
+                    "topplecat-managed-v1",
+                    "producerTask",
                     "Mutation Attribution",
-                    "coveringTests",
-                    "killingTests",
                     "Contract Quality Advisory",
-                    "toppleCatCheck",
-                    "current-run evidence",
+                    "Mechanical Seal",
+                    "current-run",
                 ),
             ),
             (
                 chinese_release,
                 (
-                    "突變歸因",
-                    "coveringTests",
-                    "killingTests",
+                    "PIT 1.25.5",
+                    "topplecat-managed-v1",
+                    "producerTask",
+                    "Mutation Attribution",
                     "Contract Quality Advisory",
-                    "toppleCatCheck",
+                    "Mechanical Seal",
                     "本次執行",
                 ),
             ),
@@ -324,7 +329,7 @@ def main() -> int:
             text = release.read_text(encoding="utf-8")
             for marker in markers:
                 if marker not in text:
-                    failures.append(f"{release.relative_to(ROOT)}: missing synchronized 0.0.9 change {marker}")
+                    failures.append(f"{release.relative_to(ROOT)}: missing synchronized 0.0.10 change {marker}")
 
     if failures:
         print("Documentation validation failed:", file=sys.stderr)

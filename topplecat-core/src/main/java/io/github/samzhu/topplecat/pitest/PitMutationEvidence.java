@@ -8,12 +8,21 @@ public record PitMutationEvidence(
     boolean detected,
     String status,
     String mutatedClass,
+    String mutator,
+    String description,
     List<String> coveringTests,
     List<String> killingTests,
     List<String> succeedingTests,
     List<String> attributedAcceptanceConditionIds) {
   public PitMutationEvidence {
-    if (status == null || status.isBlank() || mutatedClass == null || mutatedClass.isBlank()) {
+    if (status == null
+        || status.isBlank()
+        || mutatedClass == null
+        || mutatedClass.isBlank()
+        || mutator == null
+        || mutator.isBlank()
+        || description == null
+        || description.isBlank()) {
       throw new ToppleCatException("PIT mutation evidence is incomplete.");
     }
     coveringTests = List.copyOf(coveringTests == null ? List.of() : coveringTests);

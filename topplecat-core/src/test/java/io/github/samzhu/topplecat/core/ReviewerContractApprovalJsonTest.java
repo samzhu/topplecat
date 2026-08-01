@@ -42,7 +42,6 @@ class ReviewerContractApprovalJsonTest {
             new PublicContractEntry(
                 "src/test/java/example/AmountAcceptanceTest.java", entryDigest)),
         "c".repeat(64),
-        new VerificationPolicy(
-            "0.0.9", true, true, true, true, threshold, MutationProducerKind.DEFAULT, null));
+        new VerificationPolicy("0.0.10", true, true, true, true, threshold));
   }
 }

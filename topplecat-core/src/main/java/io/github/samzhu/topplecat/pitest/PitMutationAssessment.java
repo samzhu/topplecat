@@ -1,6 +1,5 @@
 package io.github.samzhu.topplecat.pitest;
 
-import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ToppleCatException;
 import java.util.List;
 
@@ -13,7 +12,7 @@ public record PitMutationAssessment(
     int sealedThreshold,
     int detectionRate,
     List<PitOutcomeCount> pitOutcomeCounts,
-    EvidenceVerdict verdict) {
+    boolean attributionGap) {
   public PitMutationAssessment {
     if (acId == null || acId.isBlank()) {
       throw new ToppleCatException("Mutation assessment AC id is required.");
@@ -30,8 +29,9 @@ public record PitMutationAssessment(
     }
     acceptanceMethods = List.copyOf(acceptanceMethods == null ? List.of() : acceptanceMethods);
     pitOutcomeCounts = List.copyOf(pitOutcomeCounts == null ? List.of() : pitOutcomeCounts);
-    if (verdict == null) {
-      throw new ToppleCatException("Mutation assessment verdict is required.");
+    if (attributionGap != (coveredMutantCount == 0)) {
+      throw new ToppleCatException(
+          "Mutation assessment attribution-gap state must match its covered mutant count.");
     }
   }
 }

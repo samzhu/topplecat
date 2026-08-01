@@ -1,24 +1,22 @@
 package io.github.samzhu.topplecat.gradle;
 
-import io.github.samzhu.topplecat.core.CompilerScenarioDescriptor;
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
 import io.github.samzhu.topplecat.core.Hashing;
 import io.github.samzhu.topplecat.junit.ToppleJunit;
+import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
 import java.io.IOException;
-import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.Directory;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
@@ -29,11 +27,9 @@ import org.gradle.api.tasks.testing.Test;
 import org.gradle.api.tasks.testing.TestDescriptor;
 import org.gradle.api.tasks.testing.TestListener;
 import org.gradle.api.tasks.testing.TestResult;
-import org.gradle.process.CommandLineArgumentProvider;
 
 /** Gradle entry point for the rebuilt ToppleCat verification workflow. */
 public final class ToppleCatPlugin implements Plugin<Project> {
-  private static final String PITEST_PLUGIN_ID = "info.solidsoft.pitest";
   private static final Pattern JAVA_PACKAGE =
       Pattern.compile("(?m)^\\s*package\\s+([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)*)\\s*;");
 
@@ -51,11 +47,6 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     extension.getHiddenTests().getEnabled().convention(true);
     extension.getMutationTesting().getEnabled().convention(true);
     extension.getMutationTesting().getThreshold().convention(100);
-    extension.getMutationTesting().getProducerTask().convention("pitest");
-    extension
-        .getMutationTesting()
-        .getReportFile()
-        .convention(project.getLayout().getBuildDirectory().file("reports/pitest/mutations.xml"));
     extension.getExpectedConsumption().getEnabled().convention(true);
     extension.getPropertyBasedTesting().getEnabled().convention(true);
     extension.getCommandLineSpecPaths().convention(List.of());
@@ -543,12 +534,10 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                               .getLayout()
                               .getBuildDirectory()
                               .file("topplecat/contract-definition.json"));
-                  task.getPitReportFile().set(extension.getMutationTesting().getReportFile());
+                  task.getPitReportFile().set(runDirectory.file("pit/mutations.xml"));
                   task.getResultsFile().set(runDirectory.file("mutation-results.json"));
                   task.getRunDirectory().set(runDirectory);
                   task.getThreshold().set(extension.getMutationTesting().getThreshold());
-                  task.getProducerTaskName().set(extension.getMutationTesting().getProducerTask());
-                  task.getProducerAvailable().convention(false);
                   task.dependsOn(prepareRun, contractIntegrity);
                   task.mustRunAfter(verificationTest, hiddenTest, propertyTest);
                   task.usesService(custodyService);
@@ -923,8 +912,6 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     task.getApprovalPropertyEnabled().convention(true);
     task.getApprovalMutationEnabled().convention(true);
     task.getApprovalMutationThreshold().convention(100);
-    task.getApprovalMutationProducerKind().convention("DEFAULT");
-    task.getApprovalMutationProducerTaskPath().convention("");
     task.getApprovalSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
     task.getApprovalSpecOptionProvided().set(extension.getCommandLineSpecProvided());
   }
@@ -941,13 +928,6 @@ public final class ToppleCatPlugin implements Plugin<Project> {
       TaskProvider<ToppleCatSealTask> hide,
       TaskProvider<ToppleCatResealTask> updateEscrow,
       TaskProvider<ToppleCatContractIntegrityTask> contractIntegrity) {
-    String producerName = extension.getMutationTesting().getProducerTask().get().trim();
-    boolean defaultProducer = producerName.equals("pitest");
-    Task producer = project.getTasks().findByName(producerName);
-    String producerPath =
-        defaultProducer
-            ? ""
-            : producer == null ? resolvedTaskPath(project, producerName) : producer.getPath();
     for (TaskProvider<? extends ToppleCatApprovalInputs> provider :
         List.of(hide, updateEscrow, contractIntegrity)) {
       provider.configure(
@@ -958,17 +938,8 @@ public final class ToppleCatPlugin implements Plugin<Project> {
             task.getApprovalPropertyEnabled().set(configuration.propertyBasedTestingEnabled());
             task.getApprovalMutationEnabled().set(configuration.mutationEnabled());
             task.getApprovalMutationThreshold().set(extension.getMutationTesting().getThreshold());
-            task.getApprovalMutationProducerKind().set(defaultProducer ? "DEFAULT" : "CUSTOM");
-            task.getApprovalMutationProducerTaskPath().set(producerPath);
           });
     }
-  }
-
-  private static String resolvedTaskPath(Project project, String taskName) {
-    if (taskName.startsWith(":")) {
-      return taskName;
-    }
-    return project.getPath().equals(":") ? ":" + taskName : project.getPath() + ":" + taskName;
   }
 
   private static void configureMutationGate(
@@ -996,219 +967,126 @@ public final class ToppleCatPlugin implements Plugin<Project> {
       report.configure(task -> task.getMutationIncompleteReason().set(reason));
       return;
     }
-    String producerName = extension.getMutationTesting().getProducerTask().get().trim();
-    boolean managedDefaultPit;
-    if (producerName.equals("pitest")) {
-      managedDefaultPit = project.getTasks().findByName(producerName) == null;
-      if (managedDefaultPit) {
-        project.getPluginManager().apply(PITEST_PLUGIN_ID);
-        configureDefaultPit(project, productionPackages.targets());
-      }
-    } else {
-      managedDefaultPit = false;
-    }
-    Task producer = project.getTasks().findByName(producerName);
+
+    SourceSetContainer sourceSets =
+        project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets();
+    SourceSet main = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
+    SourceSet test = sourceSets.getByName(SourceSet.TEST_SOURCE_SET_NAME);
+    Configuration managedRuntime = managedPitRuntime(project);
+    TaskProvider<ToppleCatManagedPitTask> producer =
+        project
+            .getTasks()
+            .register(
+                "toppleCatManagedPit",
+                ToppleCatManagedPitTask.class,
+                task -> {
+                  task.setGroup("verification");
+                  task.setDescription(
+                      "Runs ToppleCat's managed PIT 1.25.5 mutation producer for formal Verify.");
+                  task.getReportDirectory()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .dir("topplecat/runs/current/pit"));
+                  task.getTargetClasses().set(productionPackages.targets());
+                  task.getChildProcessJvmArgs()
+                      .set(
+                          List.of(
+                              "-D"
+                                  + ToppleJunit.PUBLIC_CASE_SOURCES_PROPERTY
+                                  + "="
+                                  + extension
+                                      .getPublicCaseRoot()
+                                      .get()
+                                      .getAsFile()
+                                      .getAbsolutePath(),
+                              "-D" + ToppleJunit.CASE_EXECUTION_SCOPE_PROPERTY + "=PUBLIC_ONLY",
+                              "-D"
+                                  + ToppleJunit.EXPECTED_CONSUMPTION_ENFORCEMENT_PROPERTY
+                                  + "=true",
+                              "-D"
+                                  + ToppleJunit.CONTRACT_DEFINITION_FILE_PROPERTY
+                                  + "="
+                                  + project
+                                      .getLayout()
+                                      .getBuildDirectory()
+                                      .file("topplecat/contract-definition.json")
+                                      .get()
+                                      .getAsFile()
+                                      .getAbsolutePath()));
+                  task.getDescriptorDirectory()
+                      .set(project.getLayout().getBuildDirectory().dir("topplecat/compiler"));
+                  task.getWorkingDirectory().set(project.getLayout().getProjectDirectory());
+                  task.getSourceDirectories().from(main.getAllJava().getSourceDirectories());
+                  task.getMutableCodePaths().from(main.getOutput().getClassesDirs());
+                  task.getAdditionalClasspath().from(test.getRuntimeClasspath());
+                  task.getAdditionalClasspathFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/managed-pit-classpath"));
+                  task.getLaunchClasspath().from(managedRuntime);
+                  task.dependsOn(
+                      main.getClassesTaskName(), test.getClassesTaskName(), compileContracts);
+                  task.mustRunAfter(contractIntegrity, verificationTest, hiddenTest, propertyTest);
+                  task.mustRunAfter(project.getTasks().named("toppleCatPrepareRun"));
+                  task.onlyIf(
+                      ignored ->
+                          !project.getGradle().getTaskGraph().hasTask(verify.get())
+                              || ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
+                  task.getOutputs()
+                      .upToDateWhen(
+                          ignored -> !project.getGradle().getTaskGraph().hasTask(verify.get()));
+                  task.getOutputs()
+                      .doNotCacheIf(
+                          "ToppleCat Verify requires current-run managed PIT producer evidence.",
+                          ignored -> project.getGradle().getTaskGraph().hasTask(verify.get()));
+                });
     mutationGate.configure(
         task -> {
-          task.getProducerAvailable().set(producer != null);
-          if (producer != null) {
-            task.dependsOn(producer);
-            if (managedDefaultPit) {
-              // This PIT task was created by ToppleCat, so its targetTests are owned by
-              // ToppleCat rather than a consumer. Descriptor generation must finish
-              // before PIT launches with the acceptance target argument.
-              producer.dependsOn(compileContracts);
-              configureManagedDefaultPitTargetTests(project, producer);
-            }
-          }
+          task.dependsOn(producer);
+          task.getOutputs()
+              .upToDateWhen(ignored -> !project.getGradle().getTaskGraph().hasTask(verify.get()));
+          task.getOutputs()
+              .doNotCacheIf(
+                  "ToppleCat Verify requires current-run mutation gate evidence.",
+                  ignored -> project.getGradle().getTaskGraph().hasTask(verify.get()));
         });
-    if (producer != null) {
-      // Task ordering is not inherited by dependencies. The producer is the Mutation Testing
-      // execution itself, so it must observe the same independent-safeguard sequence as the
-      // gate that reads its report. Its Integrity onlyIf must not race a missing current-run
-      // integrity result in a parallel Gradle build.
-      producer.mustRunAfter(contractIntegrity, verificationTest, hiddenTest, propertyTest);
-      producer.mustRunAfter(project.getTasks().named("toppleCatPrepareRun"));
-      producer
-          .getOutputs()
-          .upToDateWhen(ignored -> !project.getGradle().getTaskGraph().hasTask(verify.get()));
-      producer
-          .getOutputs()
-          .doNotCacheIf(
-              "ToppleCat Verify requires current-run mutation producer evidence.",
-              ignored -> project.getGradle().getTaskGraph().hasTask(verify.get()));
-      mutationGate.configure(
-          task -> {
-            // A formal verification workspace is discarded before every run. Its report, result,
-            // and completion marker must therefore be produced together in this graph rather than
-            // supplied by Gradle's previous task-output snapshot or build cache. A direct Gate
-            // invocation retains normal diagnostic up-to-date behaviour and now tracks PIT XML.
-            task.getOutputs()
-                .upToDateWhen(ignored -> !project.getGradle().getTaskGraph().hasTask(verify.get()));
-            task.getOutputs()
-                .doNotCacheIf(
-                    "ToppleCat Verify requires current-run mutation gate evidence.",
-                    ignored -> project.getGradle().getTaskGraph().hasTask(verify.get()));
-          });
-      project
-          .getTasks()
-          .named("toppleCatPrepareRun", ToppleCatPrepareRunTask.class)
-          .configure(
-              task ->
-                  task.getMutationProducerReportFile()
-                      .set(extension.getMutationTesting().getReportFile()));
-      producer.onlyIf(
-          ignored ->
-              !project.getGradle().getTaskGraph().hasTask(verify.get())
-                  || ToppleCatContractIntegrityTask.passed(contractIntegrityResult));
-      if (producerName.equals("pitest")) {
-        configureFullMutationMatrix(project, producer);
-      }
-    }
+    project
+        .getTasks()
+        .named("toppleCatPrepareRun", ToppleCatPrepareRunTask.class)
+        .configure(
+            task ->
+                task.getMutationProducerReportFile()
+                    .set(
+                        project
+                            .getLayout()
+                            .getBuildDirectory()
+                            .file("topplecat/runs/current/pit/mutations.xml")));
     verify.configure(task -> task.dependsOn(mutationGate));
   }
 
-  private static void configureDefaultPit(Project project, Set<String> targetClasses) {
-    Object pitest = project.getExtensions().findByName("pitest");
-    if (pitest == null) {
-      throw new GradleException(
-          "ToppleCat could not configure its default PIT producer. Apply info.solidsoft.pitest"
-              + " explicitly or set toppleCat.mutationTesting.producerTask.");
-    }
-    setPitProperty(pitest, "getPitestVersion", "1.25.5");
-    setPitProperty(pitest, "getJunit5PluginVersion", "1.2.3");
-    setPitProperty(pitest, "getTargetClasses", targetClasses);
-    SourceSet publicTests =
-        project
-            .getExtensions()
-            .getByType(JavaPluginExtension.class)
-            .getSourceSets()
-            .getByName(SourceSet.TEST_SOURCE_SET_NAME);
-    setPitProperty(pitest, "getTestSourceSets", Set.of(publicTests));
-    setPitProperty(pitest, "getFullMutationMatrix", true);
-    setPitProperty(pitest, "getOutputFormats", Set.of("XML"));
-    setPitProperty(pitest, "getTimestampedReports", false);
-    setPitProperty(pitest, "getMutationThreshold", 0);
-    setPitProperty(pitest, "getFailWhenNoMutations", false);
+  private static Configuration managedPitRuntime(Project project) {
+    Configuration runtime = project.getConfigurations().maybeCreate("toppleCatManagedPitRuntime");
+    runtime.setCanBeConsumed(false);
+    runtime.setCanBeResolved(true);
+    runtime.setVisible(false);
+    runtime
+        .getResolutionStrategy()
+        .force(
+            "org.pitest:pitest-command-line:" + ToppleCatManagedMutationProfile.PIT_VERSION,
+            "org.pitest:pitest:" + ToppleCatManagedMutationProfile.PIT_VERSION,
+            "org.pitest:pitest-entry:" + ToppleCatManagedMutationProfile.PIT_VERSION,
+            "org.pitest:pitest-junit5-plugin:1.2.3");
     project
-        .getLogger()
-        .lifecycle(
-            "ToppleCat configured the default PIT producer with a full mutation matrix against"
-                + " public @ToppleAcceptanceTest classes.");
-  }
-
-  /** Configures targetTests for the PIT producer ToppleCat itself applied. */
-  private static void configureManagedDefaultPitTargetTests(Project project, Task producer) {
-    Object pitest = project.getExtensions().findByName("pitest");
-    if (pitest == null) {
-      throw new GradleException("ToppleCat could not configure its managed PIT targetTests.");
-    }
-
-    // Do not attach a task-produced Provider to PIT's targetTests input. Gradle's
-    // configuration-cache serializer queries that input before producer tasks execute,
-    // and querying a task-backed provider at that point is invalid. Keep PIT's declared
-    // targetTests input empty and add the compiler-backed target as a lazy command-line
-    // argument provider; JavaExec evaluates it when PIT actually launches, after the
-    // compiler-contract dependency has completed.
-    Path descriptorDirectory =
-        project
-            .getLayout()
-            .getBuildDirectory()
-            .getAsFile()
-            .get()
-            .toPath()
-            .resolve("topplecat")
-            .resolve("compiler");
-    setPitProperty(pitest, "getTargetTests", Set.of());
-    try {
-      Object providers = producer.getClass().getMethod("getArgumentProviders").invoke(producer);
-      @SuppressWarnings("unchecked")
-      List<CommandLineArgumentProvider> argumentProviders =
-          (List<CommandLineArgumentProvider>) providers;
-      argumentProviders.add(
-          new AcceptanceTestPitTargetArgumentProvider(descriptorDirectory.toString()));
-    } catch (ReflectiveOperationException | ClassCastException exception) {
-      throw new GradleException(
-          "ToppleCat could not configure PIT targetTests at execution time.", exception);
-    }
-    project
-        .getLogger()
-        .lifecycle(
-            "ToppleCat configured its managed PIT targetTests from compiler-emitted acceptance"
-                + " public descriptors.");
-  }
-
-  private static List<String> acceptanceTestClasses(Path descriptorDirectory) {
-    Set<String> classes = new TreeSet<>();
-    for (CompilerScenarioDescriptor descriptor :
-        CompilerDescriptorReader.read(List.of(descriptorDirectory))) {
-      classes.add(descriptor.declaringBinaryName());
-    }
-    return List.copyOf(classes);
-  }
-
-  /**
-   * A serializable argument provider is required because PIT task actions are retained in the
-   * configuration cache. Capturing Project, TaskProvider, or a Gradle Provider would make the PIT
-   * task graph non-cacheable. JavaExec evaluates this provider when launching PIT.
-   */
-  private static final class AcceptanceTestPitTargetArgumentProvider
-      implements CommandLineArgumentProvider, Serializable {
-    private final String descriptorDirectory;
-
-    private AcceptanceTestPitTargetArgumentProvider(String descriptorDirectory) {
-      this.descriptorDirectory = descriptorDirectory;
-    }
-
-    @Override
-    public Iterable<String> asArguments() {
-      List<String> canonicalTests = acceptanceTestClasses(Path.of(descriptorDirectory));
-      if (canonicalTests.isEmpty()) {
-        throw new GradleException(
-            "ToppleCat compiler emitted no public @ToppleAcceptanceTest descriptors for" + " PIT.");
-      }
-      return List.of("--targetTests=" + String.join(",", canonicalTests));
-    }
-  }
-
-  private static void configureFullMutationMatrix(Project project, Task producer) {
-    Object pitest = project.getExtensions().findByName("pitest");
-    if (pitest == null) {
-      return;
-    }
-    try {
-      setPitProperty(pitest, "getFullMutationMatrix", true);
-      project
-          .getLogger()
-          .lifecycle("ToppleCat enables PIT fullMutationMatrix=true for {}.", producer.getPath());
-    } catch (GradleException exception) {
-      project
-          .getLogger()
-          .warn(
-              "ToppleCat could not enable PIT fullMutationMatrix=true for {}. "
-                  + "Configure it in the PIT extension before verification.",
-              producer.getPath());
-    }
-  }
-
-  private static void setPitProperty(Object pitest, String getter, Object value) {
-    try {
-      Object property = pitest.getClass().getMethod(getter).invoke(pitest);
-      java.lang.reflect.Method setter =
-          java.util.Arrays.stream(property.getClass().getMethods())
-              .filter(
-                  method ->
-                      method.getName().equals("set")
-                          && method.getParameterCount() == 1
-                          && method.getParameterTypes()[0].isAssignableFrom(value.getClass()))
-              .findFirst()
-              .orElseThrow(
-                  () ->
-                      new NoSuchMethodException("set(value) on " + property.getClass().getName()));
-      setter.invoke(property, value);
-    } catch (ReflectiveOperationException exception) {
-      throw new GradleException("ToppleCat could not configure PIT via " + getter + ".", exception);
-    }
+        .getDependencies()
+        .add(
+            runtime.getName(),
+            "org.pitest:pitest-command-line:" + ToppleCatManagedMutationProfile.PIT_VERSION);
+    project.getDependencies().add(runtime.getName(), "org.pitest:pitest-junit5-plugin:1.2.3");
+    return runtime;
   }
 
   private static ProductionPackages productionPackages(Project project) {

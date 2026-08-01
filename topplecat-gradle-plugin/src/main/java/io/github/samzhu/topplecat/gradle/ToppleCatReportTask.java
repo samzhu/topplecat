@@ -1128,11 +1128,15 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     try {
       MutationGateResults value = MutationGateResults.read(Files.readString(results));
       return new PitMutationAttribution(
+          value.pitVersion(),
+          value.managedProfileId(),
+          value.managedOperatorIds(),
           value.producerMutationCount(),
           value.uniquelyAttributedMutationCount(),
           value.unattributedMutationCount(),
           value.producerOutcomeCounts(),
           value.unattributedOutcomeCounts(),
+          value.perMutatorSummaries(),
           value.assessments(),
           value.mutations());
     } catch (IOException | RuntimeException ignored) {

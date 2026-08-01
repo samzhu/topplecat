@@ -2,7 +2,6 @@ package io.github.samzhu.topplecat.gradle;
 
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
-import io.github.samzhu.topplecat.core.MutationProducerKind;
 import io.github.samzhu.topplecat.core.ReviewerContractApproval;
 import io.github.samzhu.topplecat.core.SelectedSpecScope;
 import io.github.samzhu.topplecat.core.VerificationPolicy;
@@ -48,12 +47,6 @@ interface ToppleCatApprovalInputs {
   Property<Integer> getApprovalMutationThreshold();
 
   @Internal
-  Property<String> getApprovalMutationProducerKind();
-
-  @Internal
-  Property<String> getApprovalMutationProducerTaskPath();
-
-  @Internal
   ListProperty<String> getApprovalSelectedSpecPaths();
 
   @Internal
@@ -70,7 +63,6 @@ interface ToppleCatApprovalInputs {
           "Cannot read checked ToppleCat contract definition: " + exception.getMessage(),
           exception);
     }
-    String taskPath = getApprovalMutationProducerTaskPath().getOrElse("");
     VerificationPolicy policy =
         new VerificationPolicy(
             ToppleCatVersion.CURRENT,
@@ -78,9 +70,7 @@ interface ToppleCatApprovalInputs {
             getApprovalExpectedConsumptionEnabled().get(),
             getApprovalPropertyEnabled().get(),
             getApprovalMutationEnabled().get(),
-            getApprovalMutationThreshold().get(),
-            MutationProducerKind.valueOf(getApprovalMutationProducerKind().get()),
-            taskPath.isBlank() ? null : taskPath);
+            getApprovalMutationThreshold().get());
     SelectedSpecScope scope =
         SpecScopeResolver.resolve(
                 getApprovalBuildRoot().get().getAsFile().toPath(),

@@ -103,6 +103,26 @@ feedback = open(os.environ["FEEDBACK"]).read()
 
 if mutation.get("schemaVersion") != "topplecat.mutation-results.v1":
     raise SystemExit("Mutation results must use the sole v1 schema")
+if mutation.get("pitVersion") != "1.25.5":
+    raise SystemExit("Mutation results must identify PIT 1.25.5")
+if mutation.get("managedProfileId") != "topplecat-managed-v1":
+    raise SystemExit("Mutation results must identify the managed mutation profile")
+expected_operators = [
+    "TRUE_RETURNS",
+    "FALSE_RETURNS",
+    "PRIMITIVE_RETURNS",
+    "EMPTY_RETURNS",
+    "NULL_RETURNS",
+    "REMOVE_CONDITIONALS_EQUAL_IF",
+    "REMOVE_CONDITIONALS_EQUAL_ELSE",
+    "REMOVE_CONDITIONALS_ORDER_IF",
+    "REMOVE_CONDITIONALS_ORDER_ELSE",
+    "CONDITIONALS_BOUNDARY",
+    "VOID_METHOD_CALLS",
+    "MATH",
+]
+if mutation.get("managedOperatorIds") != expected_operators:
+    raise SystemExit("Mutation results must retain the exact managed operator profile")
 assessment = next(
     (item for item in mutation.get("assessments", []) if item.get("acId") == "AC-MUTATION-GATE"),
     None,
@@ -111,12 +131,42 @@ if assessment is None:
     raise SystemExit("Mutation results must contain the acceptance-method assessment")
 if assessment.get("coveredMutantCount", 0) < 1:
     raise SystemExit("The acceptance method did not cover the surviving mutant")
-if assessment.get("killedByAcceptanceMethodMutantCount") != 0:
-    raise SystemExit("The acceptance method incorrectly received kill credit")
+if assessment.get("killedByAcceptanceMethodMutantCount", 0) >= assessment.get("coveredMutantCount", 0):
+    raise SystemExit("The managed survivor did not reduce the acceptance-method detection rate")
 if assessment.get("detectionRate", 100) >= assessment.get("sealedThreshold", 0):
     raise SystemExit("The acceptance-method detection rate did not fall below its threshold")
-if assessment.get("verdict") != "FAIL":
-    raise SystemExit("The acceptance-method assessment must fail")
+if assessment.get("attributionGap"):
+    raise SystemExit("The managed survivor must be attributed to the public acceptance method")
+mutations = mutation.get("mutations", [])
+raw_mutators = {item.get("mutator", "") for item in mutations}
+signal_families = {
+    "return replacement": any(".mutators.returns." in raw for raw in raw_mutators),
+    "forced conditional": any(".RemoveConditionalMutator_" in raw for raw in raw_mutators),
+    "conditional boundary": (
+        "org.pitest.mutationtest.engine.gregor.mutators.ConditionalsBoundaryMutator"
+        in raw_mutators
+    ),
+    "void method-call removal": (
+        "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator"
+        in raw_mutators
+    ),
+    "arithmetic replacement": (
+        "org.pitest.mutationtest.engine.gregor.mutators.MathMutator" in raw_mutators
+    ),
+}
+missing_signals = [name for name, present in signal_families.items() if not present]
+if missing_signals:
+    raise SystemExit(
+        "Managed PIT did not produce all five required real mutation signal families: "
+        + ", ".join(missing_signals)
+    )
+if not any(
+    item.get("status") == "SURVIVED"
+    and item.get("mutator")
+        == "org.pitest.mutationtest.engine.gregor.mutators.VoidMethodCallMutator"
+    for item in mutations
+):
+    raise SystemExit("The managed PIT evidence must retain a raw SURVIVED void-call mutant")
 
 gates = {item.get("name"): item.get("verdict") for item in evidence.get("gates", [])}
 if gates.get("CONTRACT_INTEGRITY") != "PASS":
@@ -136,6 +186,15 @@ for reviewer_only in (
     "coveredMutantCount",
     "killedByAcceptanceMethodMutantCount",
     "detectionRate",
+    "topplecat-managed-v1",
+    "1.25.5",
+    "VoidMethodCallMutator",
+    "PrimitiveReturnsMutator",
+    "RemoveConditionalMutator",
+    "ConditionalsBoundaryMutator",
+    "MathMutator",
+    "SURVIVED",
+    "KILLED",
 ):
     if reviewer_only in feedback:
         raise SystemExit(f"Agent feedback leaked reviewer-only mutation data: {reviewer_only}")

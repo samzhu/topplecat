@@ -8,24 +8,27 @@ public record PitMutation(
     boolean detected,
     String status,
     String mutatedClass,
+    String mutator,
+    String description,
     List<String> coveringTests,
     List<String> killingTests,
     List<String> succeedingTests) {
   public PitMutation {
     requireText(status, "status");
     requireText(mutatedClass, "mutatedClass");
+    requireText(mutator, "mutator");
+    requireText(description, "description");
     coveringTests = normalized(coveringTests);
     killingTests = normalized(killingTests);
     succeedingTests = normalized(succeedingTests);
   }
 
   private static List<String> normalized(List<String> selectors) {
-    return (selectors == null ? List.<String>of() : selectors)
-        .stream()
-            .filter(selector -> selector != null && !selector.isBlank())
-            .map(String::trim)
-            .distinct()
-            .toList();
+    List<String> values = selectors == null ? List.of() : selectors;
+    if (values.stream().anyMatch(selector -> selector == null || selector.isBlank())) {
+      throw new ToppleCatException("PIT mutation selector must be nonblank when present.");
+    }
+    return List.copyOf(values);
   }
 
   private static void requireText(String value, String field) {

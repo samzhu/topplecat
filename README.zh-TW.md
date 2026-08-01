@@ -59,10 +59,16 @@ ToppleCat 不管理任務、Spec 生命週期、組織簽核、CI 隔離或作�
 選定 AC 擴大到全部 AC。性質導向測試依選定 AC 執行；突變測試永遠使用完整
 公開驗收合約。
 
-突變測試會保留 PIT 原始的 status 與 selector 關係。每個 AC 的 detection rate，是某個
-公開 Acceptance Method 出現在 `killingTests` 的 mutant 數，除以同一方法出現在
-`coveringTests` 的 mutant 數；它不是 PIT 的全域 mutation threshold。僅供審閱者查看的
-Verification Evidence 會呈現原始 PIT 摘要，安全回饋則只停留在 Gate 層級。
+正式 Verify 的突變測試一律由 ToppleCat 執行固定的 PIT 1.25.5 producer 與
+`topplecat-managed-v1` profile；它不會讀取專案的 `pitest` task、使用者指定的 producer
+或 report path。專案以 `tasks.withType(PitestTask)` 套用的慣例仍可用於獨立的 PIT 工作流，
+但不會改寫正式 Verify。突變測試會保留 PIT 原始的 `status`、`detected`、mutator、description
+與 selector 關係。每個 AC 的 detection rate，是某個公開 Acceptance Method 出現在
+`killingTests` 的 mutant 數，除以同一方法出現在 `coveringTests` 的 mutant 數；它不是
+PIT 的全域 mutation threshold。某個 AC 沒有被這個 profile 的 mutant 覆蓋時，會是供
+審閱者判斷的 attribution gap，不是假裝通過。僅供審閱者查看的 Verification Evidence
+會呈現原始矩陣，安全回饋則只停留在 Gate 層級。固定的 12 個 operator 與 Gate 規則見
+[managed mutation profile design](docs/design/managed-mutation-profile.md)。
 
 ## 撰寫驗收合約
 
@@ -143,18 +149,18 @@ shape 或疑似 opaque identifier literal 值得人工檢查。它們不推測�
 `EXPECTED_CONSUMPTION`、`PROPERTY` 與 `MUTATION`。整體結果為 `PASS`、`FAIL`
 或 `INCOMPLETE`；只有本次執行的 `PASS` 才能接受完成宣稱。
 
-## 安裝 0.0.9
+## 安裝 0.0.10
 
 ToppleCat 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.9"
+    id("io.github.samzhu.topplecat") version "0.0.10"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.9")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.10")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -170,7 +176,7 @@ tasks.test { useJUnitPlatform() }
 - [文件索引](docs/README.md)
 - [共同語言](CONTEXT.md)
 - [架構](docs/architecture.md)
-- [0.0.9 release notes](docs/releases/0.0.9.zh-TW.md)
+- [0.0.10 release notes](docs/releases/0.0.10.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

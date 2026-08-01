@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
-import io.github.samzhu.topplecat.core.MutationProducerKind;
 import io.github.samzhu.topplecat.core.VerificationPolicy;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,9 +31,7 @@ class ContractApprovalFactoryTest {
     Files.writeString(project.resolve("build/generated/ignored.txt"), "ignored\n");
 
     ContractDefinition definition = ContractDefinition.withComputedDigest(List.of());
-    VerificationPolicy policy =
-        new VerificationPolicy(
-            "0.0.4", true, true, true, true, 100, MutationProducerKind.DEFAULT, null);
+    VerificationPolicy policy = new VerificationPolicy("0.0.4", true, true, true, true, 100);
     var approved =
         ContractApprovalFactory.create(project, List.of(publicSources), cases, definition, policy);
 

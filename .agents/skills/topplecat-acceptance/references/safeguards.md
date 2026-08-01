@@ -32,7 +32,12 @@ Mutation strength comes from public acceptance methods and public rows. PIT
 attribution distinguishes the methods that execute a mutant (`coveringTests`)
 from the exact method that detects it (`killingTests`); one AC never receives
 detection credit from another. Hidden rows and Properties do not improve this
-result.
+result. Formal Verify uses ToppleCat's fixed PIT 1.25.5
+`topplecat-managed-v1` profile, not a project PIT task. If this focused profile
+does not cover an AC, treat the reviewer-visible result as an attribution gap;
+do not infer a passing mutation score or invent an extra business rule.
+Project-wide `tasks.withType(PitestTask)` conventions belong only to a separate
+project PIT workflow and cannot change formal Verify's managed producer.
 
 ## Property-Based Testing
 

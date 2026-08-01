@@ -33,21 +33,28 @@ missing or damaged. Do not inspect an earlier run as a replacement.
 
 ## Mutation evidence is missing or fails
 
-The managed PIT producer targets public acceptance classes and must write a
-complete current full matrix. Its `coveringTests`, `killingTests`, and
-`succeedingTests` selectors must be readable. A missing, damaged, interrupted,
-ambiguous, or zero-mutant producer result leaves the Mutation Gate incomplete.
-Configure a custom producer with `mutationTesting { producerTask.set(...);
-reportFile.set(...) }` only when it writes that full current report.
+Formal Verify owns the PIT producer. It pins PIT 1.25.5 and the fixed
+`topplecat-managed-v1` profile, targets only compiler-emitted public Acceptance
+Methods, and writes its internal current-run XML. Do not configure a custom
+producer, custom report path, or project `pitest` task for ToppleCat; those are
+not supported formal-evidence inputs. A missing, damaged, interrupted, stale,
+profile-mismatched, non-full-matrix, or zero-mutant managed result leaves the
+Mutation Gate incomplete.
+
+Project-wide `tasks.withType(PitestTask)` configuration remains available for a
+separate project PIT workflow. It cannot alter formal Verify's managed producer
+or its evidence.
 
 When PIT produced mutants but none map exactly to a public Acceptance Method,
 the Mutation Gate fails because ToppleCat cannot claim public-contract
 attribution. When an AC did cover mutants but its own method did not kill enough
-of them for the sealed threshold, the Gate also fails. Inspect the reviewer-only
+of them for the sealed threshold, the Gate also fails. An AC with no covered
+managed-profile mutant is instead an attribution gap for reviewer judgment once
+another AC has exact attribution. Inspect the reviewer-only
 `mutation-results.json` and Verification Evidence to see the unmodified PIT
-outcomes and selector relationships. Verify writes reports, safe feedback, and
-re-hides reviewer source before returning the aggregate failure; stale producer
-reports cannot be reused.
+outcomes, mutators, descriptions, and selector relationships. Verify writes
+reports, safe feedback, and re-hides reviewer source before returning the
+aggregate failure; stale producer reports cannot be reused.
 
 ## Contract integrity failed
 
@@ -60,7 +67,7 @@ on its own.
 
 ## Custody cannot be restored
 
-The 0.0.9 custody state is reviewer-local under
+The 0.0.10 custody state is reviewer-local under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`. The project must be opened
 at the same resolved path and with the reviewer state available. Prior-format
 custody is not migrated; create a new sealed reviewer state.

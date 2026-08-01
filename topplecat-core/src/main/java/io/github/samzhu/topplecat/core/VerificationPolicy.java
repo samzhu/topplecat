@@ -7,24 +7,13 @@ public record VerificationPolicy(
     boolean expectedConsumptionEnabled,
     boolean propertyBasedTestingEnabled,
     boolean mutationEnabled,
-    int mutationThreshold,
-    MutationProducerKind mutationProducerKind,
-    String mutationProducerTaskPath) {
+    int mutationThreshold) {
   public VerificationPolicy {
     if (toppleCatVersion == null
         || toppleCatVersion.isBlank()
         || mutationThreshold < 0
-        || mutationThreshold > 100
-        || mutationProducerKind == null) {
+        || mutationThreshold > 100) {
       throw new ToppleCatException("Verification policy is invalid.");
-    }
-    if (mutationProducerKind == MutationProducerKind.DEFAULT && mutationProducerTaskPath != null) {
-      throw new ToppleCatException(
-          "The default mutation producer must not declare a custom task path.");
-    }
-    if (mutationProducerKind == MutationProducerKind.CUSTOM
-        && (mutationProducerTaskPath == null || mutationProducerTaskPath.isBlank())) {
-      throw new ToppleCatException("A custom mutation producer requires its resolved task path.");
     }
   }
 }

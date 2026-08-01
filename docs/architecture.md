@@ -43,7 +43,7 @@ and never enters mutation targeting. Properties are public declarations under
 | Capability | Authoritative input | Formal task | Gate |
 | --- | --- | --- |
 | Hidden Tests | Hidden typed rows | `toppleCatHiddenTest` | `REVIEWER_JUNIT` |
-| Mutation Testing | Public acceptance methods and producer report | mutation producer + `toppleCatMutationGate` | `MUTATION` |
+| Mutation Testing | Compiler-emitted public acceptance methods and the fixed managed PIT 1.25.5 matrix | `toppleCatManagedPit` + `toppleCatMutationGate` | `MUTATION` |
 | Property-Based Testing | `@ToppleProperty` declarations, generators, current events | dedicated Property task | `PROPERTY` |
 
 The three capabilities are Independent Safeguards: they share only scope,
@@ -55,15 +55,27 @@ earlier safeguard fails. `REVIEWER_JUNIT` is `PASS` only when current-run
 hidden typed rows executed. When enabled but those rows are missing it is
 `INCOMPLETE`; an explicit policy decision is `DISABLED`.
 
+Formal Verify owns its PIT producer: it pins PIT 1.25.5, passes only the fixed
+`topplecat-managed-v1` 12-operator profile, targets compiler-emitted public
+Acceptance Methods, requests a non-timestamped XML full matrix, and reruns
+without task-output or build-cache reuse. A project PIT task or report never
+becomes ToppleCat evidence.
+The managed producer is not a consumer `PitestTask`, so project-wide
+`tasks.withType(PitestTask)` conventions remain confined to the project's own
+PIT workflow.
+
 Mutation attribution uses PIT's complete `coveringTests`, `killingTests`, and
 `succeedingTests` selector matrix. A mutant is mapped only when its selector's
 class, method, overload, and full parameter types exactly match a compiled
 public Acceptance Method. `coveringTests` supplies contract-scoped execution;
 `killingTests` supplies that same method's contract-scoped detection; and
-`succeedingTests` remains reviewer evidence. PIT `status` and `detected` stay
-unmodified. The sole reviewer-only `topplecat.mutation-results.v1` artifact
-directly keeps producer, unattributed, and per-AC outcome summaries plus raw
-relationships.
+`succeedingTests` remains reviewer evidence. PIT `status`, `detected`, raw
+mutator identity, and description stay unmodified. The sole reviewer-only
+`topplecat.mutation-results.v1` artifact keeps profile metadata, producer,
+unattributed, per-mutator and per-AC outcome summaries, and raw relationships.
+An AC with zero covered mutants is a nonblocking attribution gap once another
+AC has exact attribution; it never receives inferred credit from Hidden Tests,
+Properties, helpers, or another acceptance method.
 
 ## Scope and custody
 
@@ -75,7 +87,7 @@ Mutation Testing remains full-contract.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.9 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.10 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 

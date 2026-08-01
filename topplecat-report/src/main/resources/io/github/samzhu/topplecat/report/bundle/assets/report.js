@@ -190,17 +190,42 @@
     <tbody>${outcomes.map(outcome => `<tr><td><code>${e(outcome.status)}</code></td><td>${e(outcome.detected)}</td><td>${e(outcome.count)}</td></tr>`).join('')}</tbody></table></div></section>`;
   const selectorList = selectors => selectors?.length ? `<ul>${selectors.map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul>` : '<p class="meta">None reported by PIT.</p>';
   const mutationSummary = () => {
-    const mutation = data.mutationAttribution; if (projection !== 'verification' || !mutation) return '';
+    if (projection !== 'verification') return '';
+    const mutation = data.mutationAttribution;
+    const mutationGate = (data.gates || []).find(gate => gate.name === 'MUTATION');
+    const gateVerdict = status(mutationGate?.verdict || 'INCOMPLETE');
+    const gateReason = mutationGate?.reason ? `<p class="meta">${e(mutationGate.reason)}</p>` : '';
+    if (!mutation) return `<section class="mutation-summary"><h2>Mutation Testing</h2><p>${gateVerdict}</p>${gateReason}
+      <p class="panel-help">No current managed PIT attribution was available for this formal Verify.</p></section>`;
     const assessments = mutation.assessments || [];
-    return `<section class="mutation-summary"><h2>Mutation attribution</h2>
+    const profile = (mutation.managedOperatorIds || []).map(operator => `<li><code>${e(operator)}</code></li>`).join('');
+    const mutators = mutation.perMutatorSummaries || [];
+    return `<section class="mutation-summary"><h2>Mutation Testing</h2><p>${gateVerdict}</p>${gateReason}
       <p class="panel-help">PIT’s <code>status</code> and <code>detected</code> values are shown unchanged; see <a href="https://pitest.org/quickstart/basic_concepts/" target="_blank" rel="noopener">PIT’s official mutation outcome definitions</a>. ToppleCat’s contract-scoped detection rate is based only on the exact Acceptance Method selectors in PIT <code>killingTests</code>, divided by its exact <code>coveringTests</code> selectors.</p>
+      <p>PIT <code>${e(mutation.pitVersion)}</code> · managed profile <code>${e(mutation.managedProfileId)}</code></p>
+      <section><h3>Managed operator IDs</h3><ul>${profile}</ul></section>
       <p><strong>${e(mutation.producerMutationCount)}</strong> producer mutants · <strong>${e(mutation.uniquelyAttributedMutationCount)}</strong> uniquely attributed to public Acceptance Methods · <strong>${e(mutation.unattributedMutationCount)}</strong> unattributed</p>
       ${pitOutcomeTable('All producer outcomes', mutation.producerOutcomeCounts)}${pitOutcomeTable('Unattributed producer outcomes', mutation.unattributedOutcomeCounts)}
-      <section><h3>Per-Ac contract detection</h3><div class="table-scroll"><table class="case-matrix"><thead><tr><th>AC</th><th>Covered mutants</th><th>Killed by this Acceptance Method</th><th>Sealed threshold</th><th>Detection rate</th><th>Verdict</th></tr></thead>
-      <tbody>${assessments.map(assessment => `<tr><td>${e(assessment.acId)}</td><td>${e(assessment.coveredMutantCount)}</td><td>${e(assessment.killedByAcceptanceMethodMutantCount)}</td><td>${e(assessment.sealedThreshold)}%</td><td>${e(assessment.detectionRate)}%</td><td>${status(assessment.verdict)}</td></tr>`).join('')}</tbody></table></div></section>
+      ${mutators.length ? `<section><h3>Per-mutator summary</h3><div class="table-scroll"><table class="case-matrix"><thead><tr><th>Raw PIT mutator</th><th>Mutants</th><th>Raw outcomes</th></tr></thead><tbody>${mutators.map(summary => `<tr><td><code>${e(summary.mutator)}</code></td><td>${e(summary.mutantCount)}</td><td>${e((summary.outcomeCounts || []).map(outcome => `${outcome.status}/${outcome.detected}: ${outcome.count}`).join(', '))}</td></tr>`).join('')}</tbody></table></div></section>` : ''}
+      <section><h3>Per-AC contract detection</h3><div class="table-scroll"><table class="case-matrix"><thead><tr><th>AC</th><th>Covered mutants</th><th>Detected by this Acceptance Method</th><th>Sealed threshold</th><th>Detection rate</th></tr></thead>
+      <tbody>${assessments.map(assessment => `<tr><td>${e(assessment.acId)}</td><td>${e(assessment.coveredMutantCount)}</td><td>${e(assessment.killedByAcceptanceMethodMutantCount)}</td><td>${e(assessment.sealedThreshold)}%</td><td>${e(assessment.detectionRate)}%</td></tr>`).join('')}</tbody></table></div>${assessments.filter(assessment => assessment.attributionGap).map(assessment => `<p class="panel-help"><code>${e(assessment.acId)}</code>：此 AC 沒有取得本次 managed mutation profile 的歸因證據，需要 reviewer 判斷。</p>`).join('')}</section>
       ${assessments.map(assessment => pitOutcomeTable(`${assessment.acId} PIT outcomes`, assessment.pitOutcomeCounts)).join('')}
-      <details class="raw-case"><summary>View PIT selector relationships</summary>${(mutation.mutations || []).map((item, index) => `<section class="mutation-selector"><h4>Mutant ${index + 1}: <code>${e(item.status)}</code> · detected ${e(item.detected)}</h4><p class="meta">Mutated class: <code>${e(item.mutatedClass)}</code> · attributed ACs: ${e((item.attributedAcceptanceConditionIds || []).join(', ') || 'none')}</p><h5>coveringTests</h5>${selectorList(item.coveringTests)}<h5>killingTests</h5>${selectorList(item.killingTests)}<h5>succeedingTests</h5>${selectorList(item.succeedingTests)}</section>`).join('')}</details>
+      <details class="raw-case"><summary>View raw PIT mutant details</summary>${(mutation.mutations || []).map((item, index) => `<section class="mutation-selector"><h4>Mutant ${index + 1}: <code>${e(item.status)}</code> · detected ${e(item.detected)}</h4><p class="meta">Mutated class: <code>${e(item.mutatedClass)}</code> · raw mutator: <code>${e(item.mutator)}</code> · attributed ACs: ${e((item.attributedAcceptanceConditionIds || []).join(', ') || 'none')}</p><p>${e(item.description)}</p><h5>coveringTests</h5>${selectorList(item.coveringTests)}<h5>killingTests</h5>${selectorList(item.killingTests)}<h5>succeedingTests</h5>${selectorList(item.succeedingTests)}</section>`).join('')}</details>
     </section>`;
+  };
+  const functionalSafeguardSections = () => {
+    if (projection !== 'verification') return '';
+    const gates = new Map((data.gates || []).map(gate => [gate.name, gate]));
+    const safeguard = (heading, gateName, explanation) => {
+      const gate = gates.get(gateName); const verdict = gate ? status(gate.verdict) : status('INCOMPLETE');
+      const reason = gate?.reason ? `<p class="meta">${e(gate.reason)}</p>` : '';
+      return `<section class="safeguard-summary"><h2>${heading}</h2><p>${verdict}</p><p class="panel-help">${explanation}</p>${reason}</section>`;
+    };
+    const integrity = gates.get('CONTRACT_INTEGRITY');
+    return `<section class="mechanical-seal-summary"><h2>Mechanical Seal / Contract Integrity</h2><p>${status(integrity?.verdict || 'INCOMPLETE')}</p>${integrity?.reason ? `<p class="meta">${e(integrity.reason)}</p>` : ''}</section>
+      ${safeguard('Hidden Tests', 'REVIEWER_JUNIT', 'Reviewer-owned typed rows provide evidence only for Hidden Tests.')}
+      ${safeguard('Property-Based Testing', 'PROPERTY', 'Bounded Properties provide evidence only for Property-Based Testing.')}
+      ${mutationSummary()}`;
   };
   const contractQualityAdvisories = () => {
     const advisories = data.contractQualityAdvisories || []; if (projection !== 'review' || !advisories.length) return '';
@@ -249,7 +274,7 @@
     if (query) visible.forEach(ac => expanded.add(ac.acId));
     document.getElementById('summary').innerHTML = projection === 'review'
       ? `${scopeSummary()}<span>${visible.length} acceptance conditions</span>${visible.map(counts).join('')}${contractQualityAdvisories()}`
-      : `${scopeSummary()}${data.verdict ? `<span>${status(data.verdict)}</span>` : `<span>${visible.length} acceptance conditions</span>`}${gateNotices}${mutationSummary()}`;
+      : `${scopeSummary()}${data.verdict ? `<span>${status(data.verdict)}</span>` : `<span>${visible.length} acceptance conditions</span>`}${gateNotices}${functionalSafeguardSections()}`;
     document.getElementById('report').innerHTML = visible.map(ac => {
       const current = selected(ac); const isOpen = expanded.has(ac.acId);
       return `<details class="ac" data-ac-details="${e(ac.acId)}" ${isOpen ? 'open' : ''}><summary>

@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ToppleCatException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -46,12 +46,18 @@ class PitMutationParserTest {
     assertEquals(2, attribution.uniquelyAttributedMutationCount());
     assertEquals(1, attribution.unattributedMutationCount());
     assertEquals(
-        EvidenceVerdict.PASS,
-        attribution.assessments().getFirst().verdict(),
+        false,
+        attribution.assessments().getFirst().attributionGap(),
         "a raw detected=false flag must not cancel exact killingTests evidence");
     assertEquals(100, attribution.assessments().getFirst().detectionRate());
     assertEquals("UNKNOWN_FUTURE_STATUS", attribution.mutations().getFirst().status());
     assertEquals(false, attribution.mutations().getFirst().detected());
+    assertEquals(
+        "org.pitest.mutationtest.engine.gregor.mutators.MathMutator",
+        attribution.mutations().getFirst().mutator());
+    assertEquals(
+        "Replaced integer addition with subtraction",
+        attribution.mutations().getFirst().description());
     assertEquals(1, attribution.mutations().get(1).succeedingTests().size());
     assertEquals("NO_COVERAGE", attribution.unattributedOutcomeCounts().getFirst().status());
   }
@@ -73,11 +79,11 @@ class PitMutationParserTest {
     assertEquals("AC-COUPON", coupon.acId());
     assertEquals(1, coupon.coveredMutantCount());
     assertEquals(0, coupon.killedByAcceptanceMethodMutantCount());
-    assertEquals(EvidenceVerdict.FAIL, coupon.verdict());
+    assertEquals(false, coupon.attributionGap());
     assertEquals("AC-EMPTY", empty.acId());
     assertEquals(1, empty.coveredMutantCount());
     assertEquals(1, empty.killedByAcceptanceMethodMutantCount());
-    assertEquals(EvidenceVerdict.PASS, empty.verdict());
+    assertEquals(false, empty.attributionGap());
   }
 
   @Test
@@ -118,13 +124,14 @@ class PitMutationParserTest {
         PitMutationAttributor.attribute(
             new PitMutationParser()
                 .parse(
-                    """
-                    <mutations><mutation detected="true" status="KILLED"><mutatedClass>shop.OrderService</mutatedClass>
-                      <coveringTests>shop.OrderAcceptanceTest.[class:shop.OrderAcceptanceTest]/[method:appliesCoupon(io.github.samzhu.topplecat.junit.ToppleCase,long, java.lang.String[])]</coveringTests>
-                      <killingTests>shop.OrderAcceptanceTest.[class:shop.OrderAcceptanceTest]/[method:appliesCoupon(io.github.samzhu.topplecat.junit.ToppleCase,long,java.lang.String[])]</killingTests>
-                      <succeedingTests></succeedingTests>
-                    </mutation></mutations>
-                    """),
+                    managedXml(
+                        """
+                        <mutations><mutation detected="true" status="KILLED"><mutatedClass>shop.OrderService</mutatedClass>
+                          <coveringTests>shop.OrderAcceptanceTest.[class:shop.OrderAcceptanceTest]/[method:appliesCoupon(io.github.samzhu.topplecat.junit.ToppleCase,long, java.lang.String[])]</coveringTests>
+                          <killingTests>shop.OrderAcceptanceTest.[class:shop.OrderAcceptanceTest]/[method:appliesCoupon(io.github.samzhu.topplecat.junit.ToppleCase,long,java.lang.String[])]</killingTests>
+                          <succeedingTests></succeedingTests>
+                        </mutation></mutations>
+                        """)),
             Map.of("AC-INT", Set.of(COUPON), "AC-LONG", Set.of(COUPON_OVERLOAD)),
             100);
 
@@ -185,10 +192,81 @@ class PitMutationParserTest {
                 """));
   }
 
+  @Test
+  void requiresRawPitMutatorAndDescriptionWithoutNormalizingFutureStatuses() {
+    assertThrows(
+        ToppleCatException.class,
+        () ->
+            new PitMutationParser()
+                .parse(
+                    """
+                    <mutations><mutation detected="false" status="FUTURE_STATUS">
+                      <description>raw description</description><mutatedClass>shop.OrderService</mutatedClass>
+                      <coveringTests></coveringTests><killingTests></killingTests><succeedingTests></succeedingTests>
+                    </mutation></mutations>
+                    """));
+    assertThrows(
+        ToppleCatException.class,
+        () ->
+            new PitMutationParser()
+                .parse(
+                    """
+                    <mutations><mutation detected="false" status="FUTURE_STATUS">
+                      <mutator>org.pitest.mutationtest.engine.gregor.mutators.MathMutator</mutator>
+                      <mutatedClass>shop.OrderService</mutatedClass>
+                      <coveringTests></coveringTests><killingTests></killingTests><succeedingTests></succeedingTests>
+                    </mutation></mutations>
+                    """));
+  }
+
+  @Test
+  void marksAnAcceptanceMethodWithNoCoverageAsAnAttributionGap() {
+    PitMutationAttribution attribution =
+        attribute(
+            """
+            <mutations><mutation detected="false" status="NO_COVERAGE"><mutatedClass>shop.OrderService</mutatedClass>
+              <coveringTests></coveringTests><killingTests></killingTests><succeedingTests></succeedingTests>
+            </mutation></mutations>
+            """);
+
+    assertEquals(0, attribution.uniquelyAttributedMutationCount());
+    assertTrue(attribution.assessments().stream().allMatch(PitMutationAssessment::attributionGap));
+  }
+
+  @Test
+  void retainsRawDescriptionAndSelectorValuesWithoutNormalizingThem() {
+    PitMutation mutation =
+        new PitMutationParser()
+            .parse(
+                """
+                <mutations><mutation detected="false" status="FUTURE_STATUS">
+                  <mutator>org.pitest.mutationtest.engine.gregor.mutators.MathMutator</mutator>
+                  <description> raw PIT description </description><mutatedClass>shop.OrderService</mutatedClass>
+                  <coveringTests> selector one |selector two </coveringTests>
+                  <killingTests> selector one </killingTests><succeedingTests>selector two </succeedingTests>
+                </mutation></mutations>
+                """)
+            .mutations()
+            .getFirst();
+
+    assertEquals(" raw PIT description ", mutation.description());
+    assertEquals(List.of(" selector one ", "selector two "), mutation.coveringTests());
+    assertEquals(List.of(" selector one "), mutation.killingTests());
+    assertEquals(List.of("selector two "), mutation.succeedingTests());
+  }
+
   private static PitMutationAttribution attribute(String xml) {
     return PitMutationAttributor.attribute(
-        new PitMutationParser().parse(xml),
+        new PitMutationParser().parse(managedXml(xml)),
         Map.of("AC-COUPON", Set.of(COUPON), "AC-EMPTY", Set.of(EMPTY)),
         100);
+  }
+
+  private static String managedXml(String xml) {
+    return xml.replace(
+        "<mutatedClass>",
+        "<mutator>org.pitest.mutationtest.engine.gregor.mutators.MathMutator</mutator>"
+            + "<description>Replaced integer addition with subtraction</description>"
+            + "<mutatedClass>");
   }
 }

@@ -1,6 +1,6 @@
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.9"
+    id("io.github.samzhu.topplecat") version "0.0.10"
 }
 
 java {
@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.9")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.10")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -28,26 +28,5 @@ toppleCat {
     mutationTesting {
         enabled.set(true)
         threshold.set(100)
-        producerTask.set("writePitFixture")
-        reportFile.set(layout.buildDirectory.file("reports/pitest/mutations.xml"))
-    }
-}
-
-tasks.register("writePitFixture") {
-    doLast {
-        val report = layout.buildDirectory.file("reports/pitest/mutations.xml").get().asFile
-        report.parentFile.mkdirs()
-        report.writeText(
-            """
-            <mutations>
-              <mutation detected="false" status="SURVIVED">
-                <mutatedClass>integration.mutation.CouponService</mutatedClass>
-                <coveringTests>integration.mutation.CouponAcceptanceTest.[engine:junit-jupiter]/[class:integration.mutation.CouponAcceptanceTest]/[test-template:acceptsThePublicCase(io.github.samzhu.topplecat.junit.ToppleCase,io.github.samzhu.topplecat.junit.ToppleScenario,integration.mutation.CouponAcceptanceTest${'$'}CouponStage)]/[test-template-invocation:#1]</coveringTests>
-                <killingTests></killingTests>
-                <succeedingTests>integration.mutation.CouponAcceptanceTest.[engine:junit-jupiter]/[class:integration.mutation.CouponAcceptanceTest]/[test-template:acceptsThePublicCase(io.github.samzhu.topplecat.junit.ToppleCase,io.github.samzhu.topplecat.junit.ToppleScenario,integration.mutation.CouponAcceptanceTest${'$'}CouponStage)]/[test-template-invocation:#1]</succeedingTests>
-              </mutation>
-            </mutations>
-            """.trimIndent()
-        )
     }
 }

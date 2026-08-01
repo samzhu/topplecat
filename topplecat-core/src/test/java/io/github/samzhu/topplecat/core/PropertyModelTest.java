@@ -64,12 +64,8 @@ class PropertyModelTest {
 
   @Test
   void propertyPolicyAndScopeAreExplicitAndTamperEvident() {
-    VerificationPolicy enabled =
-        new VerificationPolicy(
-            "0.0.9", true, true, true, true, 100, MutationProducerKind.DEFAULT, null);
-    VerificationPolicy disabled =
-        new VerificationPolicy(
-            "0.0.9", true, true, false, true, 100, MutationProducerKind.DEFAULT, null);
+    VerificationPolicy enabled = new VerificationPolicy("0.0.10", true, true, true, true, 100);
+    VerificationPolicy disabled = new VerificationPolicy("0.0.10", true, true, false, true, 100);
     VerificationScope scope =
         new VerificationScope(
             VerificationScope.SCHEMA_VERSION,

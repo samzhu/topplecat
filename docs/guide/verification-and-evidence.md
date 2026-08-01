@@ -31,7 +31,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.9 custody and approval schemas are current-only. A prior schema is not
+The 0.0.10 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -54,15 +54,18 @@ it cannot change that result. A team choosing PBT without hidden rows
 must explicitly disable `hiddenTests`, reseal the policy, and receives
 `REVIEWER_JUNIT=DISABLED` with the actual `PROPERTY` result.
 
-The managed PIT producer uses public acceptance classes only. Consumer-owned
-`targetTests` and custom producer tasks are preserved. Its full matrix must
-contain PIT's `coveringTests`, `killingTests`, and `succeedingTests` groups.
-Before a formal Verify run, ToppleCat clears the configured PIT report and the
-prior run workspace. The producer report is a tracked Mutation Gate input, and
-formal Verify disables task-output and build-cache reuse for both the producer
-and the Gate, so the result and its completion marker belong to the same run.
-Direct diagnostic Gate execution keeps ordinary Gradle reuse behavior while
-still tracking report changes.
+Formal Verify uses only ToppleCat's managed PIT 1.25.5 producer. It targets
+compiler-emitted public Acceptance Methods, fixes the
+`topplecat-managed-v1` 12-operator profile, and writes a non-timestamped XML
+full matrix containing PIT's `coveringTests`, `killingTests`, and
+`succeedingTests` groups. A project `pitest` task, custom producer task,
+consumer `targetTests`, and consumer report path are not configuration inputs
+for ToppleCat evidence. Before every formal run, ToppleCat clears its internal
+PIT XML and prior current workspace, then disables task-output and build-cache
+reuse for both the producer and Gate. The XML, v1 result, completion marker,
+evidence, and report therefore belong to the same run.
+Project-wide `tasks.withType(PitestTask)` conventions apply only to the
+project's own PIT tasks; they cannot rewrite the formal managed producer.
 ToppleCat attributes a result only to the exact public Acceptance Method whose
 class, method, overload, and parameter types match the PIT selector.
 `coveringTests` says the method ran against that mutant; `killingTests` says
@@ -70,12 +73,14 @@ that same method detected it. If PIT produced mutants but none can be exactly
 attributed to any public Acceptance Method, the Mutation Gate fails
 (`MUTATION=FAIL`). Once at least one mutant is exactly attributed, any remaining
 unattributed mutants stay in reviewer evidence and do not directly affect the
-Gate. Each AC independently passes or fails from its own covered mutants,
-matching `killingTests`, and sealed threshold. An AC with no covered mutant or
-a detection rate below its sealed threshold makes the Gate fail. Missing, malformed,
-interrupted, ambiguous, or zero-mutant producer evidence makes it incomplete.
-PIT's own status and `detected` value remain visible without being turned into
-a ToppleCat score.
+Gate. Each AC with covered mutants independently meets or misses its sealed
+threshold from exact `killingTests`. An AC with no covered mutant is an
+attribution gap: once another AC has exact attribution it is nonblocking and
+the reviewer report says `此 AC 沒有取得本次 managed mutation profile 的歸因證據，需要 reviewer 判斷。`
+Missing, malformed, interrupted, stale, profile-mismatched, non-full-matrix,
+or zero-mutant producer evidence makes Mutation Testing incomplete. PIT's own
+status, `detected`, raw mutator, and description remain visible without being
+turned into a ToppleCat score.
 
 Contract integrity is the only precondition. Verify first runs the current Check
 to rebuild the compiler definition it compares with the Mechanical Seal. If it
