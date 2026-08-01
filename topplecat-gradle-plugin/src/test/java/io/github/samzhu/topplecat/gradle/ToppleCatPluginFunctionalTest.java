@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.samzhu.topplecat.core.ContractIntegrityResultJson;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
+import io.github.samzhu.topplecat.core.PropertyResults;
+import io.github.samzhu.topplecat.core.PropertyResultsJson;
 import io.github.samzhu.topplecat.core.ToppleEvidence;
 import io.github.samzhu.topplecat.core.ToppleEvidenceJson;
 import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
@@ -156,6 +158,63 @@ class ToppleCatPluginFunctionalTest {
     runner("toppleCatVerify").build();
 
     assertEquals(EvidenceVerdict.PASS, gate("PROPERTY"));
+  }
+
+  @Test
+  void propertySidecarsKeepIdentityWhenFivePropertiesUseTheSameDisplayName() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeAcceptanceWithDisplayNamedProperties(false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    runner("toppleCatSeal").build();
+    runner("toppleCatVerify").build();
+
+    assertEquals(EvidenceVerdict.PASS, gate("PROPERTY"));
+    PropertyResults results =
+        PropertyResultsJson.read(
+            Files.readString(project.resolve("build/topplecat/property-results.json")));
+    assertEquals(5, results.results().size());
+    assertTrue(
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"))
+            .contains("\"executedPublicProperties\" : 5"));
+  }
+
+  @Test
+  void propertySidecarsRetainFiveResultsWhenTwoDisplayedPropertiesFindCounterexamples()
+      throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeAcceptanceWithDisplayNamedProperties(true);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    runner("toppleCatSeal").build();
+    runner("toppleCatVerify").buildAndFail();
+
+    assertEquals(EvidenceVerdict.FAIL, gate("PROPERTY"));
+    PropertyResults results =
+        PropertyResultsJson.read(
+            Files.readString(project.resolve("build/topplecat/property-results.json")));
+    assertEquals(5, results.results().size());
+    assertEquals(
+        2,
+        results.results().stream()
+            .filter(
+                result ->
+                    result.state()
+                        == io.github.samzhu.topplecat.core.PropertyExecutionState
+                            .COMPLETED_COUNTEREXAMPLE)
+            .count());
   }
 
   @Test
@@ -895,6 +954,47 @@ class ToppleCatPluginFunctionalTest {
         }
         """
             .formatted(propertyMethod, actualDiscount));
+  }
+
+  private void writeAcceptanceWithDisplayNamedProperties(boolean counterexamples) throws Exception {
+    Path source = project.resolve("src/test/java/example/CouponAcceptanceTest.java");
+    Files.createDirectories(source.getParent());
+    StringBuilder properties = new StringBuilder();
+    for (int index = 0; index < 5; index++) {
+      boolean fails = counterexamples && index < 2;
+      properties.append(
+          """
+          @org.junit.jupiter.api.DisplayName("Repeated reviewer-facing Property title")
+          @ToppleProperty("AC-COUPON")
+          void property%d(PropertyTrials trials) {
+              trials.forAll(Generators.integers(0, 5)).check(value -> {%s});
+          }
+          """
+              .formatted(index, fails ? "throw new AssertionError(\"counterexample\");" : ""));
+    }
+    Files.writeString(
+        source,
+        """
+        package example;
+        import io.github.samzhu.topplecat.junit.ToppleAcceptanceTest;
+        import io.github.samzhu.topplecat.junit.ToppleCase;
+        import io.github.samzhu.topplecat.junit.ToppleScenario;
+        import io.github.samzhu.topplecat.junit.ToppleStage;
+        import io.github.samzhu.topplecat.junit.property.Generators;
+        import io.github.samzhu.topplecat.junit.property.PropertyTrials;
+        import io.github.samzhu.topplecat.junit.property.ToppleProperty;
+        class CouponAcceptanceTest {
+            @ToppleAcceptanceTest("AC-COUPON")
+            void appliesCoupon(ToppleCase testCase, ToppleScenario scenario, CouponStage coupon) {
+                scenario.then(coupon).matches(testCase);
+            }
+            %s
+            static class CouponStage extends ToppleStage {
+                void matches(ToppleCase testCase) { testCase.verify("discount", 100); }
+            }
+        }
+        """
+            .formatted(properties));
   }
 
   private void writeIndependentPublicProperty() throws Exception {

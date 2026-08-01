@@ -45,19 +45,75 @@
     return [[path || 'value', typeof value === 'string' ? value : JSON.stringify(value)]];
   };
   const values = value => `<dl class="key-values">${flatten(value).map(([path, entry]) => `<div><dt>${e(path)}</dt><dd>${e(entry)}</dd></div>`).join('')}</dl>`;
-  const highlighter = (language, source) => {
-    const raw = String(source || ''); const lang = String(language || '').toLowerCase();
-    if (lang === 'java') {
-      const keywords = new Set(['abstract','assert','boolean','break','byte','case','catch','char','class','const','continue','default','do','double','else','enum','extends','final','finally','float','for','if','implements','import','instanceof','int','interface','long','native','new','package','private','protected','public','record','return','sealed','short','static','strictfp','super','switch','synchronized','this','throw','throws','transient','try','var','void','volatile','while','yield']);
-      return e(raw).replace(/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/g, '<span class="tok-comment">$1</span>').replace(/(&quot;(?:\\.|[^&])*?&quot;|'(?:\\.|[^'])*?')/g, '<span class="tok-string">$1</span>').replace(/(@[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)/g, '<span class="tok-annotation">$1</span>').replace(/\b([A-Za-z_$][\w$]*)\b/g, word => keywords.has(word) ? `<span class="tok-keyword">${word}</span>` : (/^[A-Z]/.test(word) ? `<span class="tok-type">${word}</span>` : word));
+  const javaKeywords = new Set(['abstract','assert','boolean','break','byte','case','catch','char','class','const','continue','default','do','double','else','enum','extends','final','finally','float','for','if','implements','import','instanceof','int','interface','long','native','new','package','private','protected','public','record','return','sealed','short','static','strictfp','super','switch','synchronized','this','throw','throws','transient','try','var','void','volatile','while','yield']);
+  const escapedJavaString = value => {
+    let html = ''; let literalStart = 0;
+    for (let index = 0; index < value.length; index += 1) {
+      if (value[index] !== '\\' || index + 1 >= value.length) continue;
+      html += e(value.slice(literalStart, index));
+      html += `<span class="tok-escape">${e(value.slice(index, index + 2))}</span>`;
+      index += 1; literalStart = index + 1;
     }
-    if (lang === 'json') return e(raw).replace(/(&quot;[^&]*?&quot;)(\s*:)/g, '<span class="tok-json-key">$1</span>$2').replace(/\b(-?\d+(?:\.\d+)?)\b/g, '<span class="tok-number">$1</span>');
-    if (lang === 'yaml' || lang === 'yml') return e(raw).replace(/(^|\n)(\s*[\w.-]+:)/g, '$1<span class="tok-yaml-key">$2</span>');
-    if (lang === 'markdown' || lang === 'md') return e(raw).replace(/(^|\n)(#{1,6}|[-*+] |\d+\. )/g, '$1<span class="tok-markdown">$2</span>');
+    return `<span class="tok-string">${html}${e(value.slice(literalStart))}</span>`;
+  };
+  const tokenHtml = token => {
+    if (token.type === 'plain') return e(token.text);
+    if (token.type === 'string') return escapedJavaString(token.text);
+    return `<span class="tok-${token.type}">${e(token.text)}</span>`;
+  };
+  const sourceTokens = (source, expression, type) => {
+    const tokens = []; let position = 0; let match;
+    while ((match = expression.exec(source)) !== null) {
+      if (match.index > position) tokens.push({ type: 'plain', text: source.slice(position, match.index) });
+      tokens.push({ type: typeof type === 'function' ? type(match[0]) : type, text: match[0] });
+      position = match.index + match[0].length;
+    }
+    if (position < source.length) tokens.push({ type: 'plain', text: source.slice(position) });
+    return tokens;
+  };
+  const javaTokens = source => {
+    const tokens = []; let position = 0;
+    const push = (type, text) => tokens.push({ type, text });
+    while (position < source.length) {
+      if (source.startsWith('//', position)) {
+        const end = source.indexOf('\n', position); const next = end < 0 ? source.length : end;
+        push('comment', source.slice(position, next)); position = next; continue;
+      }
+      if (source.startsWith('/*', position)) {
+        const end = source.indexOf('*/', position + 2); const next = end < 0 ? source.length : end + 2;
+        push('comment', source.slice(position, next)); position = next; continue;
+      }
+      if (source[position] === '"' || source[position] === "'") {
+        const quote = source[position]; let next = position + 1;
+        while (next < source.length) {
+          if (source[next] === '\\') { next += 2; continue; }
+          next += 1; if (source[next - 1] === quote) break;
+        }
+        push('string', source.slice(position, next)); position = next; continue;
+      }
+      const annotation = source.slice(position).match(/^@[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*/);
+      if (annotation) { push('annotation', annotation[0]); position += annotation[0].length; continue; }
+      const identifier = source.slice(position).match(/^[A-Za-z_$][\w$]*/);
+      if (identifier) {
+        const word = identifier[0];
+        push(javaKeywords.has(word) ? 'keyword' : /^[A-Z]/.test(word) ? 'type' : 'plain', word);
+        position += word.length; continue;
+      }
+      push('plain', source[position]); position += 1;
+    }
+    return tokens;
+  };
+  // A pure source-to-safe-HTML function: token recognition always precedes escaping and markup.
+  const highlight = (language, source) => {
+    const raw = String(source || ''); const lang = String(language || '').toLowerCase();
+    if (lang === 'java') return javaTokens(raw).map(tokenHtml).join('');
+    if (lang === 'json') return sourceTokens(raw, /"(?:\\.|[^"\\])*"(?=\s*:)|-?\b\d+(?:\.\d+)?\b/g, value => value.startsWith('"') ? 'json-key' : 'number').map(tokenHtml).join('');
+    if (lang === 'yaml' || lang === 'yml') return sourceTokens(raw, /(^|\n)\s*[\w.-]+:/g, 'yaml-key').map(tokenHtml).join('');
+    if (lang === 'markdown' || lang === 'md') return sourceTokens(raw, /(^|\n)(#{1,6}|[-*+] |\d+\. )/g, 'markdown').map(tokenHtml).join('');
     if (lang === 'mermaid') return `<span class="tok-mermaid">${e(raw)}</span>`;
     return e(raw);
   };
-  const code = (language, source) => `<pre><code>${highlighter(language, source)}</code></pre>`;
+  const code = (language, source) => `<pre><code>${highlight(language, source)}</code></pre>`;
   const markdownBlock = block => {
     const anchor = block.anchorId ? ` id="ac-${id(block.anchorId)}"` : '';
     switch (block.kind) {
@@ -104,8 +160,13 @@
     if (!comparisons.length) return '';
     return `<section class="comparison"><h4>Field-level expected and actual comparison</h4><p class="meta">Bound to compiler Step <code>${e(step.stepId)}</code>.</p>${comparisons.map(entry => `<h5>Expected <code>${e(entry.expectedKey)}</code></h5><div class="table-wrap"><table><thead><tr><th>Path</th><th>Difference</th><th>Expected</th><th>Actual</th></tr></thead><tbody>${(entry.differences || []).map(diff => `<tr><td>${e(diff.path)}</td><td>${e(diff.kind)}</td><td>${e(JSON.stringify(diff.expected))}</td><td>${e(JSON.stringify(diff.actual))}</td></tr>`).join('')}</tbody></table></div>`).join('')}</section>`;
   };
+  const stepData = item => {
+    const recorded = (item.steps || []).filter(step => (step.actualArguments || []).length);
+    if (!recorded.length) return '';
+    return `<section class="step-data"><h4>Step data</h4>${recorded.map(step => `<details><summary>Arguments for <code>${e(step.stepId)}</code></summary>${values(step.actualArguments)}</details>`).join('')}</section>`;
+  };
   const lazyCases = new Map();
-  const verificationCaseContent = (ac, item) => `<h4>Public rule being checked</h4><p><a href="#verification-${id(ac.acId)}">${e(ac.acId)}: ${e(ac.title)}</a></p><h4>Scenario</h4>${scenario(item.steps?.length ? item.steps.map(step => ({ ...step, phase: ac.stepPhases?.[step.stepId] || 'AND' })) : ac.scenario, Boolean(item.steps?.length))}<h4>Failed or last reached Step</h4>${(() => { const last = failedSteps(item)[0] || (item.steps || []).filter(step => step.status !== 'SKIPPED').at(-1); return last ? `<p><code>${e(last.stepId)}</code> ${e(last.sentence)}</p>` : '<p class="meta">No Scenario Step was reached.</p>'; })()}${comparison(item)}<div class="case-grid"><section><h4>Inputs</h4>${values(item.inputs)}</section><section><h4>Complete expected result</h4>${values(item.expected)}</section></div><details class="raw-failure"><summary>Raw failure and technical metadata</summary>${item.failure ? `<pre>${e(item.failure)}</pre>` : '<p class="meta">No raw failure was recorded.</p>'}<h5>Expected consumption</h5>${values(item.expectedConsumption || {})}</details>`;
+  const verificationCaseContent = (ac, item) => `<h4>Public rule being checked</h4><p><a href="#verification-${id(ac.acId)}">${e(ac.acId)}: ${e(ac.title)}</a></p><h4>Scenario</h4>${scenario(item.steps?.length ? item.steps.map(step => ({ ...step, phase: ac.stepPhases?.[step.stepId] || 'AND' })) : ac.scenario, Boolean(item.steps?.length))}${stepData(item)}<h4>Failed or last reached Step</h4>${(() => { const last = failedSteps(item)[0] || (item.steps || []).filter(step => step.status !== 'SKIPPED').at(-1); return last ? `<p><code>${e(last.stepId)}</code> ${e(last.sentence)}</p>` : '<p class="meta">No Scenario Step was reached.</p>'; })()}${comparison(item)}<div class="case-grid"><section><h4>Inputs</h4>${values(item.inputs)}</section><section><h4>Complete expected result</h4>${values(item.expected)}</section></div><details class="raw-failure"><summary>Raw failure and technical metadata</summary>${item.failure ? `<pre>${e(item.failure)}</pre>` : '<p class="meta">No raw failure was recorded.</p>'}<h5>Expected consumption</h5>${values(item.expectedConsumption || {})}</details>`;
   const verificationCase = (ac, item, open) => {
     const key = JSON.stringify([ac.acId, item.caseId]);
     lazyCases.set(key, { ac, item });
@@ -118,7 +179,8 @@
     const value = data.mutationAttribution; const gateValue = gate('MUTATION');
     if (!value) return `${gateCard(gateValue)}<p class="meta">No current managed PIT attribution was available.</p>`;
     const outcome = rows => !rows?.length ? '' : `<div class="table-wrap"><table><thead><tr><th>PIT status</th><th>Detected</th><th>Mutants</th></tr></thead><tbody>${rows.map(row => `<tr><td><code>${e(row.status)}</code></td><td>${e(row.detected)}</td><td>${e(row.count)}</td></tr>`).join('')}</tbody></table></div>`;
-    return `${gateCard(gateValue)}<p>PIT <code>${e(value.pitVersion)}</code>, managed profile <code>${e(value.managedProfileId)}</code>.</p><p>${e(value.producerMutationCount)} producer mutants. ${e(value.uniquelyAttributedMutationCount)} uniquely attributed. ${e(value.unattributedMutationCount)} unattributed.</p><h3>Managed operator IDs</h3><ul>${(value.managedOperatorIds || []).map(operator => `<li><code>${e(operator)}</code></li>`).join('')}</ul><h3>Raw producer outcomes</h3>${outcome(value.producerOutcomeCounts)}<h3>Per-AC contract detection</h3><div class="table-wrap"><table><thead><tr><th>AC</th><th>Covered</th><th>Detected by Acceptance Method</th><th>Threshold</th><th>Detection rate</th></tr></thead><tbody>${(value.assessments || []).map(assessment => `<tr><td>${e(assessment.acId)}</td><td>${e(assessment.coveredMutantCount)}</td><td>${e(assessment.killedByAcceptanceMethodMutantCount)}</td><td>${e(assessment.sealedThreshold)}%</td><td>${e(assessment.detectionRate)}%</td></tr>`).join('')}</tbody></table></div>${(value.assessments || []).filter(assessment => assessment.attributionGap).map(assessment => `<p class="meta">${e(assessment.acId)} has no managed-profile attribution evidence in this run. Reviewer judgment is required.</p>`).join('')}<details><summary>Raw PIT findings</summary>${(value.mutations || []).map((item, index) => `<article class="case-card"><h4>Mutant ${index + 1}: <code>${e(item.status)}</code></h4><p>${e(item.description)}</p><p class="meta">Mutator <code>${e(item.mutator)}</code>. Detected: ${e(item.detected)}.</p><h5>coveringTests</h5><ul>${(item.coveringTests || []).map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul><h5>killingTests</h5><ul>${(item.killingTests || []).map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul><h5>succeedingTests</h5><ul>${(item.succeedingTests || []).map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul></article>`).join('')}</details>`;
+    const detected = (value.mutations || []).filter(item => item.detected).length;
+    return `${gateCard(gateValue)}<p>PIT <code>${e(value.pitVersion)}</code>, managed profile <code>${e(value.managedProfileId)}</code>.</p><h3>PIT global outcome</h3><p>${e(detected)}/${e(value.producerMutationCount)} mutants were detected by at least one test.</p><p class="meta">This PIT-wide observation does not mean that every Acceptance Method detected every mutant.</p><p>${e(value.producerMutationCount)} producer mutants. ${e(value.uniquelyAttributedMutationCount)} uniquely attributed. ${e(value.unattributedMutationCount)} unattributed.</p><h3>Managed operator IDs</h3><ul>${(value.managedOperatorIds || []).map(operator => `<li><code>${e(operator)}</code></li>`).join('')}</ul><h3>Raw producer outcomes</h3>${outcome(value.producerOutcomeCounts)}<h3>Per-AC Acceptance Method detection</h3><p class="meta">The Mutation Gate uses each Acceptance Method's covered-mutant detection rate against its sealed threshold. It does not blend this rate with PIT's global outcome.</p><div class="table-wrap"><table><thead><tr><th>AC</th><th>Covered</th><th>Detected by Acceptance Method</th><th>Threshold</th><th>Detection rate</th></tr></thead><tbody>${(value.assessments || []).map(assessment => `<tr><td>${e(assessment.acId)}</td><td>${e(assessment.coveredMutantCount)}</td><td>${e(assessment.killedByAcceptanceMethodMutantCount)}</td><td>${e(assessment.sealedThreshold)}%</td><td>${e(assessment.detectionRate)}%</td></tr>`).join('')}</tbody></table></div>${(value.assessments || []).filter(assessment => assessment.attributionGap).map(assessment => `<p class="meta">${e(assessment.acId)} has no managed-profile attribution evidence in this run. Reviewer judgment is required.</p>`).join('')}<details><summary>Raw PIT findings</summary>${(value.mutations || []).map((item, index) => `<article class="case-card"><h4>Mutant ${index + 1}: <code>${e(item.status)}</code></h4><p>${e(item.description)}</p><p class="meta">Mutator <code>${e(item.mutator)}</code>. Detected: ${e(item.detected)}.</p><h5>coveringTests</h5><ul>${(item.coveringTests || []).map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul><h5>killingTests</h5><ul>${(item.killingTests || []).map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul><h5>succeedingTests</h5><ul>${(item.succeedingTests || []).map(selector => `<li><code>${e(selector)}</code></li>`).join('')}</ul></article>`).join('')}</details>`;
   };
   const problems = () => {
     if (data.verdict === 'PASS') return '';

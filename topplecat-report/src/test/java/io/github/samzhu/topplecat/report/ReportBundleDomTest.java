@@ -12,6 +12,11 @@ import io.github.samzhu.topplecat.core.ExpectedActualComparison;
 import io.github.samzhu.topplecat.core.ExpectedActualDifference;
 import io.github.samzhu.topplecat.core.NarrativeStep;
 import io.github.samzhu.topplecat.core.NarrativeStepStatus;
+import io.github.samzhu.topplecat.pitest.PitMutationAssessment;
+import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
+import io.github.samzhu.topplecat.pitest.PitMutationEvidence;
+import io.github.samzhu.topplecat.pitest.PitOutcomeCount;
+import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -19,6 +24,7 @@ import java.util.Map;
 import org.htmlunit.BrowserVersion;
 import org.htmlunit.WebClient;
 import org.htmlunit.html.HtmlDetails;
+import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlPage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -33,6 +39,16 @@ class ReportBundleDomTest {
 
   @Test
   void specReviewRendersCompleteDocumentSemanticSyntaxAndNoExecutionConclusion() throws Exception {
+    String javaSource =
+        """
+        @DisplayName("Checkout <script> & \\"quoted\\"")
+        record Receipt(String total) {}
+        // Preserve this comment: <script> &
+        class Checkout {
+          char newline = '\\n';
+          String receipt() { return "total\\\\value"; }
+        }
+        """;
     ReviewDocument document =
         new ReviewDocument(
             "specs/checkout.md",
@@ -54,7 +70,7 @@ class ReportBundleDomTest {
                 new SpecMarkdownBlock(
                     SpecMarkdownBlock.Kind.CODE_FENCE,
                     0,
-                    "<script>window.injected = true</script>",
+                    javaSource,
                     List.of(),
                     "java",
                     "",
@@ -93,7 +109,7 @@ class ReportBundleDomTest {
                             List.of(
                                 new ReviewScenarioStep(
                                     io.github.samzhu.topplecat.core.StepPhase.GIVEN, "a cart")))),
-                    new ReviewMethod(List.of(), "void checkout() {}"))),
+                    new ReviewMethod(List.of(), javaSource))),
             null,
             List.of());
     Path bundle = tempDir.resolve("review");
@@ -110,7 +126,15 @@ class ReportBundleDomTest {
       assertTrue(page.querySelectorAll(".mermaid-diagram svg").getLength() == 1);
       assertNotNull(page.querySelector("a.skip-link"));
       assertNotNull(page.querySelector(".bdd-keyword"));
-      assertFalse(page.asXml().contains("<script>window.injected = true</script>"));
+      assertEquals(
+          javaSource, ((HtmlElement) page.querySelectorAll("pre code").item(0)).getTextContent());
+      assertEquals(
+          javaSource, ((HtmlElement) page.querySelectorAll("pre code").item(2)).getTextContent());
+      assertNotNull(page.querySelector(".tok-annotation"));
+      assertNotNull(page.querySelector(".tok-escape"));
+      assertFalse(page.asNormalizedText().contains("class=\"tok-annotation\">"));
+      assertFalse(page.asXml().contains("<span <span="));
+      assertFalse(page.asXml().contains("<script>"));
       assertFalse(page.asNormalizedText().contains("Delivery accepted"));
       assertFalse(page.asNormalizedText().contains("Delivery rejected"));
     }
@@ -124,7 +148,9 @@ class ReportBundleDomTest {
             "the receipt has the approved amount",
             NarrativeStepStatus.FAIL,
             1,
-            List.of(),
+            List.of(
+                JSON.readTree(
+                    "{\"request\":{\"coupon\":\"visible-value\"},\"items\":[1,2],\"nullValue\":null}")),
             List.of(),
             "raw assertion",
             List.of(
@@ -190,8 +216,95 @@ class ReportBundleDomTest {
       assertNotNull(page.querySelector("#property-testing"));
       assertNotNull(page.querySelector("#mutation-testing"));
       assertTrue(page.asNormalizedText().contains("Field-level expected and actual comparison"));
+      assertTrue(page.asNormalizedText().contains("Step data"));
+      HtmlDetails stepData = (HtmlDetails) page.querySelector(".step-data details");
+      assertFalse(stepData.isOpen(), "Step data stays collapsed by default");
+      assertTrue(stepData.getTextContent().contains("visible-value"));
       HtmlDetails failedCase = (HtmlDetails) page.querySelector("#case-case-fail");
       assertTrue(failedCase.isOpen(), "the first real failure is open by default");
+    }
+  }
+
+  @Test
+  void verificationExplainsPitsGlobalOutcomeSeparatelyFromPerAcceptanceDetection()
+      throws Exception {
+    String mutator = ToppleCatManagedMutationProfile.operatorIds().getFirst();
+    PitMutationEvidence killed =
+        new PitMutationEvidence(
+            true,
+            "KILLED",
+            "example.Checkout",
+            mutator,
+            "changed checkout total",
+            List.of("example.CheckoutAcceptance#matches()V"),
+            List.of("example.CheckoutAcceptance#matches()V"),
+            List.of(),
+            List.of("AC-COUPON"));
+    PitMutationAttribution attribution =
+        new PitMutationAttribution(
+            ToppleCatManagedMutationProfile.PIT_VERSION,
+            ToppleCatManagedMutationProfile.PROFILE_ID,
+            ToppleCatManagedMutationProfile.operatorIds(),
+            2,
+            2,
+            0,
+            List.of(new PitOutcomeCount("KILLED", true, 2)),
+            List.of(),
+            List.of(),
+            List.of(
+                new PitMutationAssessment(
+                    "AC-COUPON",
+                    List.of("example.CheckoutAcceptance#matches()V"),
+                    7,
+                    4,
+                    100,
+                    57,
+                    List.of(new PitOutcomeCount("KILLED", true, 4)),
+                    false),
+                new PitMutationAssessment(
+                    "AC-SHIPPING",
+                    List.of("example.ShippingAcceptance#matches()V"),
+                    8,
+                    8,
+                    100,
+                    100,
+                    List.of(new PitOutcomeCount("KILLED", true, 8)),
+                    false)),
+            List.of(killed, killed));
+    VerificationView view =
+        new VerificationView(
+            VerificationView.SCHEMA_VERSION,
+            NOW,
+            CaseResultStatus.PASS,
+            true,
+            List.of(
+                new EvidenceGate("CONTRACT_INTEGRITY", EvidenceVerdict.PASS, null),
+                new EvidenceGate("JUNIT", EvidenceVerdict.PASS, null),
+                new EvidenceGate("REVIEWER_JUNIT", EvidenceVerdict.PASS, null),
+                new EvidenceGate("EXPECTED_CONSUMPTION", EvidenceVerdict.PASS, null),
+                new EvidenceGate("PROPERTY", EvidenceVerdict.NOT_APPLICABLE, null),
+                new EvidenceGate(
+                    "MUTATION", EvidenceVerdict.FAIL, "Per-AC detection missed threshold.")),
+            List.of(),
+            null,
+            attribution,
+            new VerificationRunSummary("run-mutation", NOW, NOW, 1, 0, 0, 0));
+    Path bundle = tempDir.resolve("mutation-verification");
+    HtmlBundleWriter.verification(bundle, view);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      String text = page.asNormalizedText();
+      assertTrue(text.contains("PIT global outcome"));
+      assertTrue(text.contains("2/2 mutants were detected by at least one test."));
+      assertTrue(
+          text.contains("does not mean that every Acceptance Method detected every mutant."));
+      assertTrue(text.contains("Per-AC Acceptance Method detection"));
+      assertTrue(text.contains("does not blend this rate with PIT's global outcome."));
+      assertTrue(text.contains("KILLED"));
     }
   }
 }

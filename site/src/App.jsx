@@ -20,7 +20,7 @@ import stageFloorLayer from "./assets/scene/tabletop.svg";
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.11"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.12"';
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(
@@ -807,7 +807,7 @@ function App() {
         </div>
         <div className="install-actions">
           <a className="button button-amber" href={`${repositoryUrl}/tree/main/samples/junit-cart-orders`} target="_blank" rel="noreferrer">{copy.install.sample} <Arrow /></a>
-          <a className="button button-dark" href={`${repositoryUrl}#install-0011`} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
+          <a className="button button-dark" href={`${repositoryUrl}#install-0012`} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
           <a className="acceptance-skill-link" href={`${repositoryUrl}/tree/main/.agents/skills/topplecat-acceptance`} target="_blank" rel="noreferrer">
             {copy.install.skill} <Arrow />
           </a>

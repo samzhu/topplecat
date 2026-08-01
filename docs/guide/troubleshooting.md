@@ -67,7 +67,7 @@ on its own.
 
 ## Custody cannot be restored
 
-The 0.0.11 custody state is reviewer-local under
+The 0.0.12 custody state is reviewer-local under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`. The project must be opened
 at the same resolved path and with the reviewer state available. Prior-format
 custody is not migrated; create a new sealed reviewer state.

@@ -32,8 +32,8 @@ ACTIVE_TERMINOLOGY_PATHS = (
     "docs/design/managed-mutation-profile.md",
     "docs/design/contract-quality-advisory.md",
     "docs/design/human-readable-reports.md",
-    "docs/releases/0.0.11.md",
-    "docs/releases/0.0.11.zh-TW.md",
+    "docs/releases/0.0.12.md",
+    "docs/releases/0.0.12.zh-TW.md",
     "samples",
     ".agents/skills",
     "site/src",
@@ -79,7 +79,7 @@ EXPECTED_DESIGN_FILES = {
     "contract-quality-advisory.md",
     "human-readable-reports.md",
 }
-CURRENT_RELEASE_FILES = {"0.0.11.md", "0.0.11.zh-TW.md"}
+CURRENT_RELEASE_FILES = {"0.0.12.md", "0.0.12.zh-TW.md"}
 RELEASE_NOTE = re.compile(r"^(\d+\.\d+\.\d+)(\.zh-TW)?\.md$")
 CONTEXT_TERMS = (
     "Executable Contract",
@@ -238,7 +238,7 @@ def main() -> int:
             release_versions.setdefault(match.group(1), set()).add(language)
         if release_files != CURRENT_RELEASE_FILES:
             failures.append(
-                "docs/releases: expected only the 0.0.11 English and Traditional-Chinese notes"
+                "docs/releases: expected only the 0.0.12 English and Traditional-Chinese notes"
             )
         for version, languages in sorted(release_versions.items()):
             if languages != {"en", "zh-TW"}:
@@ -303,8 +303,8 @@ def main() -> int:
             if re.search(pattern, text):
                 failures.append(f"{relative}: uses replaced terminology matching {pattern}; {replacement}")
 
-    english_release = ROOT / "docs/releases/0.0.11.md"
-    chinese_release = ROOT / "docs/releases/0.0.11.zh-TW.md"
+    english_release = ROOT / "docs/releases/0.0.12.md"
+    chinese_release = ROOT / "docs/releases/0.0.12.zh-TW.md"
     if english_release.is_file() and chinese_release.is_file():
         release_markers = (
             (
@@ -312,11 +312,8 @@ def main() -> int:
                 (
                     "Spec Review",
                     "Verification Report",
-                    "reports/public",
-                    "topplecat.review-view.v7",
-                    "topplecat.verification-view.v9",
-                    "PIT 1.25.5",
-                    "producerTask",
+                    "Property-Based Testing",
+                    "terminal event",
                     "Mechanical Seal",
                 ),
             ),
@@ -325,11 +322,8 @@ def main() -> int:
                 (
                     "Spec Review",
                     "Verification Report",
-                    "reports/public",
-                    "topplecat.review-view.v7",
-                    "topplecat.verification-view.v9",
-                    "PIT 1.25.5",
-                    "producerTask",
+                    "Property-Based Testing",
+                    "terminal event",
                     "Mechanical Seal",
                 ),
             ),
@@ -338,7 +332,9 @@ def main() -> int:
             text = release.read_text(encoding="utf-8")
             for marker in markers:
                 if marker not in text:
-                    failures.append(f"{release.relative_to(ROOT)}: missing synchronized 0.0.11 change {marker}")
+                    failures.append(
+                        f"{release.relative_to(ROOT)}: missing synchronized 0.0.12 change {marker}"
+                    )
 
     if failures:
         print("Documentation validation failed:", file=sys.stderr)

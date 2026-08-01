@@ -215,10 +215,7 @@ final class ToppleNarrative {
       StepTemplate expected = expected(runtimeStepId);
       active =
           new MutableStep(
-              runtimeStepId,
-              ScenarioTemplateRenderer.render(expected, strings(arguments)),
-              arguments,
-              null);
+              runtimeStepId, ScenarioTemplateRenderer.template(expected), arguments, null);
       steps.add(active);
     }
 
@@ -354,9 +351,5 @@ final class ToppleNarrative {
     private AttachmentSizeException(IOException cause) {
       this.cause = cause;
     }
-  }
-
-  private static List<String> strings(Object[] values) {
-    return java.util.Arrays.stream(values).map(String::valueOf).toList();
   }
 }

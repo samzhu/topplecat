@@ -1,9 +1,12 @@
 package io.github.samzhu.topplecat.junit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.samzhu.topplecat.core.AcceptanceContract;
+import io.github.samzhu.topplecat.core.CaseVisibility;
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
 import io.github.samzhu.topplecat.core.ExpectedConsumptionExecution;
@@ -16,11 +19,13 @@ import io.github.samzhu.topplecat.core.StepPhase;
 import io.github.samzhu.topplecat.core.StepTemplate;
 import io.github.samzhu.topplecat.core.StepToken;
 import io.github.samzhu.topplecat.core.StepTokenKind;
+import io.github.samzhu.topplecat.core.ToppleCaseData;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
@@ -137,6 +142,72 @@ class ToppleAcceptanceExtensionTest {
     assertEquals("Readable title", ToppleTitleResolver.title(display));
     assertEquals("Fallback title", ToppleTitleResolver.title(named));
     assertEquals("derived From Method Name", ToppleTitleResolver.title(derived));
+  }
+
+  @Test
+  void narrativeKeepsCompilerSentenceSeparateFromStructuredArgumentsAndNeverUsesToString()
+      throws Exception {
+    Path narrativeSidecar = tempDir.resolve("structured-narrative.jsonl");
+    String previousNarrative = System.getProperty(ToppleJunit.NARRATIVE_EVENTS_FILE_PROPERTY);
+    try {
+      System.setProperty(ToppleJunit.NARRATIVE_EVENTS_FILE_PROPERTY, narrativeSidecar.toString());
+      StepTemplate step =
+          new StepTemplate(
+              "example.CheckoutStage#request(Ljava/lang/Object;)V",
+              StepPhase.GIVEN,
+              List.of(
+                  new StepToken(StepTokenKind.PHASE, "GIVEN"),
+                  new StepToken(StepTokenKind.LITERAL, "a checkout request")),
+              List.of(),
+              new SourceRef("ToppleAcceptanceExtensionTest.java", 1, 1));
+      ScenarioTemplate scenario =
+          new ScenarioTemplate(
+              "AC-NARRATIVE|example.Contract#checkout()V",
+              "example.Contract#checkout()V",
+              new SourceRef("ToppleAcceptanceExtensionTest.java", 1, 1),
+              List.of(step),
+              1,
+              List.of(new ScenarioStage(2, "example.CheckoutStage")));
+      ToppleCase testCase =
+          new ToppleCase(
+              new ToppleCaseData(
+                  "narrative-case",
+                  "AC-NARRATIVE",
+                  CaseVisibility.HIDDEN,
+                  JSON.readTree("{}"),
+                  JSON.readTree("{\"unused\":true}"),
+                  Path.of("cases.json")));
+      CheckoutRequest request =
+          new CheckoutRequest(
+              new SensitiveParameter("coupon-visible"), List.of(new NestedLine("sku-1", 2)));
+      ToppleNarrative.Session session = ToppleNarrative.startScenario(testCase, scenario);
+
+      session.beginScenarioStep(step.stepId(), new Object[] {request, new int[] {3, 5}, null, 7});
+      session.finishScenarioStep(null);
+      session.finishScenario(null, Map.of());
+
+      NarrativeExecution narrative =
+          JSON.readValue(Files.readString(narrativeSidecar).trim(), NarrativeExecution.class);
+      assertEquals("Given a checkout request", narrative.steps().getFirst().sentence());
+      assertFalse(
+          narrative.steps().getFirst().sentence().contains("DO-NOT-SHOW-SENSITIVE-TOSTRING"));
+      assertEquals(4, narrative.steps().getFirst().actualArguments().size());
+      assertEquals(
+          "coupon-visible",
+          narrative
+              .steps()
+              .getFirst()
+              .actualArguments()
+              .getFirst()
+              .get("coupon")
+              .get("code")
+              .asText());
+      assertEquals(5, narrative.steps().getFirst().actualArguments().get(1).get(1).asInt());
+      assertTrue(narrative.steps().getFirst().actualArguments().get(2).isNull());
+      assertEquals(7, narrative.steps().getFirst().actualArguments().get(3).asInt());
+    } finally {
+      restore(ToppleJunit.NARRATIVE_EVENTS_FILE_PROPERTY, previousNarrative);
+    }
   }
 
   @Test
@@ -378,6 +449,17 @@ class ToppleAcceptanceExtensionTest {
         observedValue = value;
         c.verify("result", value);
       }
+    }
+  }
+
+  record CheckoutRequest(SensitiveParameter coupon, List<NestedLine> lines) {}
+
+  record NestedLine(String sku, int quantity) {}
+
+  record SensitiveParameter(String code) {
+    @Override
+    public String toString() {
+      return "DO-NOT-SHOW-SENSITIVE-TOSTRING";
     }
   }
 

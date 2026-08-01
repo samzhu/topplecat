@@ -87,7 +87,7 @@ Mutation Testing remains full-contract.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.11 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.12 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 

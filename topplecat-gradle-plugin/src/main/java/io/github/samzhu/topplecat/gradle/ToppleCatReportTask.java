@@ -17,9 +17,6 @@ import io.github.samzhu.topplecat.core.ExpectedConsumptionExecution;
 import io.github.samzhu.topplecat.core.Hashing;
 import io.github.samzhu.topplecat.core.NarrativeExecution;
 import io.github.samzhu.topplecat.core.PropertyDefinition;
-import io.github.samzhu.topplecat.core.PropertyExecutionEvent;
-import io.github.samzhu.topplecat.core.PropertyExecutionEventJson;
-import io.github.samzhu.topplecat.core.PropertyExecutionState;
 import io.github.samzhu.topplecat.core.PropertyResult;
 import io.github.samzhu.topplecat.core.PropertyResults;
 import io.github.samzhu.topplecat.core.PropertyResultsJson;
@@ -89,13 +86,6 @@ public abstract class ToppleCatReportTask extends DefaultTask {
           + "toppleCatSeal before Verify. Verify did not update approval.";
   private static final String INTEGRITY_PRECONDITION =
       "The contract-integrity gate did not permit downstream verification in this run.";
-  private static final String PROPERTY_COUNTEREXAMPLE =
-      "Property-Based Testing found a counterexample in this run. Review the approved public "
-          + "contract and implement the rule generally.";
-  private static final String PROPERTY_TASK_INCOMPLETE =
-      "Property-Based Testing did not complete in this verification run.";
-  private static final String PROPERTY_EVIDENCE_INCOMPLETE =
-      "Property-Based Testing current-run evidence was missing or could not be read.";
   private static final String MUTATION_TASK_INCOMPLETE =
       "Mutation Testing did not complete in this verification run.";
   private static final String MUTATION_EVIDENCE_INCOMPLETE =
@@ -340,7 +330,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 verificationScope.mutationMode(),
                 verificationScope.publicPropertyMode(),
                 executedHiddenRows,
-                properties.publicCount()));
+                properties.completedProperties()));
     verification =
         ReportViews.withVerificationProperties(verification, verificationProperties(properties));
     verification = ReportViews.withMutationAttribution(verification, mutationAttribution());
@@ -446,84 +436,24 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     if (effective.isEmpty()) {
       return new PropertyCollection(List.of(), List.of(), GateOutcome.notApplicable());
     }
-    Map<String, List<PropertyExecutionEvent>> events = new LinkedHashMap<>();
-    Map<String, PropertyJUnitResult> junit = new LinkedHashMap<>();
-    try {
-      readPropertyEvents(runDirectory.resolve("public-property-events.jsonl"), events);
-      readPropertyJUnitResults(
-          runDirectory.resolve("junit").resolve(VerificationRunArtifacts.PROPERTY_PUBLIC), junit);
-    } catch (RuntimeException exception) {
-      return new PropertyCollection(
-          effective, List.of(), GateOutcome.incomplete(PROPERTY_EVIDENCE_INCOMPLETE));
-    }
+    PropertyAssessment assessment =
+        PropertyEvidenceAssessment.assess(runDirectory, effective, runId);
+    return new PropertyCollection(
+        effective,
+        assessment.results(),
+        propertyGate(assessment),
+        assessment.completedProperties());
+  }
 
-    List<PropertyResult> results = new ArrayList<>();
-    boolean incomplete =
-        !effective.isEmpty()
-            && !VerificationRunArtifacts.completed(
-                runDirectory, VerificationRunArtifacts.PROPERTY_PUBLIC);
-    boolean failed = false;
-    for (PropertyDefinition definition : effective) {
-      List<PropertyExecutionEvent> matching =
-          events.getOrDefault(definition.methodIdentity(), List.of());
-      List<PropertyExecutionEvent> started =
-          matching.stream()
-              .filter(event -> event.state() == PropertyExecutionState.STARTED)
-              .toList();
-      List<PropertyExecutionEvent> terminal =
-          matching.stream().filter(event -> event.state().terminal()).toList();
-      if (matching.size() != 2
-          || started.size() != 1
-          || terminal.size() != 1
-          || matching.stream().anyMatch(event -> !runId.equals(event.runId()))
-          || !started.getFirst().acId().equals(definition.acId())
-          || !started.getFirst().sourceDigest().equals(definition.sourceDigest())
-          || !terminal.getFirst().acId().equals(definition.acId())
-          || !terminal.getFirst().sourceDigest().equals(definition.sourceDigest())) {
-        incomplete = true;
-        continue;
-      }
-      PropertyResult result = terminal.getFirst().result();
-      List<PropertyJUnitResult> junitMatches =
-          junit.entrySet().stream()
-              .filter(entry -> definition.methodIdentity().startsWith(entry.getKey()))
-              .map(Map.Entry::getValue)
-              .toList();
-      PropertyJUnitResult junitResult = junitMatches.size() == 1 ? junitMatches.getFirst() : null;
-      if (junitResult == null
-          || junitResult.skipped()
-          || result.state() == PropertyExecutionState.COMPLETED_PASS && junitResult.failed()
-          || result.state() != PropertyExecutionState.COMPLETED_PASS && !junitResult.failed()) {
-        incomplete = true;
-        continue;
-      }
-      results.add(result);
-      if (result.state() == PropertyExecutionState.COMPLETED_COUNTEREXAMPLE) {
-        failed = true;
-      } else if (result.state() != PropertyExecutionState.COMPLETED_PASS) {
-        incomplete = true;
-      }
-    }
-    // Events must not be allowed to smuggle an unsealed, duplicated, or out-of-scope declaration
-    // into evidence.
-    Set<String> allowed =
-        effective.stream()
-            .map(PropertyDefinition::methodIdentity)
-            .collect(java.util.stream.Collectors.toSet());
-    if (events.keySet().stream().anyMatch(identity -> !allowed.contains(identity))) {
-      incomplete = true;
-    }
-    GateOutcome gate =
-        failed
-            ? GateOutcome.fail(PROPERTY_COUNTEREXAMPLE)
-            : incomplete || results.size() != effective.size()
-                ? GateOutcome.incomplete(
-                    VerificationRunArtifacts.completed(
-                            runDirectory, VerificationRunArtifacts.PROPERTY_PUBLIC)
-                        ? PROPERTY_EVIDENCE_INCOMPLETE
-                        : PROPERTY_TASK_INCOMPLETE)
-                : GateOutcome.pass();
-    return new PropertyCollection(effective, results, gate);
+  private static GateOutcome propertyGate(PropertyAssessment assessment) {
+    return switch (assessment.verdict()) {
+      case PASS -> GateOutcome.pass();
+      case FAIL -> GateOutcome.fail(assessment.reason());
+      case INCOMPLETE -> GateOutcome.incomplete(assessment.reason());
+      case DISABLED, NOT_APPLICABLE ->
+          throw new IllegalArgumentException(
+              "Property evidence assessment returned a gate-only verdict.");
+    };
   }
 
   private static Map<String, List<VerificationProperty>> verificationProperties(
@@ -609,51 +539,6 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     return definition.acceptanceConditions().stream()
         .flatMap(contract -> contract.properties().stream())
         .toList();
-  }
-
-  private static void readPropertyEvents(
-      Path file, Map<String, List<PropertyExecutionEvent>> result) {
-    if (!Files.isRegularFile(file)) {
-      return;
-    }
-    try {
-      for (String line : Files.readAllLines(file)) {
-        if (!line.isBlank()) {
-          PropertyExecutionEvent event = PropertyExecutionEventJson.readLine(line);
-          result.computeIfAbsent(event.methodIdentity(), ignored -> new ArrayList<>()).add(event);
-        }
-      }
-    } catch (IOException | RuntimeException exception) {
-      throw new IllegalStateException(
-          "Cannot read ToppleCat Property event evidence " + file + ".", exception);
-    }
-  }
-
-  private static void readPropertyJUnitResults(
-      Path directory, Map<String, PropertyJUnitResult> result) {
-    if (!Files.isDirectory(directory)) {
-      return;
-    }
-    try (Stream<Path> files = Files.list(directory)) {
-      for (Path file : files.filter(path -> path.toString().endsWith(".xml")).toList()) {
-        NodeList cases = parseCompletedTestResults(file);
-        for (int index = 0; index < cases.getLength(); index++) {
-          Element testCase = (Element) cases.item(index);
-          String className = testCase.getAttribute("classname");
-          String testName = testCase.getAttribute("name");
-          int parameters = testName.indexOf('(');
-          String method = parameters < 0 ? testName : testName.substring(0, parameters);
-          if (className.isBlank() || method.isBlank()) {
-            continue;
-          }
-          String prefix = className + "#" + method + "(";
-          result.put(prefix, new PropertyJUnitResult(failure(testCase) != null, skipped(testCase)));
-        }
-      }
-    } catch (IOException | SAXException exception) {
-      throw new IllegalStateException(
-          "Cannot read ToppleCat Property JUnit XML from " + directory + ".", exception);
-    }
   }
 
   private GateOutcome contractIntegrityVerdict() {
@@ -1273,18 +1158,23 @@ public abstract class ToppleCatReportTask extends DefaultTask {
   }
 
   private record PropertyCollection(
-      List<PropertyDefinition> definitions, List<PropertyResult> results, GateOutcome gate) {
+      List<PropertyDefinition> definitions,
+      List<PropertyResult> results,
+      GateOutcome gate,
+      int completedProperties) {
+    private PropertyCollection(
+        List<PropertyDefinition> definitions, List<PropertyResult> results, GateOutcome gate) {
+      this(definitions, results, gate, 0);
+    }
+
     private PropertyCollection {
       definitions = List.copyOf(definitions);
       results = List.copyOf(results);
-    }
-
-    private int publicCount() {
-      return results.size();
+      if (completedProperties < 0) {
+        throw new IllegalArgumentException("Completed Property count cannot be negative.");
+      }
     }
   }
-
-  private record PropertyJUnitResult(boolean failed, boolean skipped) {}
 
   private record GateOutcome(EvidenceVerdict verdict, String reason) {
     private static GateOutcome pass() {
