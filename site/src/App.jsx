@@ -20,7 +20,7 @@ import stageFloorLayer from "./assets/scene/tabletop.svg";
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.12"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.13"';
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(

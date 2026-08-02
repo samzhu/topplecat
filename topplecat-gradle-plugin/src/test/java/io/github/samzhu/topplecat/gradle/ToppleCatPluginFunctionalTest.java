@@ -186,6 +186,34 @@ class ToppleCatPluginFunctionalTest {
   }
 
   @Test
+  void verificationReportProjectsTheAssessmentCompletedCountForIncompletePropertyEvidence()
+      throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        tasks.named("toppleCatPropertyTest") {
+            doLast {
+                def events = layout.buildDirectory.file("topplecat/runs/current/public-property-events.jsonl").get().asFile
+                events.text = events.readLines().get(0) + System.lineSeparator()
+            }
+        }
+        """);
+    writeAcceptance("100", true);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    runner("toppleCatSeal").build();
+    runner("toppleCatVerify").buildAndFail();
+
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("PROPERTY"));
+    assertTrue(
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"))
+            .contains("\"executedPublicProperties\" : 0"));
+  }
+
+  @Test
   void propertySidecarsRetainFiveResultsWhenTwoDisplayedPropertiesFindCounterexamples()
       throws Exception {
     writeProject(

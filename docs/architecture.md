@@ -38,6 +38,14 @@ not ToppleCat gate evidence.
 and never enters mutation targeting. Properties are public declarations under
 `src/test` and run in their own formal task for the selected ACs.
 
+The Verification Report's completed Property count is a projection of the
+Property evidence assessment, not a second report-side calculation. It counts
+a selected sealed Property only when one matching `STARTED` event precedes one
+matching terminal event for the current run, AC ID, complete Java method
+identity, and source digest. Counterexample and incomplete terminal outcomes
+still count as completed; their `PROPERTY` Gate verdict remains `FAIL` or
+`INCOMPLETE`.
+
 ## Independent safeguards
 
 | Capability | Authoritative input | Formal task | Gate |
@@ -87,7 +95,7 @@ Mutation Testing remains full-contract.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.12 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.13 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 

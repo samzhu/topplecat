@@ -31,7 +31,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.12 custody and approval schemas are current-only. A prior schema is not
+The 0.0.13 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -47,6 +47,14 @@ the enabled safeguards independently:
 | Hidden Tests | Executed hidden typed rows for the selected ACs | Properties or mutation reports |
 | Mutation Testing | A current usable producer report attributed to public acceptance methods | Hidden rows or Properties |
 | Property-Based Testing | Current matching Property events and JUnit XML | Hidden rows or mutation reports |
+
+For example, if a selected delivery has five Properties but one has only a
+terminal event or a stale digest, the Verification Report says four Properties
+completed and `PROPERTY=INCOMPLETE`. A Property counts once only when its
+current sealed AC ID, complete Java method identity, and source digest have one
+matching `STARTED` event followed by one matching terminal event. Completion is
+separate from outcome: a counterexample and an incomplete terminal outcome both
+count as completed while the Gate remains `FAIL` or `INCOMPLETE`.
 
 If Hidden Tests are enabled and a selected AC has no executed hidden row,
 `REVIEWER_JUNIT=INCOMPLETE`. A Property may run and pass at the same time, but

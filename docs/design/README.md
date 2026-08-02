@@ -62,6 +62,7 @@ This structure follows three complementary practices:
 
 - [Executable acceptance boundary](executable-acceptance-boundary.md)
 - [Property-Based Testing safeguard](property-based-testing.md)
+- [Property completed count evidence fidelity](property-completion-evidence-fidelity.md)
 - [ToppleScenario authoring](topple-scenario-authoring.md)
 - [Independent safeguard results](independent-safeguard-results.md)
 - [Mutation attribution and gate](mutation-attribution.md)

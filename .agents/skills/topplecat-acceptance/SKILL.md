@@ -2,7 +2,7 @@
 name: topplecat-acceptance
 description: Author ToppleCat executable Java/JUnit acceptance contracts from SDD Specs. Use when a Java delivery needs Acceptance Conditions, public or reviewer-owned Typed Case Rows, or Property-Based Testing declarations.
 metadata:
-  topplecat-version: "0.0.12"
+  topplecat-version: "0.0.13"
 ---
 
 # ToppleCat acceptance

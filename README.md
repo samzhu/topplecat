@@ -130,6 +130,12 @@ counterexample, and a replay token in the reviewer-only Verification Report
 report. Safe feedback never contains generated inputs, identifiers, tokens,
 paths, or raw failures.
 
+The report's Property count is completion evidence, not a pass total. It counts
+one selected sealed Property only when its current run has one matching
+`STARTED` event followed by one matching terminal event. A counterexample or an
+incomplete terminal outcome can therefore count as completed while the
+`PROPERTY` Gate remains `FAIL` or `INCOMPLETE`.
+
 ## Configure safeguards
 
 Each safeguard has its own switch. Disabling one records `DISABLED`; it never
@@ -168,18 +174,18 @@ Every formal run records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
 `PASS`, `FAIL`, or `INCOMPLETE`; accept a done claim only when the current run
 is `PASS`.
 
-## Install 0.0.12
+## Install 0.0.13
 
 ToppleCat requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.12"
+    id("io.github.samzhu.topplecat") version "0.0.13"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.12")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.13")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -195,7 +201,7 @@ tasks.test { useJUnitPlatform() }
 - [Documentation index](docs/README.md)
 - [Context glossary](CONTEXT.md)
 - [Architecture](docs/architecture.md)
-- [0.0.12 release notes](docs/releases/0.0.12.md)
+- [0.0.13 release notes](docs/releases/0.0.13.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 

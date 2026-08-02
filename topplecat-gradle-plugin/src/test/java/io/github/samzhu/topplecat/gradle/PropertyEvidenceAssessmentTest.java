@@ -48,18 +48,76 @@ class PropertyEvidenceAssessmentTest {
   }
 
   @Test
-  void rejectsMissingDuplicateAndMismatchedPropertyEvents() throws Exception {
-    for (EventAttack attack : EventAttack.values()) {
-      Path run = completeRun(definitions(1), List.of(false), 0, false);
+  void countsEveryTrustedTerminalOutcomeWithoutConfusingCompletionWithVerdict() throws Exception {
+    for (PropertyExecutionState terminalState :
+        List.of(
+            PropertyExecutionState.COMPLETED_PASS,
+            PropertyExecutionState.COMPLETED_COUNTEREXAMPLE,
+            PropertyExecutionState.COMPLETED_INCOMPLETE)) {
       List<PropertyDefinition> definitions = definitions(1);
+      Path run =
+          completeRunWithStates(
+              definitions,
+              List.of(terminalState),
+              terminalState == PropertyExecutionState.COMPLETED_PASS ? 0 : 1,
+              false);
+
+      PropertyAssessment assessment = PropertyEvidenceAssessment.assess(run, definitions, RUN_ID);
+
+      assertEquals(
+          switch (terminalState) {
+            case COMPLETED_PASS -> EvidenceVerdict.PASS;
+            case COMPLETED_COUNTEREXAMPLE -> EvidenceVerdict.FAIL;
+            case COMPLETED_INCOMPLETE -> EvidenceVerdict.INCOMPLETE;
+            case STARTED -> throw new AssertionError("A terminal state is required.");
+          },
+          assessment.verdict(),
+          terminalState.name());
+      assertEquals(1, assessment.completedProperties(), terminalState.name());
+    }
+  }
+
+  @Test
+  void rejectsIncompleteOrMismatchedPropertyLifecyclesFromCompletedCount() throws Exception {
+    for (EventAttack attack : EventAttack.values()) {
+      List<PropertyDefinition> definitions = definitions(1);
+      Path run = completeRun(definitions, List.of(false), 0, false);
       Path events = run.resolve("public-property-events.jsonl");
+      List<String> validEvents = Files.readAllLines(events);
       switch (attack) {
-        case MISSING -> Files.writeString(events, Files.readAllLines(events).getFirst() + "\n");
-        case DUPLICATE ->
+        case STARTED_ONLY -> Files.writeString(events, validEvents.getFirst() + "\n");
+        case TERMINAL_ONLY -> Files.writeString(events, validEvents.getLast() + "\n");
+        case DUPLICATE_STARTED ->
             Files.writeString(
-                events, Files.readString(events) + Files.readAllLines(events).getLast() + "\n");
+                events,
+                validEvents.getFirst()
+                    + "\n"
+                    + validEvents.getFirst()
+                    + "\n"
+                    + validEvents.getLast()
+                    + "\n");
+        case DUPLICATE_TERMINAL ->
+            Files.writeString(
+                events,
+                validEvents.getFirst()
+                    + "\n"
+                    + validEvents.getLast()
+                    + "\n"
+                    + validEvents.getLast()
+                    + "\n");
+        case TERMINAL_BEFORE_STARTED ->
+            Files.writeString(events, validEvents.getLast() + "\n" + validEvents.getFirst() + "\n");
         case WRONG_RUN -> writeEvents(events, definitions, List.of(false), "other-run", null, null);
         case WRONG_AC -> writeEvents(events, definitions, List.of(false), RUN_ID, "AC-WRONG", null);
+        case WRONG_METHOD ->
+            writeEvents(
+                events,
+                definitions,
+                List.of(false),
+                RUN_ID,
+                null,
+                null,
+                definitions.getFirst().methodIdentity().replace(")V", "I)V"));
         case WRONG_DIGEST ->
             writeEvents(events, definitions, List.of(false), RUN_ID, null, "f".repeat(64));
       }
@@ -68,6 +126,45 @@ class PropertyEvidenceAssessmentTest {
 
       assertEquals(EvidenceVerdict.INCOMPLETE, assessment.verdict(), attack.name());
       assertTrue(assessment.results().isEmpty(), attack.name());
+      assertEquals(0, assessment.completedProperties(), attack.name());
+    }
+  }
+
+  @Test
+  void rejectsTerminalEventsWhoseEmbeddedResultsDisagreeWithTheEvent() throws Exception {
+    for (String resultField : List.of("acId", "methodIdentity", "state")) {
+      List<PropertyDefinition> definitions = definitions(1);
+      Path run = completeRun(definitions, List.of(false), 0, false);
+      Path events = run.resolve("public-property-events.jsonl");
+      List<String> validEvents = Files.readAllLines(events);
+      String terminal = validEvents.getLast();
+      String expected =
+          switch (resultField) {
+            case "acId" -> "\"acId\":\"" + definitions.getFirst().acId() + "\"";
+            case "methodIdentity" ->
+                "\"methodIdentity\":\"" + definitions.getFirst().methodIdentity() + "\"";
+            case "state" -> "\"state\":\"COMPLETED_PASS\"";
+            default -> throw new AssertionError("Unexpected result field.");
+          };
+      String actual =
+          switch (resultField) {
+            case "acId" -> "\"acId\":\"AC-WRONG\"";
+            case "methodIdentity" -> "\"methodIdentity\":\"example.Properties#wrong()V\"";
+            case "state" -> "\"state\":\"COMPLETED_INCOMPLETE\"";
+            default -> throw new AssertionError("Unexpected result field.");
+          };
+      int embeddedResultField = terminal.lastIndexOf(expected);
+      assertTrue(embeddedResultField > 0, resultField);
+      terminal =
+          terminal.substring(0, embeddedResultField)
+              + actual
+              + terminal.substring(embeddedResultField + expected.length());
+      Files.writeString(events, validEvents.getFirst() + "\n" + terminal + "\n");
+
+      PropertyAssessment assessment = PropertyEvidenceAssessment.assess(run, definitions, RUN_ID);
+
+      assertEquals(EvidenceVerdict.INCOMPLETE, assessment.verdict(), resultField);
+      assertEquals(0, assessment.completedProperties(), resultField);
     }
   }
 
@@ -79,12 +176,19 @@ class PropertyEvidenceAssessmentTest {
     assertEquals(
         EvidenceVerdict.INCOMPLETE,
         PropertyEvidenceAssessment.assess(missingMarker, definitions, RUN_ID).verdict());
+    assertEquals(
+        1,
+        PropertyEvidenceAssessment.assess(missingMarker, definitions, RUN_ID)
+            .completedProperties());
 
     Path missingXml = completeRun(definitions, List.of(false), 0, false);
     Files.delete(missingXml.resolve("junit/PROPERTY_PUBLIC/TEST-properties.xml"));
     assertEquals(
         EvidenceVerdict.INCOMPLETE,
         PropertyEvidenceAssessment.assess(missingXml, definitions, RUN_ID).verdict());
+    assertEquals(
+        1,
+        PropertyEvidenceAssessment.assess(missingXml, definitions, RUN_ID).completedProperties());
 
     Path malformedXml = completeRun(definitions, List.of(false), 0, false);
     Files.writeString(
@@ -92,11 +196,17 @@ class PropertyEvidenceAssessmentTest {
     assertEquals(
         EvidenceVerdict.INCOMPLETE,
         PropertyEvidenceAssessment.assess(malformedXml, definitions, RUN_ID).verdict());
+    assertEquals(
+        1,
+        PropertyEvidenceAssessment.assess(malformedXml, definitions, RUN_ID).completedProperties());
 
     Path skippedXml = completeRun(definitions, List.of(false), 0, true);
     assertEquals(
         EvidenceVerdict.INCOMPLETE,
         PropertyEvidenceAssessment.assess(skippedXml, definitions, RUN_ID).verdict());
+    assertEquals(
+        1,
+        PropertyEvidenceAssessment.assess(skippedXml, definitions, RUN_ID).completedProperties());
   }
 
   @Test
@@ -107,12 +217,20 @@ class PropertyEvidenceAssessmentTest {
     assertEquals(
         EvidenceVerdict.INCOMPLETE,
         PropertyEvidenceAssessment.assess(extraExecuted, definitions, RUN_ID).verdict());
+    assertEquals(
+        1,
+        PropertyEvidenceAssessment.assess(extraExecuted, definitions, RUN_ID)
+            .completedProperties());
 
     Path mismatchedFailures = completeRun(definitions, List.of(false), 0, false);
     writeJunit(mismatchedFailures, 1, 1, false);
     assertEquals(
         EvidenceVerdict.INCOMPLETE,
         PropertyEvidenceAssessment.assess(mismatchedFailures, definitions, RUN_ID).verdict());
+    assertEquals(
+        1,
+        PropertyEvidenceAssessment.assess(mismatchedFailures, definitions, RUN_ID)
+            .completedProperties());
   }
 
   @Test
@@ -121,12 +239,36 @@ class PropertyEvidenceAssessmentTest {
     Path run = completeRun(definitions, List.of(false), 0, false);
     PropertyDefinition extra = definitions(2).get(1);
     Path events = run.resolve("public-property-events.jsonl");
-    Files.writeString(events, Files.readString(events) + events(extra, false, RUN_ID, null, null));
+    Files.writeString(
+        events, Files.readString(events) + events(extra, false, RUN_ID, null, null, null));
 
     PropertyAssessment assessment = PropertyEvidenceAssessment.assess(run, definitions, RUN_ID);
 
     assertEquals(EvidenceVerdict.INCOMPLETE, assessment.verdict());
     assertTrue(assessment.results().isEmpty());
+    assertEquals(1, assessment.completedProperties());
+  }
+
+  @Test
+  void preservesOneTrustedCompletionWhenAnotherSelectedPropertyIsMalformed() throws Exception {
+    List<PropertyDefinition> definitions = definitions(2);
+    Path run = completeRun(definitions, List.of(false, false), 0, false);
+    Path events = run.resolve("public-property-events.jsonl");
+    List<String> validEvents = Files.readAllLines(events);
+    Files.writeString(
+        events,
+        String.join(
+                "\n",
+                validEvents.get(0),
+                validEvents.get(1),
+                validEvents.get(2),
+                validEvents.get(3),
+                validEvents.get(3))
+            + "\n");
+
+    PropertyAssessment assessment = PropertyEvidenceAssessment.assess(run, definitions, RUN_ID);
+
+    assertEquals(EvidenceVerdict.INCOMPLETE, assessment.verdict());
     assertEquals(1, assessment.completedProperties());
   }
 
@@ -150,6 +292,21 @@ class PropertyEvidenceAssessmentTest {
     return run;
   }
 
+  private Path completeRunWithStates(
+      List<PropertyDefinition> definitions,
+      List<PropertyExecutionState> terminalStates,
+      int failureCount,
+      boolean skipped)
+      throws Exception {
+    Path run = tempDir.resolve("run-" + System.nanoTime());
+    Files.createDirectories(run.resolve("gates"));
+    Files.writeString(run.resolve("gates/PROPERTY_PUBLIC.completed"), "completed\n");
+    writeEventsWithStates(
+        run.resolve("public-property-events.jsonl"), definitions, terminalStates, RUN_ID);
+    writeJunit(run, definitions.size(), failureCount, skipped);
+    return run;
+  }
+
   private static void writeEvents(
       Path file,
       List<PropertyDefinition> definitions,
@@ -157,6 +314,18 @@ class PropertyEvidenceAssessmentTest {
       String runId,
       String acOverride,
       String digestOverride)
+      throws Exception {
+    writeEvents(file, definitions, counterexamples, runId, acOverride, digestOverride, null);
+  }
+
+  private static void writeEvents(
+      Path file,
+      List<PropertyDefinition> definitions,
+      List<Boolean> counterexamples,
+      String runId,
+      String acOverride,
+      String digestOverride,
+      String methodIdentityOverride)
       throws Exception {
     StringBuilder source = new StringBuilder();
     for (int index = 0; index < definitions.size(); index++) {
@@ -166,7 +335,22 @@ class PropertyEvidenceAssessmentTest {
               counterexamples.get(index),
               runId,
               acOverride,
-              digestOverride));
+              digestOverride,
+              methodIdentityOverride));
+    }
+    Files.writeString(file, source.toString());
+  }
+
+  private static void writeEventsWithStates(
+      Path file,
+      List<PropertyDefinition> definitions,
+      List<PropertyExecutionState> terminalStates,
+      String runId)
+      throws Exception {
+    StringBuilder source = new StringBuilder();
+    for (int index = 0; index < definitions.size(); index++) {
+      source.append(
+          events(definitions.get(index), terminalStates.get(index), runId, null, null, null));
     }
     Files.writeString(file, source.toString());
   }
@@ -176,25 +360,46 @@ class PropertyEvidenceAssessmentTest {
       boolean counterexample,
       String runId,
       String acOverride,
-      String digestOverride) {
+      String digestOverride,
+      String methodIdentityOverride) {
+    return events(
+        definition,
+        counterexample
+            ? PropertyExecutionState.COMPLETED_COUNTEREXAMPLE
+            : PropertyExecutionState.COMPLETED_PASS,
+        runId,
+        acOverride,
+        digestOverride,
+        methodIdentityOverride);
+  }
+
+  private static String events(
+      PropertyDefinition definition,
+      PropertyExecutionState terminalState,
+      String runId,
+      String acOverride,
+      String digestOverride,
+      String methodIdentityOverride) {
     String acId = acOverride == null ? definition.acId() : acOverride;
     String digest = digestOverride == null ? definition.sourceDigest() : digestOverride;
+    String methodIdentity =
+        methodIdentityOverride == null ? definition.methodIdentity() : methodIdentityOverride;
     PropertyExecutionEvent started =
         new PropertyExecutionEvent(
             PropertyExecutionEvent.SCHEMA_VERSION,
             runId,
             acId,
-            definition.methodIdentity(),
+            methodIdentity,
             digest,
             PropertyExecutionState.STARTED,
             null);
-    PropertyResult result = result(acId, definition.methodIdentity(), counterexample);
+    PropertyResult result = result(acId, methodIdentity, terminalState);
     PropertyExecutionEvent terminal =
         new PropertyExecutionEvent(
             PropertyExecutionEvent.SCHEMA_VERSION,
             runId,
             acId,
-            definition.methodIdentity(),
+            methodIdentity,
             digest,
             result.state(),
             result);
@@ -203,7 +408,37 @@ class PropertyEvidenceAssessmentTest {
   }
 
   private static PropertyResult result(String acId, String methodIdentity, boolean counterexample) {
-    if (counterexample) {
+    return result(
+        acId,
+        methodIdentity,
+        counterexample
+            ? PropertyExecutionState.COMPLETED_COUNTEREXAMPLE
+            : PropertyExecutionState.COMPLETED_PASS);
+  }
+
+  private static PropertyResult result(
+      String acId, String methodIdentity, PropertyExecutionState terminalState) {
+    if (terminalState == PropertyExecutionState.COMPLETED_INCOMPLETE) {
+      return new PropertyResult(
+          acId,
+          methodIdentity,
+          terminalState,
+          10,
+          5,
+          1,
+          4,
+          1,
+          List.of(),
+          1L,
+          false,
+          null,
+          null,
+          null,
+          0,
+          false,
+          "Coverage target was not reached.");
+    }
+    if (terminalState == PropertyExecutionState.COMPLETED_COUNTEREXAMPLE) {
       return new PropertyResult(
           acId,
           methodIdentity,
@@ -279,10 +514,14 @@ class PropertyEvidenceAssessmentTest {
   }
 
   private enum EventAttack {
-    MISSING,
-    DUPLICATE,
+    STARTED_ONLY,
+    TERMINAL_ONLY,
+    DUPLICATE_STARTED,
+    DUPLICATE_TERMINAL,
+    TERMINAL_BEFORE_STARTED,
     WRONG_RUN,
     WRONG_AC,
+    WRONG_METHOD,
     WRONG_DIGEST
   }
 }

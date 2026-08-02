@@ -11,7 +11,7 @@ import org.gradle.plugins.signing.SigningExtension
 
 allprojects {
     group = "io.github.samzhu.topplecat"
-    version = "0.0.12"
+    version = "0.0.13"
 }
 
 subprojects {

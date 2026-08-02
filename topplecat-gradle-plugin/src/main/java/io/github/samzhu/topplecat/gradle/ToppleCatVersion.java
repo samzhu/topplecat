@@ -2,7 +2,7 @@ package io.github.samzhu.topplecat.gradle;
 
 /** Version sealed into reviewer approvals. Keep this aligned with the published plugin version. */
 final class ToppleCatVersion {
-  static final String CURRENT = "0.0.12";
+  static final String CURRENT = "0.0.13";
 
   private ToppleCatVersion() {}
 }

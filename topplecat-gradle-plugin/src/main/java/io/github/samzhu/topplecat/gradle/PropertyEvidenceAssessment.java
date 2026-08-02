@@ -42,7 +42,8 @@ final class PropertyEvidenceAssessment {
 
   /**
    * Assesses one sealed Property scope for one run. The returned count is the number of sealed
-   * current-run Properties that emitted a terminal event, never the number of projected results.
+   * current-run Properties with one trusted complete lifecycle, never the number of projected
+   * results.
    */
   static PropertyAssessment assess(
       Path runDirectory, List<PropertyDefinition> sealedDefinitions, String runId) {
@@ -66,7 +67,9 @@ final class PropertyEvidenceAssessment {
     } catch (IOException | RuntimeException exception) {
       return incomplete(0);
     }
-    int completedProperties = completedProperties(events, identities, runId);
+    PropertyLifecycleAssessment lifecycle =
+        assessLifecycles(events, definitions, identities, runId);
+    int completedProperties = lifecycle.completedProperties();
     if (!VerificationRunArtifacts.completed(
         runDirectory, VerificationRunArtifacts.PROPERTY_PUBLIC)) {
       return new PropertyAssessment(
@@ -82,36 +85,6 @@ final class PropertyEvidenceAssessment {
       return incomplete(completedProperties);
     }
 
-    Map<String, List<PropertyExecutionEvent>> byIdentity = new LinkedHashMap<>();
-    for (PropertyExecutionEvent event : events) {
-      byIdentity.computeIfAbsent(event.methodIdentity(), ignored -> new ArrayList<>()).add(event);
-    }
-    boolean evidenceConsistent = byIdentity.keySet().equals(identities);
-    List<PropertyResult> results = new ArrayList<>();
-    for (PropertyDefinition definition : definitions) {
-      List<PropertyExecutionEvent> propertyEvents =
-          byIdentity.getOrDefault(definition.methodIdentity(), List.of());
-      List<PropertyExecutionEvent> started =
-          propertyEvents.stream()
-              .filter(event -> event.state() == PropertyExecutionState.STARTED)
-              .toList();
-      List<PropertyExecutionEvent> terminal =
-          propertyEvents.stream().filter(event -> event.state().terminal()).toList();
-      boolean matchesDefinition =
-          propertyEvents.size() == 2
-              && started.size() == 1
-              && terminal.size() == 1
-              && propertyEvents.stream().allMatch(event -> runId.equals(event.runId()))
-              && propertyEvents.stream().allMatch(event -> definition.acId().equals(event.acId()))
-              && propertyEvents.stream()
-                  .allMatch(event -> definition.sourceDigest().equals(event.sourceDigest()));
-      if (!matchesDefinition) {
-        evidenceConsistent = false;
-        continue;
-      }
-      results.add(terminal.getFirst().result());
-    }
-
     int terminalEventCount =
         Math.toIntExact(
             events.stream()
@@ -125,8 +98,9 @@ final class PropertyEvidenceAssessment {
                 .filter(event -> event.state().terminal())
                 .filter(event -> event.state() != PropertyExecutionState.COMPLETED_PASS)
                 .count());
-    evidenceConsistent &=
-        junit.testCount() == definitions.size()
+    boolean evidenceConsistent =
+        lifecycle.evidenceConsistent()
+            && junit.testCount() == definitions.size()
             && junit.skippedCount() == 0
             && junit.executedCount() == terminalEventCount
             && junit.failureCount() == failedTerminalEventCount;
@@ -135,16 +109,16 @@ final class PropertyEvidenceAssessment {
     }
 
     boolean counterexample =
-        results.stream()
+        lifecycle.results().stream()
             .anyMatch(result -> result.state() == PropertyExecutionState.COMPLETED_COUNTEREXAMPLE);
     boolean incomplete =
-        results.stream()
+        lifecycle.results().stream()
             .anyMatch(result -> result.state() == PropertyExecutionState.COMPLETED_INCOMPLETE);
     if (incomplete) {
       return incomplete(completedProperties);
     }
     return new PropertyAssessment(
-        results,
+        lifecycle.results(),
         counterexample ? EvidenceVerdict.FAIL : EvidenceVerdict.PASS,
         counterexample ? COUNTEREXAMPLE_REASON : null,
         completedProperties);
@@ -155,16 +129,54 @@ final class PropertyEvidenceAssessment {
         List.of(), EvidenceVerdict.INCOMPLETE, EVIDENCE_INCOMPLETE_REASON, completedProperties);
   }
 
-  private static int completedProperties(
-      List<PropertyExecutionEvent> events, Set<String> identities, String runId) {
-    return Math.toIntExact(
-        events.stream()
-            .filter(event -> runId.equals(event.runId()))
-            .filter(event -> identities.contains(event.methodIdentity()))
-            .filter(event -> event.state().terminal())
-            .map(PropertyExecutionEvent::methodIdentity)
-            .distinct()
-            .count());
+  private static PropertyLifecycleAssessment assessLifecycles(
+      List<PropertyExecutionEvent> events,
+      List<PropertyDefinition> definitions,
+      Set<String> identities,
+      String runId) {
+    Map<String, List<PropertyExecutionEvent>> byIdentity = new LinkedHashMap<>();
+    for (PropertyExecutionEvent event : events) {
+      byIdentity.computeIfAbsent(event.methodIdentity(), ignored -> new ArrayList<>()).add(event);
+    }
+    boolean evidenceConsistent = byIdentity.keySet().equals(identities);
+    List<PropertyResult> results = new ArrayList<>();
+    for (PropertyDefinition definition : definitions) {
+      PropertyResult result =
+          trustedResult(
+              byIdentity.getOrDefault(definition.methodIdentity(), List.of()), definition, runId);
+      if (result == null) {
+        evidenceConsistent = false;
+      } else {
+        results.add(result);
+      }
+    }
+    return new PropertyLifecycleAssessment(results, evidenceConsistent);
+  }
+
+  private static PropertyResult trustedResult(
+      List<PropertyExecutionEvent> propertyEvents, PropertyDefinition definition, String runId) {
+    if (propertyEvents.size() != 2) {
+      return null;
+    }
+    PropertyExecutionEvent started = propertyEvents.getFirst();
+    PropertyExecutionEvent terminal = propertyEvents.getLast();
+    if (started.state() != PropertyExecutionState.STARTED
+        || !terminal.state().terminal()
+        || propertyEvents.stream().anyMatch(event -> !runId.equals(event.runId()))
+        || propertyEvents.stream().anyMatch(event -> !definition.acId().equals(event.acId()))
+        || propertyEvents.stream()
+            .anyMatch(event -> !definition.methodIdentity().equals(event.methodIdentity()))
+        || propertyEvents.stream()
+            .anyMatch(event -> !definition.sourceDigest().equals(event.sourceDigest()))) {
+      return null;
+    }
+    PropertyResult result = terminal.result();
+    return result != null
+            && definition.acId().equals(result.acId())
+            && definition.methodIdentity().equals(result.methodIdentity())
+            && terminal.state() == result.state()
+        ? result
+        : null;
   }
 
   private static List<PropertyExecutionEvent> readEvents(Path file) throws IOException {
@@ -270,6 +282,17 @@ final class PropertyEvidenceAssessment {
 
   private record JunitSummary(
       int testCount, int executedCount, int skippedCount, int failureCount) {}
+
+  private record PropertyLifecycleAssessment(
+      List<PropertyResult> results, boolean evidenceConsistent) {
+    private PropertyLifecycleAssessment {
+      results = List.copyOf(results);
+    }
+
+    private int completedProperties() {
+      return results.size();
+    }
+  }
 }
 
 /** The compact result returned by {@link PropertyEvidenceAssessment}'s one assessment interface. */

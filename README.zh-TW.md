@@ -113,6 +113,11 @@ void payableTotalIsNeverNegative(PropertyTrials trials) {
 縮小後的反例與重播記號；安全回饋絕不包含產生的輸入、識別字、重播記號、
 路徑或原始失敗訊息。
 
+報告中的 Property 數量是完成執行的證據，不是通過數。只有已選且 sealed 的
+Property 在本次執行留下恰好一個相符的 `STARTED` 事件，並接著一個相符的終態事件，
+才算完成一次。因此找到反例或以 incomplete 終態結束的 Property 仍可算完成，
+但 `PROPERTY` Gate 會分別維持 `FAIL` 或 `INCOMPLETE`。
+
 ## 設定功能
 
 每個功能都有自己的開關。關閉時記錄為 `DISABLED`，不會假裝成
@@ -148,18 +153,18 @@ shape 或疑似 opaque identifier literal 值得人工檢查。它們不推測�
 `EXPECTED_CONSUMPTION`、`PROPERTY` 與 `MUTATION`。整體結果為 `PASS`、`FAIL`
 或 `INCOMPLETE`；只有本次執行的 `PASS` 才能接受完成宣稱。
 
-## 安裝 0.0.12
+## 安裝 0.0.13
 
 ToppleCat 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.12"
+    id("io.github.samzhu.topplecat") version "0.0.13"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.12")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.13")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -175,7 +180,7 @@ tasks.test { useJUnitPlatform() }
 - [文件索引](docs/README.md)
 - [共同語言](CONTEXT.md)
 - [架構](docs/architecture.md)
-- [0.0.12 release notes](docs/releases/0.0.12.zh-TW.md)
+- [0.0.13 release notes](docs/releases/0.0.13.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

@@ -9,6 +9,6 @@ Spec Review and the post-verification Verification Report.
 - [Run verification and read evidence](guide/verification-and-evidence.md)
 - [Troubleshoot a verification run](guide/troubleshooting.md)
 - [Read the architecture](architecture.md) and [product designs](design/README.md)
-- [Read the 0.0.12 release notes](releases/0.0.12.md)
+- [Read the 0.0.13 release notes](releases/0.0.13.md)
 
 The root [context glossary](../CONTEXT.md) defines ToppleCat-specific terms.
