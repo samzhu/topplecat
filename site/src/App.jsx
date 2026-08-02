@@ -20,7 +20,7 @@ import stageFloorLayer from "./assets/scene/tabletop.svg";
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.13"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.14"';
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(
@@ -132,7 +132,7 @@ const copyByLocale = {
     views: {
       heading: "One executable contract. Two human reports.",
       summary:
-        "The reviewer reads the complete selected Spec before handoff, then gets one failure-first report from formal verification. Neither becomes another source of truth.",
+        "The reviewer reads the complete selected Spec before handoff, then gets one failure-first report from formal verification. ToppleCat makes a delivery recommendation; the reviewer decides whether to accept it.",
       items: [
         {
           title: "Spec Review",
@@ -188,7 +188,7 @@ const copyByLocale = {
       ],
       verdictLabel: "Aggregate verdict",
       verdictBody:
-        "Only every required gate passing in the current run lets the claim stand.",
+        "Only every required gate passing in the current run lets ToppleCat recommend acceptance. The reviewer makes the final decision.",
     },
     install: {
       heading: "Try the sample before changing your project.",
@@ -305,7 +305,7 @@ const copyByLocale = {
     views: {
       heading: "一份可執行契約，兩份人類報告。",
       summary:
-        "交付前，審閱者閱讀完整的已選 Spec；正式驗證後，再從一份問題優先的報告查看結果。兩者都不會成為第二個事實來源。",
+        "交付前，審閱者閱讀完整的已選 Spec；正式驗證後，再從一份問題優先的報告查看結果。ToppleCat 提供交付建議，是否接受仍由審閱者決定。",
       items: [
         {
           title: "Spec Review",
@@ -360,7 +360,8 @@ const copyByLocale = {
         },
       ],
       verdictLabel: "彙總判定",
-      verdictBody: "只有本次執行中每個必要 gate 都通過，完成宣稱才能成立。",
+      verdictBody:
+        "只有本次執行中每個必要 gate 都通過，ToppleCat 才會建議接受；最後仍由審閱者決定。",
     },
     install: {
       heading: "先執行範例，再改動自己的專案。",

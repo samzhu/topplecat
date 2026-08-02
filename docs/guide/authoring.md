@@ -100,6 +100,10 @@ explicit-alphabet strings, lists, optionals, `oneOf`, `map`, `filter`, and
 two/three-input `combine`. Recursive generation, custom engines, `flatMap`,
 and custom shrinkers are unsupported.
 
+`@ToppleProperty` defaults to 200 tries, 1,000 discards, and 500 shrink steps.
+Authors may set positive `tries` and non-negative `maxDiscards` and
+`maxShrinks` values on the annotation.
+
 Use `classify` and `requireCoverage` for a named business boundary. An unmet
 coverage requirement, exhausted filter, malformed generator, or unstable replay
 makes evidence `INCOMPLETE`. Generated trial values are current-run evidence,
@@ -130,3 +134,10 @@ rows expose distinct nonblank literals at the same `...Id`, `...Key`, or
 it is a prompt to review the approved examples. The advisory contains only its
 rule code, AC, expected path, and counts, and never changes the contract,
 approval, or verification result.
+
+`EXPECTED_SHAPE_VARIANT_MISSING` compares recursive expected-field paths while
+ignoring object-key order, scalar values, and scalar types; arrays are terminal
+fields. `EXPECTED_OPAQUE_IDENTIFIER_LITERALS` requires the same suffix-matching
+path to have at least two public and two hidden non-empty string values, all
+distinct. Blank, duplicate, non-string, array-content, and other field-name
+candidates do not produce that advisory.

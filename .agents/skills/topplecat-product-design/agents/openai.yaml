@@ -1,0 +1,4 @@
+interface:
+  display_name: "ToppleCat Product Design"
+  short_description: "Frame ToppleCat changes before implementation"
+  default_prompt: "Use $topplecat-product-design to frame this proposed ToppleCat product change before implementation."

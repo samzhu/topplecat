@@ -25,7 +25,7 @@ import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.TaskAction;
 
-/** Writes a reviewer-only, no-verdict contract review from the checked ContractDefinition. */
+/** Writes the reviewer-only, no-verdict Spec Review from the checked ContractDefinition. */
 public abstract class ToppleCatReviewTask extends ToppleCatScopedTask {
   @org.gradle.api.tasks.Internal
   public abstract DirectoryProperty getProjectRoot();

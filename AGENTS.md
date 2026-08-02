@@ -10,9 +10,14 @@ Read `DEVELOPMENT.md` and `CONTEXT.md` first. Use the task map to find the
 relevant implementation documents and verification commands, and use the
 context glossary's formal terms consistently.
 
+Before proposing, comparing, reviewing, scoping, or delegating a new or changed
+product behavior, use the repository `topplecat-product-design` skill and
+present its Product Frame before solutions.
+
 Before changing supported behavior, read:
 
 - `README.md`
+- `docs/product.md`
 - `docs/architecture.md`
 - `docs/guide/authoring.md`
 - `docs/guide/verification-and-evidence.md`
@@ -22,16 +27,20 @@ Before changing supported behavior, read:
 - Do not leave an accepted product design only in a chat, prompt, issue, or
   agent handoff. Before delegating implementation, record it under
   `docs/design/` using the structure in `docs/design/README.md`.
+- Check the design index before creating a record. Merge a narrow follow-up into
+  its owning current document, and delete completed task plans or redundant
+  research after their lasting conclusion is recorded; do not create a
+  searchable archive of obsolete guidance.
 - Keep `AGENTS.md` short and durable: put mandatory boundaries, work rules, and
   document routing here. Put feature examples, alternatives, detailed behavior,
-  failure semantics, and acceptance cases in the relevant design record.
-- Treat `docs/architecture.md` and the guides as the current implemented
-  product. A design record marked `Accepted` but not `Implemented` describes
-  intended work and must not be presented in the README as an available feature.
-- When implementation changes supported behavior, update the design status,
-  architecture, affected guide, tests, agent skill, and user-facing
-  documentation in the same change. Link to one canonical explanation instead
-  of copying details into several files.
+  failure semantics, and acceptance cases in the active design record.
+- Treat `docs/product.md`, `docs/architecture.md`, and the guides as the current
+  implemented product. Every retained design record is `Accepted`, describes
+  intended work only, and must not be presented as an available feature.
+- When implementation changes supported behavior, merge the lasting design
+  into Product, Architecture, the affected guide, glossary, tests, skills, and
+  user-facing documentation, then delete the completed design record in the
+  same change. Link to one canonical explanation instead of copying details.
 - If code, tests, design records, and current-product documentation disagree,
   stop and identify the conflict. Do not silently choose the version that makes
   the task easiest.

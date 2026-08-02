@@ -70,6 +70,8 @@ outputs/
 # Local agent tooling. ToppleCat's repository skills remain versioned.
 .claude/
 .agents/skills/*
+!.agents/skills/topplecat-product-design/
+!.agents/skills/topplecat-product-design/**
 !.agents/skills/topplecat-acceptance/
 !.agents/skills/topplecat-acceptance/**
 !.agents/skills/topplecat-release/

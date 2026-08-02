@@ -2,7 +2,9 @@
 
 ToppleCat starts at the executable acceptance boundary. Java/JUnit acceptance
 methods and typed JSON/YAML case rows are authoritative; generated JSON and
-HTML are evidence projections.
+HTML are evidence projections. The [product definition](product.md) owns the
+audience, use moments, and responsibility boundary; this document describes how
+the implemented modules preserve them.
 
 ## Modules
 
@@ -12,6 +14,14 @@ HTML are evidence projections.
 | `topplecat-junit` | `@ToppleAcceptanceTest`, typed rows, compiler-described Scenario/Stage proxies, expected consumption, and PBT engine. |
 | `topplecat-report` | Reviewer-only Spec Review and Verification Report projections. |
 | `topplecat-gradle-plugin` | Commands, task wiring, scope, custody, policy, integrity, and mutation orchestration. |
+
+## Product boundary carried by the architecture
+
+The Reviewer owns the delivery decision. The Implementation Agent receives the
+public contract and safe Gate-level feedback, while both HTML reports and
+private diagnostics remain reviewer-only. External Workflow chooses the Spec
+and execution placement. No module owns CI, PR operations, Spec lifecycle, or
+organizational approval.
 
 ## Execution boundary
 
@@ -95,7 +105,7 @@ Mutation Testing remains full-contract.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.13 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.14 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
@@ -142,6 +152,10 @@ selected Markdown document in order before the AC-bound Scenario, public and
 reviewer Typed Case Rows, Properties, and the one public Acceptance Method.
 Raw Markdown HTML and unsafe URLs are escaped, repository-local image assets
 stay inside the offline bundle, and Mermaid has an escaped source fallback.
+Both report bundles are offline, self-contained, and CSP-safe. They load no
+external UI, font, syntax highlighter, Mermaid runtime, analytics, or CDN
+resource. Missing or unsafe local assets remain visible as escaped text or a
+placeholder rather than disappearing or executing content.
 
 Verification Report leads with the aggregate conclusion and a Problems Summary.
 It keeps Contract Integrity, Public Acceptance (including Expected Consumption),

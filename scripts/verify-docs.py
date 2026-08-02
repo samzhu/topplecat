@@ -18,23 +18,13 @@ ACTIVE_TERMINOLOGY_PATHS = (
     "README.md",
     "README.zh-TW.md",
     "docs/README.md",
+    "docs/product.md",
     "docs/architecture.md",
     "docs/guide",
-    "docs/faq.md",
-    "docs/faq.zh-TW.md",
     "CONTEXT.md",
-    "docs/design/README.md",
-    "docs/design/executable-acceptance-boundary.md",
-    "docs/design/property-based-testing.md",
-    "docs/design/property-completion-evidence-fidelity.md",
-    "docs/design/topple-scenario-authoring.md",
-    "docs/design/independent-safeguard-results.md",
-    "docs/design/mutation-attribution.md",
-    "docs/design/managed-mutation-profile.md",
-    "docs/design/contract-quality-advisory.md",
-    "docs/design/human-readable-reports.md",
-    "docs/releases/0.0.13.md",
-    "docs/releases/0.0.13.zh-TW.md",
+    "docs/design",
+    "docs/releases/0.0.14.md",
+    "docs/releases/0.0.14.zh-TW.md",
     "samples",
     ".agents/skills",
     "site/src",
@@ -63,25 +53,47 @@ LEGACY_TERMS = {
     r"隱藏性質|審閱者(?:專用|專屬)性質": "性質導向測試沒有隱藏或審閱者專用版本",
 }
 REQUIRED_GUIDES = (
+    "docs/product.md",
     "docs/architecture.md",
     "docs/guide/getting-started.md",
     "docs/guide/authoring.md",
     "docs/guide/verification-and-evidence.md",
     "docs/guide/troubleshooting.md",
 )
-EXPECTED_DESIGN_FILES = {
+EXPECTED_ROOT_MARKDOWN_FILES = {
+    "AGENTS.md",
+    "CONTEXT.md",
+    "CONTRIBUTING.md",
+    "DEVELOPMENT.md",
     "README.md",
-    "executable-acceptance-boundary.md",
-    "property-based-testing.md",
-    "property-completion-evidence-fidelity.md",
-    "topple-scenario-authoring.md",
-    "independent-safeguard-results.md",
-    "mutation-attribution.md",
-    "managed-mutation-profile.md",
-    "contract-quality-advisory.md",
-    "human-readable-reports.md",
+    "README.zh-TW.md",
+    "SECURITY.md",
 }
-CURRENT_RELEASE_FILES = {"0.0.13.md", "0.0.13.zh-TW.md"}
+EXPECTED_DOC_ROOT_MARKDOWN_FILES = {"README.md", "product.md", "architecture.md"}
+REQUIRED_DOC_INDEX_LINKS = (
+    "../README.md",
+    "product.md",
+    "guide/getting-started.md",
+    "guide/authoring.md",
+    "guide/verification-and-evidence.md",
+    "guide/troubleshooting.md",
+    "architecture.md",
+    "design/README.md",
+    "../CONTEXT.md",
+    "releases/0.0.14.md",
+    "releases/0.0.14.zh-TW.md",
+    "validation/README.md",
+)
+REQUIRED_DESIGN_SECTIONS = (
+    "## User example",
+    "## Problem",
+    "## Decision and product boundaries",
+    "## Visible interface and behavior",
+    "## Failure and integrity rules",
+    "## Acceptance evidence",
+    "## Consequences and alternatives",
+)
+CURRENT_RELEASE_FILES = {"0.0.14.md", "0.0.14.zh-TW.md"}
 RELEASE_NOTE = re.compile(r"^(\d+\.\d+\.\d+)(\.zh-TW)?\.md$")
 CONTEXT_TERMS = (
     "Executable Contract",
@@ -106,6 +118,9 @@ CONTEXT_TERMS = (
     "Mechanical Seal",
     "Reviewer Custody",
     "Current-run Evidence",
+    "Reviewer",
+    "Implementation Agent",
+    "External Workflow",
 )
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
 HTML_LINK = re.compile(r"(?:href|src)=[\"']([^\"']+)[\"']", re.IGNORECASE)
@@ -206,6 +221,19 @@ def has_balanced_fences(text: str) -> bool:
 def main() -> int:
     failures: list[str] = []
     public_documents = [path for path in source_markdown() if is_public_document(path)]
+    root_markdown_files = {path.name for path in ROOT.glob("*.md")}
+    if root_markdown_files != EXPECTED_ROOT_MARKDOWN_FILES:
+        failures.append(
+            "repository root: expected only indexed root Markdown files "
+            + ", ".join(sorted(EXPECTED_ROOT_MARKDOWN_FILES))
+        )
+    docs_root = ROOT / "docs"
+    docs_root_markdown_files = {path.name for path in docs_root.glob("*.md")}
+    if docs_root_markdown_files != EXPECTED_DOC_ROOT_MARKDOWN_FILES:
+        failures.append(
+            "docs: expected only the index, Product definition, and Architecture at its root"
+        )
+    guide_dir = docs_root / "guide"
     for required in REQUIRED_GUIDES:
         if not (ROOT / required).is_file():
             failures.append(f"required public guide is missing: {required}")
@@ -219,14 +247,49 @@ def main() -> int:
                 failures.append(f"CONTEXT.md: missing canonical term {term}")
         if "```" in context_text or "implementation plan" in context_text.lower():
             failures.append("CONTEXT.md: must remain a glossary without code or implementation plans")
+    docs_index = ROOT / "docs/README.md"
+    if not docs_index.is_file():
+        failures.append("required documentation index is missing: docs/README.md")
+    else:
+        docs_index_text = docs_index.read_text(encoding="utf-8")
+        for destination in REQUIRED_DOC_INDEX_LINKS:
+            if f"]({destination})" not in docs_index_text:
+                failures.append(f"docs/README.md: missing indexed document {destination}")
+        for guide in sorted(guide_dir.glob("*.md")):
+            destination = f"guide/{guide.name}"
+            if f"]({destination})" not in docs_index_text:
+                failures.append(f"docs/README.md: unindexed guide {destination}")
+
     design_dir = ROOT / "docs/design"
     if design_dir.is_dir():
-        design_files = {path.name for path in design_dir.iterdir() if path.is_file()}
-        if design_files != EXPECTED_DESIGN_FILES:
+        nested_design_dirs = [path.name for path in design_dir.iterdir() if path.is_dir()]
+        if nested_design_dirs:
             failures.append(
-                "docs/design: expected only formal records "
-                + ", ".join(sorted(EXPECTED_DESIGN_FILES))
+                "docs/design: archive or nested directories are not allowed: "
+                + ", ".join(sorted(nested_design_dirs))
             )
+        design_files = {path.name for path in design_dir.glob("*.md")}
+        design_index = design_dir / "README.md"
+        design_index_text = (
+            design_index.read_text(encoding="utf-8") if design_index.is_file() else ""
+        )
+        for name in sorted(design_files - {"README.md"}):
+            if f"]({name})" not in design_index_text:
+                failures.append(f"docs/design/README.md: missing indexed design record {name}")
+            record = design_dir / name
+            record_text = record.read_text(encoding="utf-8")
+            status_match = re.search(r"^\*\*Status:\*\* ([A-Za-z]+)$", record_text, re.MULTILINE)
+            if status_match is None or status_match.group(1) != "Accepted":
+                failures.append(f"docs/design/{name}: retained design status must be Accepted")
+            if not re.search(r"^\*\*Accepted date:\*\* \d{4}-\d{2}-\d{2}$", record_text, re.MULTILINE):
+                failures.append(f"docs/design/{name}: missing Accepted date metadata")
+            if "**Affected current documentation:**" not in record_text:
+                failures.append(f"docs/design/{name}: missing affected current-document metadata")
+            for heading in REQUIRED_DESIGN_SECTIONS:
+                if heading not in record_text:
+                    failures.append(f"docs/design/{name}: missing required section {heading}")
+            if "## Implementation task plan" in record_text:
+                failures.append(f"docs/design/{name}: retains a completed implementation task plan")
     release_dir = ROOT / "docs/releases"
     if release_dir.is_dir():
         release_files = {path.name for path in release_dir.iterdir() if path.is_file()}
@@ -240,7 +303,7 @@ def main() -> int:
             release_versions.setdefault(match.group(1), set()).add(language)
         if release_files != CURRENT_RELEASE_FILES:
             failures.append(
-                "docs/releases: expected only the 0.0.13 English and Traditional-Chinese notes"
+                "docs/releases: expected only the 0.0.14 English and Traditional-Chinese notes"
             )
         for version, languages in sorted(release_versions.items()):
             if languages != {"en", "zh-TW"}:
@@ -305,8 +368,8 @@ def main() -> int:
             if re.search(pattern, text):
                 failures.append(f"{relative}: uses replaced terminology matching {pattern}; {replacement}")
 
-    english_release = ROOT / "docs/releases/0.0.13.md"
-    chinese_release = ROOT / "docs/releases/0.0.13.zh-TW.md"
+    english_release = ROOT / "docs/releases/0.0.14.md"
+    chinese_release = ROOT / "docs/releases/0.0.14.zh-TW.md"
     if english_release.is_file() and chinese_release.is_file():
         release_markers = (
             (
@@ -333,7 +396,7 @@ def main() -> int:
             for marker in markers:
                 if marker not in text:
                     failures.append(
-                        f"{release.relative_to(ROOT)}: missing synchronized 0.0.13 change {marker}"
+                        f"{release.relative_to(ROOT)}: missing synchronized 0.0.14 change {marker}"
                     )
 
     if failures:

@@ -181,3 +181,68 @@ release_word_count="$(wc -w < "$release_path" | tr -d ' ')"
   || fail "$release_skill exceeds progressive-disclosure limits."
 
 echo "ToppleCat skill validation PASS: $release_skill"
+
+product_skill="topplecat-product-design"
+product_root="$root/.agents/skills/$product_skill"
+product_path="$product_root/SKILL.md"
+product_interface="$product_root/agents/openai.yaml"
+
+[[ -f "$product_path" ]] || fail "$product_path was not found."
+[[ -f "$product_interface" ]] || fail "$product_interface was not found."
+[[ "$(sed -n '1p' "$product_path")" == '---' ]] \
+  || fail "$product_skill is missing YAML front matter."
+[[ "$(sed -n '2p' "$product_path")" == "name: $product_skill" ]] \
+  || fail "$product_skill has a stale name."
+[[ "$(sed -n '3p' "$product_path")" == description:* ]] \
+  || fail "$product_skill is missing a description."
+[[ "$(sed -n '4p' "$product_path")" == '---' ]] \
+  || fail "$product_skill front matter must end on line 4."
+
+product_description="$(sed -n '3s/^description: //p' "$product_path")"
+for trigger in 'Frame ToppleCat product behavior' 'reviewing' 'designing' \
+  'implementation handoff' 'Product Frame'; do
+  [[ "$product_description" == *"$trigger"* ]] \
+    || fail "$product_skill description is missing its $trigger trigger."
+done
+
+for required in \
+  'DEVELOPMENT.md' \
+  'CONTEXT.md' \
+  'docs/product.md' \
+  'docs/design/README.md' \
+  'Product definition' \
+  'Product Frame' \
+  'Authoritative inputs' \
+  'What ToppleCat owns' \
+  'What remains outside ToppleCat' \
+  'Primary user and use moment' \
+  'Product-fit gate' \
+  'Product-fit verdict' \
+  'official primary sources' \
+  'Accepted' \
+  'owning topic record' \
+  'completed task plan' \
+  'delete the record' \
+  'acceptance check' \
+  'review-only requests read-only'; do
+  grep -Fq -- "$required" "$product_path" \
+    || fail "$product_skill is missing required behavior: $required"
+done
+
+grep -Fq 'display_name: "ToppleCat Product Design"' "$product_interface" \
+  || fail "$product_interface has a stale display name."
+grep -Fq '$topplecat-product-design' "$product_interface" \
+  || fail "$product_interface has a stale default prompt."
+grep -Fq 'topplecat-product-design' "$root/AGENTS.md" \
+  || fail "AGENTS.md does not route product changes through $product_skill."
+grep -Fq '.agents/skills/topplecat-product-design/SKILL.md' "$root/DEVELOPMENT.md" \
+  || fail "DEVELOPMENT.md does not route product changes through $product_skill."
+! grep -R -Fq '[TODO' "$product_root" \
+  || fail "$product_skill still contains a template TODO."
+
+product_line_count="$(wc -l < "$product_path" | tr -d ' ')"
+product_word_count="$(wc -w < "$product_path" | tr -d ' ')"
+[[ "$product_line_count" -le 120 && "$product_word_count" -le 800 ]] \
+  || fail "$product_skill exceeds progressive-disclosure limits."
+
+echo "ToppleCat skill validation PASS: $product_skill"

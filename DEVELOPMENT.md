@@ -21,8 +21,8 @@ additional reading.
 
 | Task | Read before editing | Main implementation area |
 | --- | --- | --- |
-| Understand the product or change supported behavior | [`README.md`](README.md), [`docs/architecture.md`](docs/architecture.md), [`docs/guide/authoring.md`](docs/guide/authoring.md), [`docs/guide/verification-and-evidence.md`](docs/guide/verification-and-evidence.md) | All four published modules |
-| Implement an accepted design | [`docs/design/README.md`](docs/design/README.md), the relevant design record, and the current architecture/guide it will change | The components and tests named by that design |
+| Understand the product or change supported behavior | [product-design skill](.agents/skills/topplecat-product-design/SKILL.md), [`README.md`](README.md), [`docs/product.md`](docs/product.md), [`docs/architecture.md`](docs/architecture.md), and the affected guide | All four published modules |
+| Implement an accepted design | [`docs/design/README.md`](docs/design/README.md), the active design record, and every current document it will change; delete the record after synchronization | The components and tests named by that design |
 | Record a cross-cutting product decision before delegation | [`docs/design/README.md`](docs/design/README.md) | `docs/design/` |
 | Change case schemas, evidence models, custody metadata, or safe feedback | [`docs/architecture.md`](docs/architecture.md), [`docs/guide/verification-and-evidence.md`](docs/guide/verification-and-evidence.md) | `topplecat-core/` |
 | Change annotations, case injection, Stage DSL, or expected consumption | [`docs/guide/authoring.md`](docs/guide/authoring.md), [`docs/architecture.md`](docs/architecture.md) | `topplecat-junit/` |
@@ -35,7 +35,7 @@ additional reading.
 | Change website deployment | [`site/README.md`](site/README.md), [Pages workflow](.github/workflows/pages.yml), [`site/vite.config.js`](site/vite.config.js) | `.github/workflows/pages.yml`, `site/` |
 | Change public documentation | The implementation document for the affected feature and [`README.md`](README.md) | `README.md`, `docs/` |
 | Prepare a release or its maintainer publication handoff | [release skill](.agents/skills/topplecat-release/SKILL.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), and [`docs/validation/README.md`](docs/validation/README.md) | Release-facing docs and site, release notes, local Git tag, and the Maven/GitHub handoff |
-| Change a repository-owned ToppleCat agent skill | The affected skill and [`docs/validation/README.md`](docs/validation/README.md) | `.agents/skills/topplecat-acceptance/`, `.agents/skills/topplecat-release/` |
+| Change a repository-owned ToppleCat agent skill | The affected skill and [`docs/validation/README.md`](docs/validation/README.md) | `.agents/skills/` |
 
 ## Repository map
 
@@ -46,11 +46,12 @@ additional reading.
 | `topplecat-report/` | Reviewer-only Spec Review and Verification Report projections and static HTML rendering |
 | `topplecat-gradle-plugin/` | Gradle lifecycle, verification runs, report publication, and mutation gate |
 | `samples/` | Independent consumer projects and reproducible walkthroughs |
-| `docs/` | User guides, architecture, troubleshooting, release notes, and validation records |
-| `docs/design/` | Implemented product decisions, examples, trade-offs, and acceptance evidence |
+| `docs/` | Indexed Product definition, current guides, Architecture, release notes, and maintainer validation rules |
+| `docs/design/` | Accepted product designs awaiting implementation; completed records are deleted after current docs are synchronized |
 | `site/` | Vite/React source for the static GitHub Pages project site |
 | `scripts/` | Release, documentation, sample, cleanup, and skill validation |
 | `.github/workflows/` | CI and GitHub Pages automation |
+| `.agents/skills/topplecat-product-design/` | Repository-owned product framing and design guidance before implementation |
 | `.agents/skills/topplecat-acceptance/` | Repository-owned authoring guidance for executable ToppleCat acceptance contracts |
 | `.agents/skills/topplecat-release/` | Repository-owned preparation and publication guidance for developer-facing ToppleCat releases |
 
@@ -74,14 +75,15 @@ Keep these boundaries in mind:
   reviewer-only data, identifiers, source names, paths, or raw failures.
 - Humans remain responsible for the completeness of the approved contract.
 
-Read [`docs/architecture.md`](docs/architecture.md) for the full contract,
+Read [`docs/product.md`](docs/product.md) for product ownership and
+[`docs/architecture.md`](docs/architecture.md) for the implemented contract,
 verification, information, and delivery boundaries.
 
-Design records under [`docs/design/`](docs/design/) explain why a future or
-recent change was chosen. Their status matters: `Accepted` means the direction
-is decided, while `Implemented` means the current architecture, guides, tests,
-and code have been synchronized. Do not describe an accepted-only design as
-current product behavior.
+Design records under [`docs/design/`](docs/design/) are temporary implementation
+handoffs. Every retained record is `Accepted` and therefore not current product
+behavior. When implementation finishes, merge its lasting content into Product,
+Architecture, guides, glossary, skills, and release-facing docs as applicable,
+then delete the record.
 
 ## Local prerequisites
 

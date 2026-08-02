@@ -128,3 +128,25 @@ Mechanical Seal. It is custody, not encryption or a security boundary.
 **Current-run Evidence／本次執行證據**:
 The evidence produced by the active formal verification run. Archived output
 is diagnostic material and cannot replace it.
+
+## People and orchestration
+
+**Reviewer／審閱者**:
+The human accountable for reading the prepared Executable Contract and the
+current Verification Report, then deciding whether to accept the delivery. The
+Reviewer may be the developer, Spec owner, or another team member; ToppleCat
+does not define a separate organizational role or grant approval.
+_Avoid_: mandatory QA department, automated approver
+
+**Implementation Agent／實作代理**:
+The AI coding agent that implements against the public handoff and may receive
+safe Gate-level feedback. It does not receive reviewer-owned contract material
+or either reviewer-only HTML report.
+_Avoid_: Reviewer, approval authority
+
+**External Workflow／外部工作流程**:
+The human or automation that chooses the current Spec, decides when and where
+ToppleCat runs, manages delivery history, and applies organizational policy.
+ToppleCat supplies verification mechanisms and evidence, not workflow
+orchestration.
+_Avoid_: ToppleCat-managed task or Spec lifecycle

@@ -42,6 +42,6 @@ class ReviewerContractApprovalJsonTest {
             new PublicContractEntry(
                 "src/test/java/example/AmountAcceptanceTest.java", entryDigest)),
         "c".repeat(64),
-        new VerificationPolicy("0.0.13", true, true, true, true, threshold));
+        new VerificationPolicy("0.0.14", true, true, true, true, threshold));
   }
 }

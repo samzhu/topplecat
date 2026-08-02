@@ -8,85 +8,111 @@
 
 <p align="center"><a href="README.zh-TW.md">繁體中文</a> · <a href="LICENSE">Apache-2.0</a></p>
 
-ToppleCat is a Java/JUnit delegation-verification gate. Java acceptance tests
-and typed JSON or YAML case rows are the executable contract; JSON evidence and
-HTML reports are projections, never another source of truth.
+ToppleCat is a Java/JUnit delegation-verification gate for teams that ask AI
+coding agents to implement a selected Spec while a human remains responsible
+for acceptance. After the agent says the work is done, ToppleCat runs the
+sealed executable acceptance contract and produces fresh evidence plus a
+human-readable recommendation.
 
-It keeps three independent safeguards separate:
+Ordinary Java acceptance tests and typed JSON or YAML case rows are the source
+of truth. Generated JSON and HTML explain what was checked; they never become a
+second specification.
 
-| Safeguard | Input and question | Gate |
+## A concrete example
+
+A checkout Spec says that a 1,000-dollar order receives a 100-dollar discount.
+The public example checks `1,000 -> 900`, but an implementation could hard-code
+`900` and still pass it.
+
+A Reviewer can prepare additional evidence before handing the work to the
+agent:
+
+- a reviewer-owned case such as `2,000 -> 1,900` or `999 -> no discount`;
+- a Property such as “the payable total is never negative”; and
+- managed Mutation Testing that asks whether the public Acceptance Method
+  notices a changed boundary or arithmetic operation.
+
+After implementation, ToppleCat runs each enabled safeguard independently and
+shows all results together. A `PASS` can support a recommendation to accept the
+delivery, but the human makes the final decision. ToppleCat cannot infer a
+missing rule, such as a VIP discount that the Spec never stated.
+
+## How it fits into delivery
+
+```text
+human selects the Spec and prepares the executable contract
+    -> Spec Review: confirm what will be checked
+    -> AI agent implements with ordinary ./gradlew test feedback
+    -> toppleCatVerify: produce fresh formal evidence
+    -> Verification Report: recommend accept, reject, or incomplete
+    -> human decides what happens to the delivery
+```
+
+Both HTML reports are for the human Reviewer. The Implementation Agent receives
+the public contract and safe Gate-level feedback, never reviewer-owned cases or
+either HTML report.
+
+ToppleCat supplies commands, evidence, and reports. The team decides who runs
+them and whether they run locally, in CI, or in another workflow.
+
+## What ToppleCat checks
+
+| Safeguard | Question | Gate |
 | --- | --- | --- |
-| **Hidden Tests** | Reviewer-owned typed case rows: do independently chosen examples pass? | `REVIEWER_JUNIT` |
-| **Mutation Testing** | Exact public Acceptance Methods and PIT's full matrix: does each method detect the mutants it covered? | `MUTATION` |
-| **Property-Based Testing (PBT)** | Bounded `@ToppleProperty` declarations: does an approved invariant survive generated inputs? | `PROPERTY` |
+| **Hidden Tests** | Do independently chosen reviewer examples pass the same public Acceptance Method? | `REVIEWER_JUNIT` |
+| **Property-Based Testing** | Does a human-approved invariant survive bounded generated inputs? | `PROPERTY` |
+| **Mutation Testing** | Does each exact public Acceptance Method detect the managed-profile mutants it covered? | `MUTATION` |
 
-None supplies evidence for another. They share contract integrity, scope
-selection, reporting, and the aggregate verdict only. Reviewer custody belongs
-to Hidden Tests; Property declarations live under `src/test`. Expected-value
-consumption is a separate `EXPECTED_CONSUMPTION` guard for typed case rows.
+The safeguards are independent: one never supplies evidence for another, and
+their results are not blended into a quality score. Contract Integrity confirms
+that the selected contract and verification policy still match the Mechanical
+Seal. Expected Consumption separately checks that authored expected values were
+actually asserted.
 
-ToppleCat does not manage tasks, Spec lifecycle, organizational approval, CI
-isolation, or OS security. People select the delivery, make its rules complete,
-and decide sign-off.
+Formal Mutation Testing uses ToppleCat's fixed, versioned PIT profile and
+preserves PIT's official outcomes. Project-specific PIT tasks remain separate
+and never enter ToppleCat evidence. See the
+[verification guide](docs/guide/verification-and-evidence.md#independent-formal-work).
 
-## The two pipelines
+## Quick start
 
-```text
+ToppleCat 0.0.14 requires Java 25 and a compatible Gradle version.
+
+```kotlin
+plugins {
+    java
+    id("io.github.samzhu.topplecat") version "0.0.14"
+}
+
+dependencies {
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.14")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
+}
+
+tasks.test { useJUnitPlatform() }
+```
+
+Prepare and inspect the contract before implementation, then verify the same
+selected Spec after the agent's done claim:
+
+```bash
+./gradlew toppleCatCheck --spec specs/checkout/spec.md
+./gradlew toppleCatReview --spec specs/checkout/spec.md
+./gradlew toppleCatSeal --spec specs/checkout/spec.md
+
 ./gradlew test
-    ordinary project tests and public acceptance tests; development feedback only
-
-./gradlew toppleCatVerify --spec path/to/spec.md
-    fresh formal acceptance evidence for the selected delivery
+./gradlew toppleCatVerify --spec specs/checkout/spec.md
 ```
 
-The ordinary `test` task must not depend on Check, Review, Seal, custody,
-reports, or formal evidence. `toppleCatVerify` always runs the formal public
-acceptance task freshly, then evaluates every enabled Independent Safeguard.
-After contract integrity passes, a failed safeguard records its own result but
-does not stop later safeguards; the one aggregate failure comes after evidence,
-reports, safe feedback, and rehide.
+Start with the [getting-started guide](docs/guide/getting-started.md) or run the
+[JUnit sample](samples/junit-cart-orders).
 
-## Workflow
+## A minimal acceptance contract
 
-```text
-author public contract + Properties + reviewer-owned hidden rows
-    -> toppleCatCheck -> toppleCatReview -> toppleCatSeal
-    -> implementation uses ./gradlew test
-    -> reviewer or CI uses toppleCatVerify
-```
-
-Use `toppleCatRestore` only in the reviewer boundary. After editing reviewer
-material, use `toppleCatRestore -> toppleCatCheck -> toppleCatReview ->
-toppleCatReseal`. Custody is plaintext local state under
-`~/.topplecat/projects/<sha256-project-key>/escrow/`; it is not encryption or a
-sandbox.
-
-`--spec <repository-relative-markdown-file>` is the only delivery input. Repeat
-it for multiple documents; no `--spec` selects all acceptance conditions.
-`--all-hidden-tests` broadens only hidden typed rows. Public Properties follow
-the selected ACs; Mutation Testing remains the full public acceptance contract.
-
-For Mutation Testing, formal Verify always runs ToppleCat's managed PIT 1.25.5
-producer with the fixed `topplecat-managed-v1` profile. It never consumes a
-project `pitest` task, a consumer-selected producer, or a consumer report path.
-Project-wide `tasks.withType(PitestTask)` conventions remain part of a separate
-project PIT workflow and cannot alter formal Verify.
-ToppleCat preserves PIT's raw `status`, `detected`, mutator, description, and
-selector relationships. Its per-AC detection rate counts the mutants a
-specific public Acceptance Method appears in `killingTests` for, divided by the
-mutants that same method appears in `coveringTests` for; it is not PIT's global
-mutation threshold. An AC with no covered managed-profile mutant is a
-reviewer-visible attribution gap, not automatic passing evidence. Reviewer-only
-The reviewer-only Verification Report shows the raw matrix; safe feedback stays at Gate level.
-See the [managed mutation profile design](docs/design/managed-mutation-profile.md)
-for the fixed 12 operators and Gate rules.
-
-## Write an acceptance contract
-
-Each AC has one public `@ToppleAcceptanceTest`. The default form receives one
-`ToppleScenario` and one or more concrete capability Stages. Its small
-orchestration method selects the compiled Given/When/Then order; setup,
-service calls, assertions, and control flow belong in those Stages.
+Each Acceptance Condition has one public Java/JUnit Acceptance Method. The
+method describes one ordered Scenario; ordinary Java Stage methods perform the
+business calls and assertions.
 
 ```java
 @ToppleAcceptanceTest("AC-CART-COUPON")
@@ -98,116 +124,74 @@ void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
 }
 ```
 
-`CouponStage` is a non-final concrete `ToppleStage` with an accessible
-no-argument constructor. The same proxy carries its per-case state across the
-three calls. This is the only supported acceptance-authoring form.
+Typed rows provide the inputs and expected results:
 
-Public rows live under `src/test/resources/topplecat/cases/`; reviewer-owned
-rows use the same schema under `src/hiddenTest/resources/topplecat/cases/`.
-One row has exactly `caseId`, `acId`, `inputs`, and `expected`. A top-level
-expected value is an assertion obligation: `c.verify(...)` consumes it, while
-merely reading it does not.
-
-## Add an invariant when examples are not enough
-
-`@ToppleProperty` is a bounded JUnit check tied to an existing AC. It is not a
-case row and does not enter expected consumption or mutation attribution.
-
-```java
-@ToppleProperty("AC-CART-COUPON")
-void payableTotalIsNeverNegative(PropertyTrials trials) {
-    trials.forAll(Generators.integers(0, 10_000))
-        .classify("free-shipping-boundary", subtotal -> subtotal >= 1_000)
-        .requireCoverage("free-shipping-boundary", 5.0)
-        .check(subtotal -> assertTrue(checkout.payable(subtotal) >= 0));
-}
+```yaml
+- caseId: coupon-at-threshold
+  acId: AC-CART-COUPON
+  inputs:
+    cart: {subtotal: 1000}
+  expected:
+    receipt: {total: 900}
 ```
 
-Properties live under `src/test`, but ordinary `./gradlew test` excludes them.
-`toppleCatVerify` runs Properties for the selected ACs in the independent
-`PROPERTY` gate. A reproducible failure records generator choices, a shrunk
-counterexample, and a replay token in the reviewer-only Verification Report
-report. Safe feedback never contains generated inputs, identifiers, tokens,
-paths, or raw failures.
-
-The report's Property count is completion evidence, not a pass total. It counts
-one selected sealed Property only when its current run has one matching
-`STARTED` event followed by one matching terminal event. A counterexample or an
-incomplete terminal outcome can therefore count as completed while the
-`PROPERTY` Gate remains `FAIL` or `INCOMPLETE`.
-
-## Configure safeguards
-
-Each safeguard has its own switch. Disabling one records `DISABLED`; it never
-pretends to be `NOT_APPLICABLE` or `PASS`.
-
-```kotlin
-toppleCat {
-    hiddenTests { enabled.set(false) }
-    mutationTesting { enabled.set(false) }
-    propertyBasedTesting { enabled.set(false) }
-    expectedConsumption { enabled.set(false) }
-}
-```
-
-If Hidden Tests remain enabled, missing executed hidden rows leave
-`REVIEWER_JUNIT=INCOMPLETE`, even if a Property passes. A Property-only team
-must explicitly disable Hidden Tests and reseal that policy; then evidence shows
-`REVIEWER_JUNIT=DISABLED` and the actual `PROPERTY` result.
+Public rows live under `src/test`; reviewer-owned rows use the same schema under
+`src/hiddenTest`. See [Authoring contracts](docs/guide/authoring.md) for the
+complete Java, Stage, case, expected-value, and Property rules.
 
 ## Read the result
 
 | Artifact | Audience | Purpose |
 | --- | --- | --- |
-| `build/topplecat/reports/review/index.html` | Reviewer | Spec Review before handoff: the complete selected Markdown document and its bound executable material. |
-| `build/topplecat/reports/verification/index.html` | Reviewer | Failure-first Verification Report for one formal run, including private diagnostics. |
-| `build/topplecat/evidence.json` | Reviewer / CI | Machine verdict and gate digests. |
-| `build/topplecat/agent-feedback.json` | Implementation agent | Gate-level safe feedback only. |
+| `build/topplecat/reports/review/index.html` | Reviewer | Spec Review before handoff: the complete selected Spec and bound executable material, not an execution result. |
+| `build/topplecat/reports/verification/index.html` | Reviewer | Verification Report for the current formal run, including private diagnostics and the accept/reject/incomplete recommendation. |
+| `build/topplecat/evidence.json` | Reviewer / automation | Machine-readable current-run verdict and Gate digests. |
+| `build/topplecat/agent-feedback.json` | Implementation Agent | Safe Gate-level remediation without reviewer answers. |
 
-Spec Review can also show non-blocking reviewer advisories about hidden
-expected-output shapes and likely opaque identifier literals. They are prompts
-to examine the selected examples, not inferred business rules: they never
-change the executable contract, Seal, evidence, public handoff, or a Gate.
+The aggregate verdict is:
 
-Every formal run records `CONTRACT_INTEGRITY`, `JUNIT`, `REVIEWER_JUNIT`,
-`EXPECTED_CONSUMPTION`, `PROPERTY`, and `MUTATION`. The aggregate verdict is
-`PASS`, `FAIL`, or `INCOMPLETE`; accept a done claim only when the current run
-is `PASS`.
+- `PASS`: the current selected contract passed; the report may recommend
+  accepting the delivery;
+- `FAIL`: completed verification found a problem; the report may recommend
+  rejecting or revising the delivery; or
+- `INCOMPLETE`: ToppleCat could not obtain enough trustworthy current-run
+  evidence to recommend acceptance.
 
-## Install 0.0.13
+The human keeps the final decision in every case.
 
-ToppleCat requires Java 25 and a compatible Gradle version.
+## Product boundaries
 
-```kotlin
-plugins {
-    java
-    id("io.github.samzhu.topplecat") version "0.0.13"
-}
+ToppleCat starts at the executable acceptance boundary:
 
-dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.13")
-    testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
-}
+- Humans or external workflows select the Spec and remain responsible for
+  complete rules and cases.
+- Teams own task state, Spec lifecycle, execution placement, PR policy,
+  organizational approval, and sign-off.
+- Ordinary unit and QA testing, project-specific PIT, performance programs, and
+  security programs remain project concerns.
+- Reviewer Custody is plaintext mechanical storage, not encryption, a sandbox,
+  CI isolation, or operating-system security.
 
-tasks.test { useJUnitPlatform() }
-```
+Read the canonical
+[product definition](docs/product.md)
+before proposing a new ToppleCat responsibility.
 
 ## Learn more
 
 - [Getting started](docs/guide/getting-started.md)
 - [Authoring contracts](docs/guide/authoring.md)
 - [Verification and evidence](docs/guide/verification-and-evidence.md)
-- [Documentation index](docs/README.md)
-- [Context glossary](CONTEXT.md)
+- [Product definition](docs/product.md)
 - [Architecture](docs/architecture.md)
-- [0.0.13 release notes](docs/releases/0.0.13.md)
+- [Context glossary](CONTEXT.md)
+- [Documentation index](docs/README.md)
+- [0.0.14 release notes](docs/releases/0.0.14.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 
 The repository also provides the
-[`topplecat-acceptance`](.agents/skills/topplecat-acceptance/SKILL.md) skill.
-It helps SDD agents turn selected ACs into executable Java acceptance methods,
-public and reviewer case rows, and optional Properties. Humans or external
-workflow automation remain responsible for running ToppleCat and accepting its
-verdict.
+[`topplecat-acceptance`](.agents/skills/topplecat-acceptance/SKILL.md) skill
+for turning selected ACs into executable Java acceptance methods, public and
+reviewer case rows, and optional Properties. Humans or external workflow
+automation remain responsible for running ToppleCat and deciding what to do
+with its recommendation.

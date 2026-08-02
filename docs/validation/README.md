@@ -1,7 +1,8 @@
-# External validation records
+# Release validation
 
-This directory indexes public release-validation records. From a clean
-checkout, run:
+This maintainer document lists the current public release checks. It does not
+store generated validation output or historical run logs. From a clean checkout,
+run:
 
 ```bash
 ./gradlew check

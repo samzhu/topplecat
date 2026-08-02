@@ -67,14 +67,7 @@ on its own.
 
 ## Custody cannot be restored
 
-The 0.0.13 custody state is reviewer-local under
+The 0.0.14 custody state is reviewer-local under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`. The project must be opened
 at the same resolved path and with the reviewer state available. Prior-format
 custody is not migrated; create a new sealed reviewer state.
-
-## A retired public report path is absent
-
-`reports/public/index.html` is intentionally not published. Use reviewer-only
-Spec Review before handoff and the reviewer-only Verification Report after
-formal Verify. `agent-feedback.json` remains the only generated result intended
-for the implementation agent.

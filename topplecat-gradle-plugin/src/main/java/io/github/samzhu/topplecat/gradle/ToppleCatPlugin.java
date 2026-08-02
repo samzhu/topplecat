@@ -226,7 +226,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                 task -> {
                   task.setGroup("verification");
                   task.setDescription(
-                      "Writes a reviewer-only static contract review without executing tests.");
+                      "Writes the reviewer-only Spec Review without executing verification.");
                   task.dependsOn(check);
                   task.getProjectRoot().set(project.getLayout().getProjectDirectory());
                   task.getPublicTestSourceRoot()
@@ -554,7 +554,8 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                 task -> {
                   task.setGroup("verification");
                   task.setDescription(
-                      "Writes safe Spec and reviewer-only Verification reports plus evidence.");
+                      "Writes Current-run Evidence, safe agent feedback, and the reviewer-only"
+                          + " Verification Report.");
                   task.getProjectRoot().set(project.getLayout().getProjectDirectory());
                   task.getPublicCaseRoot().set(extension.getPublicCaseRoot());
                   task.getDefinitionFile()

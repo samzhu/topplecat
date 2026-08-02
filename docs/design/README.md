@@ -1,73 +1,89 @@
-# Product design records
+# Product design workspace
 
-This directory keeps the few product decisions that need more detail than a
-standing agent rule and are not fully explained by the current architecture.
+This directory is for accepted product work that has not been implemented yet.
+It is a handoff workspace, not a permanent archive.
 
-For example, suppose one delivery changes checkout while the repository also
-contains older coupon and cancellation Specs. A design record can explain which
-acceptance conditions ToppleCat should execute, why Hidden Tests and Mutation Testing
-have different scopes, what the command should look like, and how a changed
-Spec is detected. `AGENTS.md` should only tell an agent to follow that decision;
-it should not repeat the whole design.
+Current product facts belong in the [Product definition](../product.md),
+[Architecture](../architecture.md), [guides](../README.md), and
+[context glossary](../../CONTEXT.md).
 
-## Where each kind of information belongs
+## Active designs
 
-| Information | Canonical location |
+There are no active product designs.
+
+An empty list is normal. It means every accepted design has either been
+implemented and merged into current documentation or removed before
+delegation.
+
+## Decide by content
+
+Do not classify a file from its name or directory alone. Read it and move each
+lasting part to the document that owns that kind of information:
+
+| Content | Owner |
 | --- | --- |
-| Rules every coding agent must follow | Repository or nested `AGENTS.md` |
-| Repository map and commands | `DEVELOPMENT.md` |
-| Current implemented product boundaries and data flow | `docs/architecture.md` |
-| Current user workflow and supported configuration | `README.md` and `docs/guide/` |
-| A significant decision, its example, alternatives, and consequences | `docs/design/` |
-| What changed in a published version | `docs/releases/` |
-| Executable behavior | Java/JUnit tests and typed JSON/YAML case rows |
+| Audience, product promise, use moments, responsibility boundary, product-fit test | `docs/product.md` |
+| Current modules, execution model, data flow, integrity, custody, information boundary | `docs/architecture.md` |
+| Current commands, authoring, configuration, result interpretation, troubleshooting | `docs/guide/` |
+| Precise product terms | `CONTEXT.md` |
+| Published version changes | `docs/releases/` |
+| Accepted behavior not implemented yet, with alternatives and acceptance evidence | `docs/design/` |
+| Completed task plan, technical spike, temporary research, duplicated explanation | Delete after its conclusion reaches the owner above |
 
-## Status
+If one file contains several kinds of content, split by responsibility. Do not
+keep the mixed file merely because part of it remains useful.
 
-Every retained design record is decision-complete before implementation. A new
-decision starts as **Accepted** while its implementation is in progress. Change
-it to **Implemented** only after the code, tests, architecture, guides, and
-other current-product documentation have been synchronized. Do not describe an
-Accepted-only record as supported current behavior.
+## Lifecycle
 
-## Required structure
+1. Discuss and research a proposal without creating a permanent record.
+2. After the human accepts a cross-cutting direction, create one design record
+   with `Status: Accepted` before delegating implementation.
+3. During implementation, keep the record focused on unresolved behavior,
+   boundaries, failure rules, and acceptance evidence. Do not add a daily log
+   or completed task checklist.
+4. When code and tests pass, merge each lasting conclusion into Product,
+   Architecture, the affected guides, glossary, skills, and release-facing
+   documentation as applicable.
+5. Delete the completed design record in that same change. Git history keeps
+   the development trail.
 
-Use a concrete user example before technical details, then record:
+Do not mark a retained record `Implemented`. An implemented design remaining in
+this directory is unfinished documentation cleanup.
 
-1. **Status and date**
-2. **User example**
-3. **Problem**
-4. **Decision and product boundaries**
-5. **Visible interface and behavior**
-6. **Failure and integrity rules**
-7. **Acceptance evidence**
-8. **Consequences and alternatives**
+Do not create `archive/`, `completed/`, or `history/` folders. They keep stale
+instructions searchable and make a new session guess which answer is current.
 
-The record should be decision-complete before implementation is delegated.
-After implementation, synchronize the current-product documents in the same
-change. Move the lasting conclusion into the formal record; do not retain
-step-by-step delivery notes or one-time technical spikes.
+## Required shape for an active design
 
-This structure follows three complementary practices:
+Use one concrete user example before implementation details, then include:
 
-- [OpenAI's `AGENTS.md` guidance](https://learn.chatgpt.com/docs/agent-configuration/agents-md.md)
-  uses repository and nested files for durable instructions close to the work.
-- [GitHub's repository-instruction guidance](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions)
-  likewise separates repository-wide and path-specific agent instructions.
-- [Google Cloud's decision-record guidance](https://docs.cloud.google.com/architecture/architecture-decision-records)
-  keeps the context, alternatives, decision, and consequences near the
-  codebase so later contributors can understand why a choice was made.
+1. `Status: Accepted` and acceptance date;
+2. affected current documents;
+3. **User example**;
+4. **Problem**;
+5. **Decision and product boundaries**;
+6. **Visible interface and behavior**;
+7. **Failure and integrity rules**;
+8. **Acceptance evidence**; and
+9. **Consequences and alternatives**.
 
-## Current records
+The record must say which Product, Architecture, guide, glossary, skill, and
+user-facing sections will change when implementation finishes. README and
+guides must not describe the design as available while the record remains here.
 
-- [Executable acceptance boundary](executable-acceptance-boundary.md)
-- [Property-Based Testing safeguard](property-based-testing.md)
-- [Property completed count evidence fidelity](property-completion-evidence-fidelity.md)
-- [ToppleScenario authoring](topple-scenario-authoring.md)
-- [Independent safeguard results](independent-safeguard-results.md)
-- [Mutation attribution and gate](mutation-attribution.md)
-- [Managed mutation profile and verification evidence](managed-mutation-profile.md)
-- [Contract quality advisory](contract-quality-advisory.md)
-- [Human-readable Spec Review and Verification Report](human-readable-reports.md)
+## Completion check
 
-Use the root [context glossary](../../CONTEXT.md) for shared terms.
+Before deleting a completed record, verify all of these from current files:
+
+- Code and tests implement the accepted behavior.
+- Product definition still states the correct ownership boundary.
+- Architecture explains the implemented structure and information flow.
+- Guides explain every supported command, option, result, and diagnostic users
+  need.
+- Glossary, skills, README, and release notes are synchronized where affected.
+- No remaining document links to the record being removed.
+- Documentation checks and the relevant repository tests pass.
+
+If a conclusion has no current owner, the design is not ready to delete. Add it
+to the correct current document first; do not retain the whole work package as
+a shortcut.

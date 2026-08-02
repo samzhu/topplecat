@@ -4,6 +4,14 @@ ToppleCat verifies an executable Java/JUnit acceptance contract. It does not
 select the current work, manage delivery history, grant organizational approval,
 or provide an operating-system security boundary.
 
+The Reviewer may be the developer, Spec owner, or another accountable human.
+That human reads Spec Review before implementation handoff and Verification
+Report after the implementation agent's done claim, then decides whether to
+accept the delivery. A team may run the commands locally, in CI, or through an
+external workflow; ToppleCat supplies verification and evidence but does not
+own that orchestration. Verification Report may recommend acceptance or
+rejection from the Gate results, while the human keeps the final decision.
+
 ## Reviewer workflow
 
 ```bash
@@ -31,7 +39,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.13 custody and approval schemas are current-only. A prior schema is not
+The 0.0.14 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -74,6 +82,24 @@ reuse for both the producer and Gate. The XML, v1 result, completion marker,
 evidence, and report therefore belong to the same run.
 Project-wide `tasks.withType(PitestTask)` conventions apply only to the
 project's own PIT tasks; they cannot rewrite the formal managed producer.
+
+The fixed profile contains these exact PIT operator IDs:
+
+```text
+TRUE_RETURNS
+FALSE_RETURNS
+PRIMITIVE_RETURNS
+EMPTY_RETURNS
+NULL_RETURNS
+REMOVE_CONDITIONALS_EQUAL_IF
+REMOVE_CONDITIONALS_EQUAL_ELSE
+REMOVE_CONDITIONALS_ORDER_IF
+REMOVE_CONDITIONALS_ORDER_ELSE
+CONDITIONALS_BOUNDARY
+VOID_METHOD_CALLS
+MATH
+```
+
 ToppleCat attributes a result only to the exact public Acceptance Method whose
 class, method, overload, and parameter types match the PIT selector.
 `coveringTests` says the method ran against that mutant; `killingTests` says
@@ -176,6 +202,13 @@ Contract Integrity, Public Acceptance and Expected Consumption, Hidden Tests,
 Property-Based Testing, and Mutation Testing. A field-level expected/actual
 comparison is reviewer-only diagnostic context for the failed compiler Step; it
 does not alter the JUnit assertion or Expected Consumption result.
+
+Both HTML bundles are offline, self-contained, and CSP-safe. Spec Review
+supports headings, paragraphs, lists, task lists, block quotes, tables, links,
+inline and fenced code, repository-local images, and Mermaid diagrams. Raw HTML
+and unsafe URLs never execute; missing assets and diagram failures keep visible
+fallback text. Reports fetch no external fonts, UI code, syntax highlighter,
+Mermaid runtime, analytics, or CDN assets.
 
 ## Custody boundary
 
