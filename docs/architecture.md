@@ -112,7 +112,7 @@ fail during command configuration, before a formal Verify run starts.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.16 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.17 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
@@ -180,6 +180,19 @@ Hidden Tests, Property-Based Testing, and Mutation Testing in separate sections.
 When a `ToppleCase.verify(...)` comparison differs, the active compiler Step
 receives reviewer-only structured expected/actual field differences; that data
 never enters evidence feedback for the implementation agent.
+
+Within Mutation Testing, the primary reading order is AC-first. For each AC,
+the report keeps Public Acceptance, Hidden Tests, and Mutation Testing as
+separate results, then explains whether the public Acceptance Method noticed
+enough temporary production-behavior changes to meet its sealed requirement.
+It projects existing covered, noticed, threshold, and detection values without
+recalculating policy. An unavailable per-AC result remains visible as no data,
+with the recorded `DISABLED`, `NOT_APPLICABLE`, or `INCOMPLETE` reason when
+applicable. The managed profile, PIT-wide outcomes, operator IDs, attribution
+counts, selectors, mutator descriptions, and raw PIT outcomes stay unchanged
+inside collapsed reviewer technical details. This presentation does not change
+Current-run Evidence, the Mechanical Seal, a Gate, the aggregate verdict, or
+safe Implementation Agent feedback.
 
 Direct `toppleCatCheck` logs reviewer-only, non-blocking Contract Quality
 Advisories about hidden expected-output shapes and opaque identifier literals,

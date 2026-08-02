@@ -158,7 +158,7 @@ release_skill="topplecat-release"
 release_root="$root/.agents/skills/$release_skill"
 release_path="$release_root/SKILL.md"
 release_interface="$release_root/agents/openai.yaml"
-release_references=(release-notes.md maintainer-publishing.md)
+release_references=(release-notes.md maintainer-publishing.md release-gate-hygiene.md)
 
 [[ -f "$release_path" ]] || fail "$release_path was not found."
 [[ -f "$release_interface" ]] || fail "$release_interface was not found."
@@ -184,23 +184,86 @@ for required in \
   'CONTEXT.md' \
   'developer capability' \
   'site decision' \
-  'generated notes' \
   'docs/validation/README.md' \
-  'explicitly authorizes the release' \
+  'release-gate hygiene' \
+  'Gradle TestKit daemon' \
+  'topplecat-gradle-plugin/build/' \
+  'same complete release gate' \
+  'Invoking `$topplecat-release` authorizes the complete release flow' \
+  'java-format format' \
+  'Commit the formatted release candidate' \
+  'next remote tag' \
+  'Tag annotation' \
+  'docs/releases/X.Y.Z.md' \
   'annotated `X.Y.Z` tag' \
   'Do not require a' \
-  'Push the verified tag to `origin`' \
-  'Stop at the remote-tag boundary' \
+  './gradlew publishToMavenLocal' \
+  'git push origin main' \
+  'git push origin X.Y.Z' \
   'Maven Central' \
   'GitHub Release'; do
   grep -Fq -- "$required" "$release_path" \
     || fail "$release_skill is missing required behavior: $required"
 done
 
+last_line=0
+for marker in \
+  'java-format format' \
+  'Commit the formatted release candidate' \
+  'next remote tag' \
+  'Tag annotation' \
+  'annotated `X.Y.Z` tag' \
+  './gradlew publishToMavenLocal' \
+  'git push origin main' \
+  'git push origin X.Y.Z'; do
+  marker_line="$(grep -n -m 1 -F -- "$marker" "$release_path" | cut -d: -f1)"
+  [[ -n "$marker_line" && "$marker_line" -gt "$last_line" ]] \
+    || fail "$release_skill does not keep release operations in the required order at $marker"
+  last_line="$marker_line"
+done
+
+! grep -R -Fq 'scripts/publish-central.sh' "$release_root" \
+  || fail "$release_skill must leave Maven Central publication to the maintainer."
+! grep -R -Fq 'gh release create' "$release_root" \
+  || fail "$release_skill must leave GitHub Release creation to the maintainer."
+! grep -REiq 'wait[^[:cntrl:]]*(CI|GitHub[^[:cntrl:]]*check)' "$release_root" \
+  || fail "$release_skill must not wait for CI or GitHub checks before tag push."
+grep -Fq 'git tag -a X.Y.Z <candidate-sha> -F docs/releases/X.Y.Z.md' \
+  "$release_root/references/maintainer-publishing.md" \
+  || fail "$release_skill tag annotation must use the committed English release note verbatim."
+
+release_hygiene="$release_root/references/release-gate-hygiene.md"
+for required in \
+  './gradlew --stop' \
+  'mktemp -d' \
+  'mv topplecat-gradle-plugin/build' \
+  'GRADLE_CMD=./gradlew scripts/verify-release.sh' \
+  'local-environment blocker'; do
+  grep -Fq -- "$required" "$release_hygiene" \
+    || fail "$release_skill release-gate hygiene is missing required behavior: $required"
+done
+
+last_line=0
+for marker in \
+  './gradlew --stop' \
+  'mktemp -d' \
+  'mv topplecat-gradle-plugin/build' \
+  'GRADLE_CMD=./gradlew scripts/verify-release.sh'; do
+  marker_line="$(grep -n -m 1 -F -- "$marker" "$release_hygiene" | cut -d: -f1)"
+  [[ -n "$marker_line" && "$marker_line" -gt "$last_line" ]] \
+    || fail "$release_skill release-gate hygiene has the wrong recovery order at $marker"
+  last_line="$marker_line"
+done
+
+! grep -Fq 'rm -rf' "$release_hygiene" \
+  || fail "$release_skill release-gate hygiene must quarantine, not delete, TestKit cache."
+
 grep -Fq 'display_name: "ToppleCat Release"' "$release_interface" \
   || fail "$release_interface has a stale display name."
 grep -Fq '$topplecat-release' "$release_interface" \
   || fail "$release_interface has a stale default prompt."
+grep -Fq 'create its next tag, and push main and the tag to GitHub' "$release_interface" \
+  || fail "$release_interface must invoke the complete tag-push flow."
 ! grep -R -Fq '[TODO' "$release_root" || fail "$release_skill still contains a template TODO."
 
 release_line_count="$(wc -l < "$release_path" | tr -d ' ')"

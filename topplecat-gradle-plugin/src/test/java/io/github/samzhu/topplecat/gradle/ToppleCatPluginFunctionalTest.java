@@ -93,7 +93,8 @@ class ToppleCatPluginFunctionalTest {
 
     runner("toppleCatReview", "--language", "zh-TW").build();
     assertReportLanguage("review", "zh-TW");
-    String reviewData = Files.readString(project.resolve("build/topplecat/reports/review/data.json"));
+    String reviewData =
+        Files.readString(project.resolve("build/topplecat/reports/review/data.json"));
     assertFalse(reviewData.contains("zh-TW"));
     assertTrue(reviewData.contains("套用 SAVE100 折抵訂單小計"));
     assertTrue(reviewData.contains("準備可結帳的購物車"));
@@ -114,7 +115,8 @@ class ToppleCatPluginFunctionalTest {
     assertFalse(verificationData.contains("zh-TW"));
     assertTrue(verificationData.contains("套用 SAVE100 折抵訂單小計"));
     assertTrue(verificationData.contains("準備可結帳的購物車"));
-    assertFalse(Files.readString(project.resolve("build/topplecat/evidence.json")).contains("zh-TW"));
+    assertFalse(
+        Files.readString(project.resolve("build/topplecat/evidence.json")).contains("zh-TW"));
     assertFalse(
         Files.readString(project.resolve("build/topplecat/agent-feedback.json")).contains("zh-TW"));
   }
@@ -1509,7 +1511,8 @@ class ToppleCatPluginFunctionalTest {
 
   private void assertReportLanguage(String name, String language) throws Exception {
     String html =
-        Files.readString(project.resolve("build/topplecat/reports").resolve(name).resolve("index.html"));
+        Files.readString(
+            project.resolve("build/topplecat/reports").resolve(name).resolve("index.html"));
     assertTrue(html.contains("<html lang=\"" + language + "\">"));
   }
 

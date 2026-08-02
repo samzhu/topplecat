@@ -20,7 +20,7 @@ import stageFloorLayer from "./assets/scene/tabletop.svg";
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.16"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.17"';
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(
@@ -225,7 +225,7 @@ const copyByLocale = {
       titleBefore: "讓每一個 agent 的",
       titleAfter: "「完成」都能自證。",
       summary:
-        "可執行的 Java 驗收契約，找出取巧、硬編碼答案、規則遭更動與未完成的工作。",
+        "可執行的 Java 驗收契約，可找出取巧作法、寫死的答案、被改動的規則，以及未完成的工作。",
       explore: "看看如何運作",
       repository: "在 GitHub 查看",
       scene:

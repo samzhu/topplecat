@@ -11,7 +11,7 @@ import org.gradle.plugins.signing.SigningExtension
 
 allprojects {
     group = "io.github.samzhu.topplecat"
-    version = "0.0.16"
+    version = "0.0.17"
 }
 
 subprojects {
@@ -21,10 +21,12 @@ subprojects {
             withJavadocJar()
         }
         tasks.withType<Javadoc>().configureEach {
-            // Keep publishing the complete Javadoc artifact while suppressing only
-            // missing-comment noise; malformed Javadoc and broken references still fail.
-            (options as StandardJavadocDocletOptions)
-                .addBooleanOption("Xdoclint:all,-missing", true)
+            // Keep the complete Javadoc artifact while suppressing only missing-comment
+            // noise and duplicate standard web fonts. Malformed Javadoc and broken
+            // references still fail; consumers use their browser or system fonts.
+            val javadocOptions = options as StandardJavadocDocletOptions
+            javadocOptions.addBooleanOption("Xdoclint:all,-missing", true)
+            javadocOptions.addBooleanOption("-no-fonts", true)
         }
         tasks.withType<Test>().configureEach {
             useJUnitPlatform()

@@ -109,7 +109,8 @@ class ReportBundleDomTest {
                             JSON.readTree("{\"total\":700}"),
                             List.of(
                                 new ReviewScenarioStep(
-                                    io.github.samzhu.topplecat.core.StepPhase.GIVEN, "準備可結帳的購物車")))),
+                                    io.github.samzhu.topplecat.core.StepPhase.GIVEN,
+                                    "準備可結帳的購物車")))),
                     new ReviewMethod(List.of(), javaSource))),
             null,
             List.of());
@@ -243,6 +244,10 @@ class ReportBundleDomTest {
       assertNotNull(page.querySelector("#hidden-tests"));
       assertNotNull(page.querySelector("#property-testing"));
       assertNotNull(page.querySelector("#mutation-testing"));
+      assertTrue(
+          page.asNormalizedText()
+              .contains("No data. This run has no Mutation result to show for this AC."));
+      assertTrue(page.asNormalizedText().contains("Sealed policy disabled mutation."));
       assertTrue(page.asNormalizedText().contains("Field-level expected and actual comparison"));
       assertTrue(page.asNormalizedText().contains("Step data"));
       HtmlDetails stepData = (HtmlDetails) page.querySelector(".step-data details");
@@ -277,51 +282,63 @@ class ReportBundleDomTest {
   }
 
   @Test
-  void verificationExplainsPitsGlobalOutcomeSeparatelyFromPerAcceptanceDetection()
+  void verificationPresentsAcFirstPlainLanguageMutationResultsAndKeepsPitDetailsCollapsed()
       throws Exception {
     String mutator = ToppleCatManagedMutationProfile.operatorIds().getFirst();
     PitMutationEvidence killed =
         new PitMutationEvidence(
             true,
             "KILLED",
-            "example.Checkout",
+            "example.Production",
             mutator,
-            "changed checkout total",
-            List.of("example.CheckoutAcceptance#matches()V"),
-            List.of("example.CheckoutAcceptance#matches()V"),
+            "changed production behavior",
+            List.of("example.MeetsAcceptance#matches()V"),
+            List.of("example.MeetsAcceptance#matches()V"),
             List.of(),
-            List.of("AC-COUPON"));
+            List.of("AC-MEETS"));
+    PitMutationEvidence survived =
+        new PitMutationEvidence(
+            false,
+            "SURVIVED",
+            "example.Production",
+            mutator,
+            "changed another production behavior",
+            List.of("example.BelowAcceptance#matches()V"),
+            List.of(),
+            List.of("example.BelowAcceptance#matches()V"),
+            List.of("AC-BELOW"));
     PitMutationAttribution attribution =
         new PitMutationAttribution(
             ToppleCatManagedMutationProfile.PIT_VERSION,
             ToppleCatManagedMutationProfile.PROFILE_ID,
             ToppleCatManagedMutationProfile.operatorIds(),
-            2,
-            2,
+            3,
+            3,
             0,
-            List.of(new PitOutcomeCount("KILLED", true, 2)),
+            List.of(
+                new PitOutcomeCount("KILLED", true, 2), new PitOutcomeCount("SURVIVED", false, 1)),
             List.of(),
             List.of(),
             List.of(
                 new PitMutationAssessment(
-                    "AC-COUPON",
-                    List.of("example.CheckoutAcceptance#matches()V"),
-                    7,
-                    4,
-                    100,
-                    57,
-                    List.of(new PitOutcomeCount("KILLED", true, 4)),
+                    "AC-MEETS",
+                    List.of("example.MeetsAcceptance#matches()V"),
+                    10,
+                    8,
+                    80,
+                    80,
+                    List.of(new PitOutcomeCount("KILLED", true, 8)),
                     false),
                 new PitMutationAssessment(
-                    "AC-SHIPPING",
-                    List.of("example.ShippingAcceptance#matches()V"),
-                    8,
-                    8,
-                    100,
-                    100,
-                    List.of(new PitOutcomeCount("KILLED", true, 8)),
+                    "AC-BELOW",
+                    List.of("example.BelowAcceptance#matches()V"),
+                    10,
+                    7,
+                    80,
+                    70,
+                    List.of(new PitOutcomeCount("KILLED", true, 7)),
                     false)),
-            List.of(killed, killed));
+            List.of(killed, killed, survived));
     VerificationView view =
         new VerificationView(
             VerificationView.SCHEMA_VERSION,
@@ -336,7 +353,10 @@ class ReportBundleDomTest {
                 new EvidenceGate("PROPERTY", EvidenceVerdict.NOT_APPLICABLE, null),
                 new EvidenceGate(
                     "MUTATION", EvidenceVerdict.FAIL, "Per-AC detection missed threshold.")),
-            List.of(),
+            List.of(
+                mutationAcceptanceCondition("AC-MEETS", "Meets its requirement"),
+                mutationAcceptanceCondition("AC-BELOW", "Misses its requirement"),
+                mutationAcceptanceCondition("AC-NO-DATA", "Has no Mutation result")),
             null,
             attribution,
             new VerificationRunSummary("run-mutation", NOW, NOW, 1, 0, 0, 0));
@@ -349,13 +369,89 @@ class ReportBundleDomTest {
       client.waitForBackgroundJavaScript(250);
 
       String text = page.asNormalizedText();
-      assertTrue(text.contains("PIT global outcome"));
-      assertTrue(text.contains("2/2 mutants were detected by at least one test."));
       assertTrue(
-          text.contains("does not mean that every Acceptance Method detected every mutant."));
-      assertTrue(text.contains("Per-AC Acceptance Method detection"));
-      assertTrue(text.contains("does not blend this rate with PIT's global outcome."));
-      assertTrue(text.contains("KILLED"));
+          text.contains(
+              "During verification, ToppleCat temporarily changes production behavior and checks it"
+                  + " again with this AC's public acceptance work."));
+      assertTrue(text.contains("Meets requirement"));
+      assertTrue(
+          text.contains(
+              "10 relevant changes; public acceptance noticed 8; meets the sealed 80%"
+                  + " requirement."));
+      assertTrue(text.contains("Below requirement"));
+      assertTrue(
+          text.contains(
+              "Of 10 relevant changes, public acceptance noticed 7, below the sealed 80%"
+                  + " requirement."));
+      assertTrue(text.contains("No data. This run has no Mutation result to show for this AC."));
+      HtmlElement meets = (HtmlElement) page.querySelector("#mutation-ac-AC-MEETS");
+      assertTrue(meets.getTextContent().contains("Public Acceptance"));
+      assertTrue(meets.getTextContent().contains("Hidden Tests"));
+      assertTrue(meets.getTextContent().contains("Mutation Testing"));
+      assertFalse(meets.getTextContent().contains("PIT"));
+      HtmlDetails technicalDetails =
+          (HtmlDetails) page.querySelector("#mutation-technical-details");
+      assertFalse(technicalDetails.isOpen(), "PIT evidence stays collapsed by default");
+      assertTrue(technicalDetails.getTextContent().contains("KILLED"));
+      assertTrue(technicalDetails.getTextContent().contains("SURVIVED"));
+      assertTrue(technicalDetails.getTextContent().contains("changed production behavior"));
     }
+
+    String englishData = Files.readString(bundle.resolve("data.json"));
+    VerificationView recorded = ReportJson.readVerification(englishData);
+    assertEquals(view, recorded);
+    assertEquals(80, recorded.mutationAttribution().assessments().getFirst().detectionRate());
+    assertEquals("KILLED", recorded.mutationAttribution().mutations().getFirst().status());
+
+    Path traditionalChineseBundle = tempDir.resolve("mutation-verification-zh-TW");
+    HtmlBundleWriter.verification(traditionalChineseBundle, view, ReportLanguage.ZH_TW);
+    assertEquals(englishData, Files.readString(traditionalChineseBundle.resolve("data.json")));
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page =
+          client.getPage(traditionalChineseBundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      String text = page.asNormalizedText();
+      assertTrue(text.contains("驗證時，ToppleCat 暫時改變正式程式的行為，再用這個 AC 的公開驗收檢查。"));
+      assertTrue(text.contains("符合要求"));
+      assertTrue(text.contains("10 個相關改動，公開驗收發現 8 個，符合封存的 80% 要求。"));
+      assertTrue(text.contains("低於要求"));
+      assertTrue(text.contains("10 個相關改動，公開驗收只發現 7 個，低於封存的 80% 要求。"));
+      assertTrue(text.contains("無資料。本次執行沒有此 AC 可顯示的突變測試結果。"));
+      HtmlDetails technicalDetails =
+          (HtmlDetails) page.querySelector("#mutation-technical-details");
+      assertFalse(technicalDetails.isOpen(), "技術細節預設維持收合");
+      assertTrue(technicalDetails.getTextContent().contains("KILLED"));
+      assertTrue(technicalDetails.getTextContent().contains("SURVIVED"));
+    }
+  }
+
+  private VerificationAcceptanceCondition mutationAcceptanceCondition(String acId, String title)
+      throws Exception {
+    return new VerificationAcceptanceCondition(
+        acId,
+        title,
+        CaseResultStatus.PASS,
+        List.of(
+            new VerificationCase(
+                acId + "-public",
+                CaseVisibility.PUBLIC,
+                JSON.readTree("{}"),
+                JSON.readTree("{}"),
+                CaseResultStatus.PASS,
+                Map.of(),
+                List.of(),
+                null),
+            new VerificationCase(
+                acId + "-hidden",
+                CaseVisibility.HIDDEN,
+                JSON.readTree("{}"),
+                JSON.readTree("{}"),
+                CaseResultStatus.PASS,
+                Map.of(),
+                List.of(),
+                null)));
   }
 }

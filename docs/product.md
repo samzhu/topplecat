@@ -34,8 +34,9 @@ ToppleCat serves Java/JUnit product teams that delegate implementation to AI
 coding agents while a human remains accountable for acceptance.
 
 - The **Reviewer** reads the prepared contract and current Verification Report,
-  then makes the delivery decision. The Reviewer may be the developer, Spec
-  owner, or another team member; ToppleCat does not require a separate QA role.
+  then makes the delivery decision. The Reviewer may be a developer, Spec
+  owner, tester, or another accountable team member; ToppleCat does not require
+  a separate QA role or prior knowledge of a producer's technical vocabulary.
 - The **Implementation Agent** receives the public contract and safe Gate-level
   feedback. It never receives reviewer-owned source, values, HTML reports,
   paths, counterexamples, replay material, raw failures, or PIT details.
@@ -94,6 +95,15 @@ PIT owns its operator and outcome meanings. ToppleCat preserves PIT's raw terms,
 attributes observations to exact public Acceptance Methods, and applies a
 sealed ToppleCat Gate policy. A project's other PIT workflows remain outside
 ToppleCat evidence.
+
+In Verification Report, Mutation Testing starts with the Reviewer question for
+each AC: did its public Acceptance Method notice enough temporary production-
+behavior changes to meet the sealed requirement? The report states the relevant
+change count, noticed count, and requirement in ordinary language, or says
+there is no data and preserves the current-run reason. Public Acceptance,
+Hidden Tests, and Mutation Testing stay visibly separate for that AC. Raw PIT
+outcomes and attribution remain available as reviewer technical evidence; they
+do not become a claim that the unmodified program is correct in every case.
 
 ## Product-fit test
 

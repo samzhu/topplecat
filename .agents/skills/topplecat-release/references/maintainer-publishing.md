@@ -1,77 +1,53 @@
-# Maintainer publication handoff
+# Tag-push reference
 
-The agent prepares this checklist after release verification and, when
-authorized, pushes the verified release tag. The maintainer performs Maven and
-GitHub Release actions.
+Read this reference in step 5, immediately before preparing an authorized
+ToppleCat tag. It supplies the mechanical checks for the sequence in
+`SKILL.md`; the skill owns the release narrative and ordering.
 
-## Preflight
+## Resolve the next remote tag
 
-1. Fetch `main` and tags, then record the candidate commit.
-2. Confirm the branch is `main`, the working tree is clean, `HEAD` equals
-   `origin/main`, CI is green, and version coordinates agree.
-3. Confirm the `X.Y.Z` tag and GitHub Release do not exist remotely.
-4. Confirm Maven Central does not already serve the candidate version.
+Fetch `main` and tags. Consider only remote tags matching exactly `X.Y.Z`, sort
+them as semantic versions, and increment the highest patch number. Do not infer
+the next tag from a local tag or a GitHub Release. Stop when the resulting value
+does not equal the version sealed into the candidate commit.
 
-ToppleCat tags have no `v` prefix. The agent creates an annotated tag; a GPG
-signature is not required. Verify that its target is the candidate commit,
-then push and resolve the remote tag:
+Before tagging, confirm the branch is `main`, the worktree is clean, the
+candidate commit has the expected version, and neither the local nor remote
+`X.Y.Z` tag exists.
+
+## Use the committed release note for the local tag
+
+Use the exact contents of the committed English release note—do not write a
+second summary. Create the tag, then verify its target and publish candidate
+artifacts only to the local Maven repository:
 
 ```bash
+git tag -a X.Y.Z <candidate-sha> -F docs/releases/X.Y.Z.md
 git show --no-patch --format=fuller X.Y.Z
 git rev-list -n 1 X.Y.Z
+./gradlew publishToMavenLocal
+```
+
+The annotation is therefore the committed release note itself. Local
+publication confirms the tagged coordinates can be consumed without sending
+artifacts to Maven Central.
+
+## Push and resolve the remote tag
+
+Push the candidate branch first, then push and resolve the tag:
+
+```bash
+git push origin main
+git ls-remote --heads origin main
 git push origin X.Y.Z
 git ls-remote --tags origin refs/tags/X.Y.Z refs/tags/X.Y.Z^{}
 ```
 
-Stop if the annotation or target commit is wrong, or if the remote tag does not
-resolve to the candidate commit.
+Stop when either remote ref differs from the candidate commit.
 
-## Stage the public release
+## Maintainer follow-up
 
-After the agent pushes the tag, create a GitHub Release draft bound to that
-existing remote tag. With GitHub CLI:
-
-```bash
-gh release create X.Y.Z \
-  --verify-tag \
-  --draft \
-  --fail-on-no-commits \
-  --title "ToppleCat X.Y.Z" \
-  --notes-file docs/releases/X.Y.Z.md
-```
-
-When GitHub CLI is unavailable, use the Releases page with the same tag, title,
-and body, and save a draft. Draft-first keeps assets and notes editable before
-release immutability applies.
-
-## Publish artifacts before announcing
-
-Run `scripts/publish-central.sh`. It reruns the release gate, signs Maven
-artifacts, uploads a user-managed Central deployment, and stops for Portal
-review. Publish that deployment in the Central Portal only after validation.
-
-Wait until the public Maven Central coordinates resolve. If the site changed,
-also wait for the Pages deployment and inspect the public page. Then publish
-the GitHub draft and mark it Latest:
-
-```bash
-gh release edit X.Y.Z --draft=false --latest
-gh release view X.Y.Z
-```
-
-Verify the release title, tag, target commit, body, latest status, source
-archives, and public installation coordinates.
-
-## Repository settings
-
-Prefer release immutability and a tag ruleset that restricts deletion or
-rewrites of version tags. With immutability enabled, assemble the draft before
-publishing because the tag and assets lock at publication.
-
-Primary references:
-
-- [Managing releases](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
-- [Automatically generated release notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes)
-- [Immutable releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
-- [`gh release create`](https://cli.github.com/manual/gh_release_create)
-- [Semantic Versioning](https://semver.org/)
+Maven Central publication and GitHub Release drafting or publication are manual
+maintainer actions. This skill leaves their release title and body in the
+committed English release note and makes no external artifact or GitHub Release
+change.

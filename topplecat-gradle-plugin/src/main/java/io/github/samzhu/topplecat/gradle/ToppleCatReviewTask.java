@@ -23,8 +23,8 @@ import java.util.Map;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.TaskAction;
 
 /** Writes the reviewer-only, no-verdict Spec Review from the checked ContractDefinition. */

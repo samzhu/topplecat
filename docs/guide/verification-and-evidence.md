@@ -47,7 +47,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.16 custody and approval schemas are current-only. A prior schema is not
+The 0.0.17 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -196,6 +196,26 @@ non-blocking expected-output quality advisories. There is no public HTML report;
 `agent-feedback.json` never exposes reviewer case IDs, values, source names or
 paths, Property trial material, tokens, attachments, raw private failures, or
 quality-advisory output.
+
+### Reading Mutation results
+
+For each AC, Verification Report first answers a plain question: while
+verifying this delivery, did the public Acceptance Method notice enough
+temporary changes to production behavior to meet its sealed requirement? For
+example, “10 relevant changes; public acceptance noticed 8; meets the sealed
+80% requirement” means that AC met this safeguard's recorded rule for this
+run. “Below requirement” uses the same three values. This reports what the
+Acceptance Method distinguished during the temporary verification changes; it
+does not prove that the original program is correct in every situation.
+
+Public Acceptance, Hidden Tests, and Mutation Testing appear separately for the
+same AC. A missing Mutation result says “No data”; it is never a pass. If the
+current evidence says `DISABLED`, `NOT_APPLICABLE`, or `INCOMPLETE`, the report
+keeps the actual reason. Readers who need producer detail can expand the
+collapsed technical details, which preserve PIT's official outcomes, managed
+profile, operator IDs, attribution counts, selectors, and descriptions exactly
+as recorded. The English and Traditional Chinese reports use the same reading
+order and evidence values.
 
 `build/topplecat/evidence.json` is the machine verdict for the current run.
 Each run starts in `build/topplecat/runs/current/`, receives a fresh UUID when

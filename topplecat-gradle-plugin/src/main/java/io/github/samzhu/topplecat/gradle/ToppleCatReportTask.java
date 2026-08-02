@@ -343,7 +343,9 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         ReportViews.withRun(verification, runId, runStartedAt(runDirectory), generatedAt);
     Path reports = runDirectory.resolve("reports");
     HtmlBundleWriter.verification(
-        reports.resolve("verification"), verification, ReportLanguage.fromTag(getReportLanguage().get()));
+        reports.resolve("verification"),
+        verification,
+        ReportLanguage.fromTag(getReportLanguage().get()));
     copyAttachments(verification, runDirectory, reports.resolve("verification"));
 
     EvidenceVerdict verdict =
