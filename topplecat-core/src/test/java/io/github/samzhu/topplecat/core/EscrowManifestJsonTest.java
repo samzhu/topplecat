@@ -15,7 +15,7 @@ class EscrowManifestJsonTest {
                 new PublicContractEntry(
                     "src/test/java/example/AmountAcceptanceTest.java", "b".repeat(64))),
             "c".repeat(64),
-            new VerificationPolicy("0.0.14", true, true, true, true, 100));
+            new VerificationPolicy("0.0.15", true, true, true, true, 100));
     EscrowManifest manifest =
         new EscrowManifest(
             EscrowManifest.SCHEMA_VERSION_V2,

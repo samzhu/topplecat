@@ -26,6 +26,8 @@ grep -Fq 'CONTEXT.md' "$skill_path" || fail "SKILL.md must require the root cont
 [[ "$(sed -n '6p' "$skill_path")" == '---' ]] || fail "front matter must end on line 6."
 
 description="$(sed -n '3s/^description: //p' "$skill_path")"
+[[ "$description" == 'Bind selected Spec Acceptance Conditions'* ]] \
+  || fail "description must start from externally selected Spec ACs."
 for trigger in \
   'ToppleCat' \
   'Java/JUnit' \
@@ -62,16 +64,31 @@ for required in \
   'reviewer rows' \
   '@ToppleProperty' \
   'unresolved gaps' \
-  'External workflow automation and humans execute'; do
+  'Selected Spec Document' \
+  'no `--spec` selection' \
+  'every bound AC' \
+  'Ground the selected contract' \
+  'Implementation Agent' \
+  'External Workflow' \
+  'Current-run Evidence' \
+  'The Reviewer' \
+  'alone decides whether to'; do
   grep -Fq -- "$required" "$skill_path" || fail "missing required behavior: $required"
 done
+
+! grep -Fq 'Grill the delivery' "$skill_path" \
+  || fail "acceptance authoring must ground the selected contract rather than expand requirements."
 
 for required in \
   'ToppleCase' \
   'ToppleScenario' \
   'ToppleStage' \
   'step().attach(...)' \
-  'c.verify('; do
+  'c.verify(' \
+  'between 1 and 100,000' \
+  'classify' \
+  'requireCoverage' \
+  'Current-run Evidence'; do
   grep -Fq -- "$required" "$skill_root/references/authoring.md" \
     || fail "authoring reference is missing current API: $required"
 done
@@ -86,7 +103,9 @@ for required in \
   'Mutation Testing' \
   'Property-Based Testing' \
   'REVIEWER_JUNIT=INCOMPLETE' \
-  'REVIEWER_JUNIT=DISABLED'; do
+  'REVIEWER_JUNIT=DISABLED' \
+  'MUTATION=FAIL' \
+  'nonblocking reviewer-visible attribution gap'; do
   grep -Fq -- "$required" "$skill_root/references/safeguards.md" \
     || fail "safeguards reference is missing current behavior: $required"
 done
@@ -95,7 +114,9 @@ for required in \
   'Spec Review' \
   'Verification Report' \
   'Current-run Evidence' \
-  'Safe agent feedback'; do
+  'Safe agent feedback' \
+  'External Workflow' \
+  'Reviewer reads both HTML reports'; do
   grep -Fq -- "$required" "$skill_root/references/reports.md" \
     || fail "reports reference is missing current artifact: $required"
 done
@@ -104,6 +125,13 @@ grep -Fq 'display_name: "ToppleCat Acceptance"' "$interface_path" \
   || fail "agents/openai.yaml has a stale display name."
 grep -Fq '$topplecat-acceptance' "$interface_path" \
   || fail "agents/openai.yaml has a stale default prompt."
+grep -Fq 'selected Spec ACs' "$interface_path" \
+  || fail "agents/openai.yaml must start from externally selected Spec ACs."
+! grep -Fq 'as Acceptance Conditions' "$interface_path" \
+  || fail "agents/openai.yaml must not ask the skill to invent Acceptance Conditions."
+
+! grep -Fq 'Reviewer / CI' "$skill_root/references/reports.md" \
+  || fail "CI is an execution placement, not the Current-run Evidence audience."
 
 if grep -Eq '\\./gradlew[[:space:]]+toppleCat' "$skill_path"; then
   fail "SKILL.md must leave ToppleCat task execution to people or external workflow automation."

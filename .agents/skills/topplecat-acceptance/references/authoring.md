@@ -2,8 +2,10 @@
 
 ## Acceptance binding
 
-Put public acceptance source under `src/test/java`. Bind each selected AC to
-exactly one literal method:
+Put public acceptance source under `src/test/java`. Bind each AC in the
+human-selected delivery scope to exactly one literal method. When External
+Workflow supplies Selected Spec Document paths, include every AC anchored in
+each complete document. With no `--spec` selection, every bound AC is in scope.
 
 ```java
 @ToppleAcceptanceTest("AC-CHECKOUT-001")
@@ -29,9 +31,10 @@ concrete Stage. A selected Step is a non-private, non-static, non-final `void`
 method. Use `step().attach(...)` only for an attachment belonging to the
 active compiled Step.
 
-Give each Acceptance Method a concrete `@DisplayName`. Use stable,
-business-readable method names and optional `@As` text for compiler-described
-Step sentences. Use case IDs that identify the behavior or boundary.
+Use stable, business-readable method names. Add `@DisplayName` when it makes the
+reviewer-facing title clearer; otherwise ToppleCat derives the title from the
+method name. Use optional `@As` text for compiler-described Step sentences and
+case IDs that identify the behavior or boundary.
 
 ## Typed case rows
 
@@ -54,6 +57,12 @@ Use `c.input(...)` for typed inputs. Use `c.verify("receipt", actual)` to compar
 and consume each top-level expected value. Reading `c.expected(...)` without an
 assertion does not satisfy expected consumption.
 
+Prefer one `c.verify("receipt", projection)` for a complete observable result.
+When several independent top-level expected values are necessary, put their
+`verify` calls in JUnit `assertAll` so each receives an assertion opportunity.
+A mismatching `verify` remains `ASSERTED`; a later call that never runs remains
+`UNTOUCHED`. ToppleCat has no `verifyAll` API.
+
 A reviewer row reuses an existing public AC and exercises a different value,
 boundary, or rule combination. It never creates a rule absent from the public
 Spec.
@@ -71,6 +80,15 @@ void payableTotalNeverBecomesNegative(PropertyTrials trials) {
 ```
 
 The method returns `void`, receives exactly one `PropertyTrials`, and calls one
-`forAll(...).check(...)`. Use a positive `tries` value and non-negative
-discard and shrink limits. A Property states a confirmed invariant; generated
-trials are not approved case rows.
+`forAll(...).check(...)`. `tries` must be between 1 and 100,000; discard and
+shrink limits are non-negative. The defaults are 200 tries, 1,000 discards, and
+500 shrink steps.
+
+Built-in generators cover booleans, bounded integers, longs and decimals,
+ordered values and enums, explicit-alphabet strings, lists, optionals, `oneOf`,
+`map`, `filter`, and two- or three-input `combine`. Use `classify` and
+`requireCoverage` for a named business boundary. Recursive generators,
+`flatMap`, custom engines, and custom shrinkers are outside the supported API.
+
+A Property states a recorded invariant.
+Generated trials are Current-run Evidence, not Typed Case Rows.

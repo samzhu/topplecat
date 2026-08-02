@@ -31,7 +31,9 @@ build/topplecat/reports/review/index.html
 build/topplecat/reports/verification/index.html
 ```
 
-Spec Review is reviewer-only and shows the complete selected Spec plus its
-executable contract before handoff. The failing run must not leak reviewer
-values into safe feedback. Verification Report is reviewer-only and shows the
-detailed result.
+Spec Review is reviewer-only and shows the executable contract before handoff.
+This sample supplies no `--spec` path, so it demonstrates the all-bound-AC
+scope without external Markdown context. When an External Workflow supplies
+`--spec`, Spec Review also shows every complete selected document. The failing
+run must not leak reviewer values into safe feedback. Verification Report is
+reviewer-only and shows the detailed result.

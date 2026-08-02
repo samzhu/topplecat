@@ -33,9 +33,11 @@ attribution distinguishes the methods that execute a mutant (`coveringTests`)
 from the exact method that detects it (`killingTests`); one AC never receives
 detection credit from another. Hidden rows and Properties do not improve this
 result. Formal Verify uses ToppleCat's fixed PIT 1.25.5
-`topplecat-managed-v1` profile, not a project PIT task. If this focused profile
-does not cover an AC, treat the reviewer-visible result as an attribution gap;
-do not infer a passing mutation score or invent an extra business rule.
+`topplecat-managed-v1` profile, not a project PIT task. If the producer creates
+mutants but none can be exactly attributed to a public Acceptance Method,
+`MUTATION=FAIL`. Once at least one mutant has exact attribution, an AC with no
+covered mutant is a nonblocking reviewer-visible attribution gap; it never
+receives inferred credit or a passing mutation score.
 Project-wide `tasks.withType(PitestTask)` conventions belong only to a separate
 project PIT workflow and cannot change formal Verify's managed producer.
 
@@ -57,6 +59,6 @@ Gradle logic, compiler semantics, or verification policy after sealing.
 Expected consumption catches every declared expected value that was not
 asserted. Use `ToppleCase.verify(...)` for observable case results.
 
-Humans remain responsible for complete rules. ToppleCat checks that the approved
-executable contract is the contract that runs; it does not infer omitted
-requirements.
+Humans remain responsible for complete rules. ToppleCat checks that the
+human-selected Executable Contract is the contract that runs; it does not infer
+omitted requirements.

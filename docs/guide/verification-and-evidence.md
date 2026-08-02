@@ -39,7 +39,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.14 custody and approval schemas are current-only. A prior schema is not
+The 0.0.15 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work

@@ -23,8 +23,8 @@ ACTIVE_TERMINOLOGY_PATHS = (
     "docs/guide",
     "CONTEXT.md",
     "docs/design",
-    "docs/releases/0.0.14.md",
-    "docs/releases/0.0.14.zh-TW.md",
+    "docs/releases/0.0.15.md",
+    "docs/releases/0.0.15.zh-TW.md",
     "samples",
     ".agents/skills",
     "site/src",
@@ -80,8 +80,8 @@ REQUIRED_DOC_INDEX_LINKS = (
     "architecture.md",
     "design/README.md",
     "../CONTEXT.md",
-    "releases/0.0.14.md",
-    "releases/0.0.14.zh-TW.md",
+    "releases/0.0.15.md",
+    "releases/0.0.15.zh-TW.md",
     "validation/README.md",
 )
 REQUIRED_DESIGN_SECTIONS = (
@@ -93,7 +93,7 @@ REQUIRED_DESIGN_SECTIONS = (
     "## Acceptance evidence",
     "## Consequences and alternatives",
 )
-CURRENT_RELEASE_FILES = {"0.0.14.md", "0.0.14.zh-TW.md"}
+CURRENT_RELEASE_FILES = {"0.0.15.md", "0.0.15.zh-TW.md"}
 RELEASE_NOTE = re.compile(r"^(\d+\.\d+\.\d+)(\.zh-TW)?\.md$")
 CONTEXT_TERMS = (
     "Executable Contract",
@@ -303,7 +303,7 @@ def main() -> int:
             release_versions.setdefault(match.group(1), set()).add(language)
         if release_files != CURRENT_RELEASE_FILES:
             failures.append(
-                "docs/releases: expected only the 0.0.14 English and Traditional-Chinese notes"
+                "docs/releases: expected only the 0.0.15 English and Traditional-Chinese notes"
             )
         for version, languages in sorted(release_versions.items()):
             if languages != {"en", "zh-TW"}:
@@ -368,8 +368,8 @@ def main() -> int:
             if re.search(pattern, text):
                 failures.append(f"{relative}: uses replaced terminology matching {pattern}; {replacement}")
 
-    english_release = ROOT / "docs/releases/0.0.14.md"
-    chinese_release = ROOT / "docs/releases/0.0.14.zh-TW.md"
+    english_release = ROOT / "docs/releases/0.0.15.md"
+    chinese_release = ROOT / "docs/releases/0.0.15.zh-TW.md"
     if english_release.is_file() and chinese_release.is_file():
         release_markers = (
             (
@@ -379,6 +379,10 @@ def main() -> int:
                     "Current-run Evidence",
                     "terminal event",
                     "PROPERTY",
+                    "authoritative upstream Spec",
+                    "all-bound-AC",
+                    "@DisplayName",
+                    "1 through 100,000",
                 ),
             ),
             (
@@ -388,6 +392,10 @@ def main() -> int:
                     "Current-run Evidence",
                     "terminal event",
                     "PROPERTY",
+                    "權威 upstream Spec",
+                    "all-bound-AC",
+                    "@DisplayName",
+                    "1 到 100,000",
                 ),
             ),
         )
@@ -396,7 +404,7 @@ def main() -> int:
             for marker in markers:
                 if marker not in text:
                     failures.append(
-                        f"{release.relative_to(ROOT)}: missing synchronized 0.0.14 change {marker}"
+                        f"{release.relative_to(ROOT)}: missing synchronized 0.0.15 change {marker}"
                     )
 
     if failures:

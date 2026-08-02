@@ -93,16 +93,16 @@ void lineOrderDoesNotChangeTotal(PropertyTrials trials) {
 }
 ```
 
-The method returns `void`, receives exactly one `PropertyTrials`, uses positive
-tries and non-negative discard/shrink limits, and calls `forAll(...).check(...)`
-once. Built-ins cover bounded scalar values, ordered values and enums,
-explicit-alphabet strings, lists, optionals, `oneOf`, `map`, `filter`, and
-two/three-input `combine`. Recursive generation, custom engines, `flatMap`,
-and custom shrinkers are unsupported.
+The method returns `void`, receives exactly one `PropertyTrials`, uses 1 to
+100,000 tries and non-negative discard/shrink limits, and calls
+`forAll(...).check(...)` once. Built-ins cover bounded scalar values, ordered
+values and enums, explicit-alphabet strings, lists, optionals, `oneOf`, `map`,
+`filter`, and two/three-input `combine`. Recursive generation, custom engines,
+`flatMap`, and custom shrinkers are unsupported.
 
 `@ToppleProperty` defaults to 200 tries, 1,000 discards, and 500 shrink steps.
-Authors may set positive `tries` and non-negative `maxDiscards` and
-`maxShrinks` values on the annotation.
+Authors may set `tries` from 1 through 100,000 and non-negative `maxDiscards`
+and `maxShrinks` values on the annotation.
 
 Use `classify` and `requireCoverage` for a named business boundary. An unmet
 coverage requirement, exhausted filter, malformed generator, or unstable replay
