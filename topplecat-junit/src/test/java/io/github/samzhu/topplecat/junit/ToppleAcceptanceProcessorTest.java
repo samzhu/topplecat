@@ -34,8 +34,10 @@ class ToppleAcceptanceProcessorTest {
             """
             package fixture;
             import io.github.samzhu.topplecat.junit.*;
+            import org.junit.jupiter.api.DisplayName;
             class ScenarioFixture {
               @ToppleAcceptanceTest("AC-EXACT")
+              @DisplayName("套用 SAVE100 折抵訂單小計")
               void accepts(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
                 scenario.given(coupon).a_cart(c.input("cart", Cart.class));
                 scenario.when(coupon).checks_out();
@@ -43,7 +45,7 @@ class ToppleAcceptanceProcessorTest {
               }
               record Cart(String customerId) {}
               static class CouponStage extends ToppleStage {
-                @As("Prepare cart for {cart.customerId}") void a_cart(Cart cart) {}
+                @As("準備可結帳的購物車 {cart.customerId}") void a_cart(Cart cart) {}
                 void checks_out() {}
                 void matches(ToppleCase c) {}
               }
@@ -57,6 +59,7 @@ class ToppleAcceptanceProcessorTest {
             Files.readString(
                 contracts.resolve(Files.readAllLines(contracts.resolve("index")).getFirst())));
     assertEquals("AC-EXACT", descriptor.acId());
+    assertEquals("套用 SAVE100 折抵訂單小計", descriptor.title());
     assertEquals(1, descriptor.scenarioParameterIndex());
     assertEquals(2, descriptor.stageParameters().getFirst().parameterIndex());
     assertEquals(
@@ -68,6 +71,7 @@ class ToppleAcceptanceProcessorTest {
     assertEquals(
         "/inputs/cart/customerId",
         descriptor.steps().getFirst().argumentBindings().getFirst().jsonPointer());
+    assertEquals("準備可結帳的購物車 ", descriptor.steps().getFirst().tokens().get(1).value());
   }
 
   @Test
@@ -133,11 +137,13 @@ class ToppleAcceptanceProcessorTest {
             package fixture;
             import io.github.samzhu.topplecat.junit.*;
             import io.github.samzhu.topplecat.junit.property.*;
+            import org.junit.jupiter.api.DisplayName;
             class PropertyFixture {
               @ToppleAcceptanceTest("AC-PROPERTY")
               void examples(ToppleCase c, ToppleScenario scenario, ExampleStage example) {
                 scenario.then(example).matches(c);
               }
+              @DisplayName("折扣後金額不為負數")
               @ToppleProperty(value = "AC-PROPERTY", tries = 25, maxDiscards = 4, maxShrinks = 3)
               void remainsGeneral(PropertyTrials trial) { }
               static class ExampleStage extends ToppleStage { void matches(ToppleCase c) {} }
@@ -151,6 +157,7 @@ class ToppleAcceptanceProcessorTest {
     CompilerPropertyDescriptor descriptor =
         CompilerPropertyDescriptorJson.read(Files.readString(properties.resolve(index.getFirst())));
     assertEquals("AC-PROPERTY", descriptor.acId());
+    assertEquals("折扣後金額不為負數", descriptor.title());
     assertEquals("remainsGeneral", descriptor.methodName());
     assertEquals(25, descriptor.tries());
     assertEquals(4, descriptor.maxDiscards());

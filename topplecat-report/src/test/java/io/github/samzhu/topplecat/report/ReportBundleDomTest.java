@@ -17,6 +17,7 @@ import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import io.github.samzhu.topplecat.pitest.PitMutationEvidence;
 import io.github.samzhu.topplecat.pitest.PitOutcomeCount;
 import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -41,7 +42,7 @@ class ReportBundleDomTest {
   void specReviewRendersCompleteDocumentSemanticSyntaxAndNoExecutionConclusion() throws Exception {
     String javaSource =
         """
-        @DisplayName("Checkout <script> & \\"quoted\\"")
+        @DisplayName("套用 SAVE100 折抵訂單小計 <script> & \\"quoted\\"")
         record Receipt(String total) {}
         // Preserve this comment: <script> &
         class Checkout {
@@ -98,7 +99,7 @@ class ReportBundleDomTest {
             List.of(
                 new ReviewAcceptanceCondition(
                     "AC-CHECKOUT",
-                    "Checkout total",
+                    "套用 SAVE100 折抵訂單小計",
                     new ReviewAcLocation("specs/checkout.md", 1),
                     List.of(
                         new ReviewCase(
@@ -108,12 +109,18 @@ class ReportBundleDomTest {
                             JSON.readTree("{\"total\":700}"),
                             List.of(
                                 new ReviewScenarioStep(
-                                    io.github.samzhu.topplecat.core.StepPhase.GIVEN, "a cart")))),
+                                    io.github.samzhu.topplecat.core.StepPhase.GIVEN, "準備可結帳的購物車")))),
                     new ReviewMethod(List.of(), javaSource))),
             null,
             List.of());
     Path bundle = tempDir.resolve("review");
     HtmlBundleWriter.review(bundle, view);
+
+    Path explicitEnglishBundle = tempDir.resolve("review-en");
+    HtmlBundleWriter.review(explicitEnglishBundle, view, ReportLanguage.EN);
+    assertEquals(
+        Files.readString(bundle.resolve("index.html")),
+        Files.readString(explicitEnglishBundle.resolve("index.html")));
 
     try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
       client.getOptions().setThrowExceptionOnScriptError(true);
@@ -137,6 +144,27 @@ class ReportBundleDomTest {
       assertFalse(page.asXml().contains("<script>"));
       assertFalse(page.asNormalizedText().contains("Delivery accepted"));
       assertFalse(page.asNormalizedText().contains("Delivery rejected"));
+    }
+
+    Path traditionalChineseBundle = tempDir.resolve("review-zh-TW");
+    HtmlBundleWriter.review(traditionalChineseBundle, view, ReportLanguage.ZH_TW);
+    assertEquals(
+        Files.readString(bundle.resolve("data.json")),
+        Files.readString(traditionalChineseBundle.resolve("data.json")));
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page =
+          client.getPage(traditionalChineseBundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      assertEquals("zh-TW", ((HtmlElement) page.querySelector("html")).getAttribute("lang"));
+      assertEquals("規格審閱", page.getTitleText());
+      assertTrue(page.asNormalizedText().contains("規格已備妥，尚未執行"));
+      assertTrue(page.asNormalizedText().contains("跳至報告內容"));
+      assertTrue(page.asNormalizedText().contains("套用 SAVE100 折抵訂單小計"));
+      assertTrue(page.asNormalizedText().contains("準備可結帳的購物車"));
+      assertFalse(page.asNormalizedText().contains("Specification prepared — not executed"));
     }
   }
 
@@ -222,6 +250,29 @@ class ReportBundleDomTest {
       assertTrue(stepData.getTextContent().contains("visible-value"));
       HtmlDetails failedCase = (HtmlDetails) page.querySelector("#case-case-fail");
       assertTrue(failedCase.isOpen(), "the first real failure is open by default");
+    }
+
+    Path traditionalChineseBundle = tempDir.resolve("verification-zh-TW");
+    HtmlBundleWriter.verification(traditionalChineseBundle, view, ReportLanguage.ZH_TW);
+    assertEquals(
+        Files.readString(bundle.resolve("data.json")),
+        Files.readString(traditionalChineseBundle.resolve("data.json")));
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page =
+          client.getPage(traditionalChineseBundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      assertEquals("zh-TW", ((HtmlElement) page.querySelector("html")).getAttribute("lang"));
+      assertEquals("驗證報告", page.getTitleText());
+      assertTrue(page.asNormalizedText().contains("交付遭拒，驗證失敗"));
+      assertEquals(
+          "驗證報告篩選器",
+          ((HtmlElement) page.querySelector(".filter-controls")).getAttribute("aria-label"));
+      assertTrue(page.asNormalizedText().contains("JUNIT"));
+      assertTrue(page.asNormalizedText().contains("FAIL"));
+      assertFalse(page.asNormalizedText().contains("Delivery rejected — verification failed"));
     }
   }
 

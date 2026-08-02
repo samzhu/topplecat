@@ -8,6 +8,7 @@ import io.github.samzhu.topplecat.core.ContractQualityAdvisor;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.report.DeliveryScope;
 import io.github.samzhu.topplecat.report.HtmlBundleWriter;
+import io.github.samzhu.topplecat.report.ReportLanguage;
 import io.github.samzhu.topplecat.report.ReportViews;
 import io.github.samzhu.topplecat.report.ReviewMethod;
 import io.github.samzhu.topplecat.report.ReviewProperty;
@@ -23,10 +24,11 @@ import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.TaskAction;
 
 /** Writes the reviewer-only, no-verdict Spec Review from the checked ContractDefinition. */
-public abstract class ToppleCatReviewTask extends ToppleCatScopedTask {
+public abstract class ToppleCatReviewTask extends ToppleCatReviewerPresentationTask {
   @org.gradle.api.tasks.Internal
   public abstract DirectoryProperty getProjectRoot();
 
@@ -38,6 +40,10 @@ public abstract class ToppleCatReviewTask extends ToppleCatScopedTask {
 
   @InputFile
   public abstract RegularFileProperty getDefinitionFile();
+
+  /** Presentation-only task input; excluded from the checked contract and Mechanical Seal. */
+  @Input
+  public abstract org.gradle.api.provider.Property<String> getReportLanguage();
 
   @TaskAction
   public void review() {
@@ -127,7 +133,7 @@ public abstract class ToppleCatReviewTask extends ToppleCatScopedTask {
                     .flatMap(contract -> contract.cases().stream())
                     .toList()));
     Path review = getReviewRoot().get().getAsFile().toPath();
-    HtmlBundleWriter.review(review, view, root);
+    HtmlBundleWriter.review(review, view, root, ReportLanguage.fromTag(getReportLanguage().get()));
     getLogger().lifecycle("ToppleCat reviewer review written: {}", review.resolve("index.html"));
   }
 

@@ -64,16 +64,16 @@ Expected Consumption 另外確認作者寫下的預期值真的有被斷言。
 
 ## 快速開始
 
-ToppleCat 0.0.15 需要 Java 25 與相容的 Gradle。
+ToppleCat 0.0.16 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.15"
+    id("io.github.samzhu.topplecat") version "0.0.16"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.15")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.16")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -91,6 +91,11 @@ tasks.test { useJUnitPlatform() }
 ./gradlew test
 ./gradlew toppleCatVerify --spec specs/checkout/spec.md
 ```
+
+Reviewer HTML 預設使用英文。要以繁體中文閱讀 ToppleCat 自己的報告介面，請在
+`toppleCatReview`、`toppleCatSeal`、`toppleCatReseal` 或 `toppleCatVerify` 加上
+`--language zh-TW`。這只影響該次執行的 HTML；作者寫下的文字與 AC ID、Gate 名稱、
+verdict、PIT 結果等 canonical 值都會維持原樣。
 
 從[快速開始指南](docs/guide/getting-started.md)開始，或直接執行
 [JUnit 範例](samples/junit-cart-orders)。
@@ -134,6 +139,10 @@ Typed Case Rows 提供輸入與預期結果：
 | `build/topplecat/evidence.json` | Reviewer／automation | machine-readable 本次 verdict 與 Gate 摘要值。 |
 | `build/topplecat/agent-feedback.json` | Implementation Agent | 不含 reviewer 答案的安全 Gate 層級修正方向。 |
 
+兩份 Reviewer HTML 都支援同一次執行選擇 `--language en` 或
+`--language zh-TW`。這會改變標題、無障礙文字、控制項、說明與 HTML 語言中繼資料，
+但不會改變報告 JSON、evidence、安全 agent feedback、Mechanical Seal 或契約本身。
+
 整體 verdict 有三種：
 
 - `PASS`：本次已選契約通過，報告可以建議接受交付；
@@ -164,7 +173,7 @@ ToppleCat 從可執行驗收邊界開始：
 - [架構](docs/architecture.md)
 - [共同語言](CONTEXT.md)
 - [文件索引](docs/README.md)
-- [0.0.15 release notes](docs/releases/0.0.15.zh-TW.md)
+- [0.0.16 release notes](docs/releases/0.0.16.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

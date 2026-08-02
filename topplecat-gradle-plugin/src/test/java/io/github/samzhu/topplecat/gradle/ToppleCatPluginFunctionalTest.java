@@ -76,6 +76,50 @@ class ToppleCatPluginFunctionalTest {
   }
 
   @Test
+  void reviewerLanguageIsInvocationScopedForReviewSealResealAndVerify() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeTraditionalChineseScenarioAcceptance();
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+
+    var unsupported = runner("toppleCatVerify", "--language", "ja").buildAndFail();
+    assertTrue(unsupported.getOutput().contains("Supported values: en, zh-TW"));
+    assertFalse(Files.exists(project.resolve("build/topplecat/runs/current")));
+
+    runner("toppleCatReview", "--language", "zh-TW").build();
+    assertReportLanguage("review", "zh-TW");
+    String reviewData = Files.readString(project.resolve("build/topplecat/reports/review/data.json"));
+    assertFalse(reviewData.contains("zh-TW"));
+    assertTrue(reviewData.contains("套用 SAVE100 折抵訂單小計"));
+    assertTrue(reviewData.contains("準備可結帳的購物車"));
+
+    runner("toppleCatReview").build();
+    assertReportLanguage("review", "en");
+
+    runner("toppleCatSeal", "--language", "zh-TW").build();
+    assertReportLanguage("review", "zh-TW");
+    runner("toppleCatRestore").build();
+    runner("toppleCatReseal", "--language", "zh-TW").build();
+    assertReportLanguage("review", "zh-TW");
+
+    runner("toppleCatVerify", "--language", "zh-TW").build();
+    assertReportLanguage("verification", "zh-TW");
+    String verificationData =
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
+    assertFalse(verificationData.contains("zh-TW"));
+    assertTrue(verificationData.contains("套用 SAVE100 折抵訂單小計"));
+    assertTrue(verificationData.contains("準備可結帳的購物車"));
+    assertFalse(Files.readString(project.resolve("build/topplecat/evidence.json")).contains("zh-TW"));
+    assertFalse(
+        Files.readString(project.resolve("build/topplecat/agent-feedback.json")).contains("zh-TW"));
+  }
+
+  @Test
   void verificationUsesOnlyFormalAcceptanceTasksAndPublishesTheThreeReportAudiences()
       throws Exception {
     writeProject(
@@ -945,6 +989,37 @@ class ToppleCatPluginFunctionalTest {
         """);
   }
 
+  private void writeTraditionalChineseScenarioAcceptance() throws Exception {
+    Path source = project.resolve("src/test/java/example/CouponAcceptanceTest.java");
+    Files.createDirectories(source.getParent());
+    Files.writeString(
+        source,
+        """
+        package example;
+        import io.github.samzhu.topplecat.junit.As;
+        import io.github.samzhu.topplecat.junit.ToppleAcceptanceTest;
+        import io.github.samzhu.topplecat.junit.ToppleCase;
+        import io.github.samzhu.topplecat.junit.ToppleScenario;
+        import io.github.samzhu.topplecat.junit.ToppleStage;
+        import org.junit.jupiter.api.DisplayName;
+        class CouponAcceptanceTest {
+            @ToppleAcceptanceTest("AC-COUPON")
+            @DisplayName("套用 SAVE100 折抵訂單小計")
+            void appliesCoupon(ToppleCase testCase, ToppleScenario scenario, CouponStage coupon) {
+                scenario.given(coupon).reads_discount(testCase.expected("discount", Integer.class));
+                scenario.then(coupon).matches(testCase);
+            }
+            static class CouponStage extends ToppleStage {
+                private int actual;
+                @As("準備可結帳的購物車 {discount}")
+                void reads_discount(int discount) { actual = discount; }
+                @As("收據符合預期")
+                void matches(ToppleCase testCase) { testCase.verify("discount", actual); }
+            }
+        }
+        """);
+  }
+
   private void writeAcceptance(String actualDiscount, boolean property) throws Exception {
     Path source = project.resolve("src/test/java/example/CouponAcceptanceTest.java");
     Files.createDirectories(source.getParent());
@@ -1430,6 +1505,12 @@ class ToppleCatPluginFunctionalTest {
         .findFirst()
         .orElseThrow()
         .verdict();
+  }
+
+  private void assertReportLanguage(String name, String language) throws Exception {
+    String html =
+        Files.readString(project.resolve("build/topplecat/reports").resolve(name).resolve("index.html"));
+    assertTrue(html.contains("<html lang=\"" + language + "\">"));
   }
 
   private ToppleEvidence evidence() throws Exception {

@@ -7,6 +7,12 @@ method. Give it an optional `@DisplayName` that says what a reviewer is checking
 The method is a small Scenario orchestration, not a home for setup, assertions,
 or business calls.
 
+`@DisplayName` is authored business prose, not ToppleCat interface copy. It
+may use Traditional Chinese or other Unicode text and is preserved exactly in
+the compiler descriptor, contract, runtime narrative, JSON projection, and
+Reviewer HTML. The same rule applies to an optional JUnit `@DisplayName` on a
+`@ToppleProperty`: it is the Property title, never text to be translated.
+
 ```java
 @ToppleAcceptanceTest("AC-ORDER-CREATE")
 @DisplayName("Create an accepted order")
@@ -29,6 +35,12 @@ Step. Put setup, service calls, branching, and assertions inside ordinary Stage
 methods. Give business-visible methods `@As` sentences. `step().attach(...)` is available
 only while a selected Step runs and cannot rename or otherwise edit the
 compiler-described Step.
+
+`@As` is also authored prose and survives unchanged. A named placeholder such
+as `@As("準備可結帳的購物車 {cart.customerId}")` is resolved by the compiler to
+the recorded argument binding; choosing a Traditional Chinese Reviewer report
+only changes the surrounding ToppleCat presentation and its Given/When/Then
+labels, never the Step sentence, placeholder, underlying phase, or Step order.
 
 Public rows are JSON or YAML under `src/test/resources/topplecat/cases/`.
 Reviewer-owned rows use the same schema under

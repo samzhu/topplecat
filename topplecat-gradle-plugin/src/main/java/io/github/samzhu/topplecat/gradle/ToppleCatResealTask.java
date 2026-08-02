@@ -7,7 +7,7 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 
 /** Explicit reviewer-custody task that replaces a restored escrowed reviewer suite after review. */
-public abstract class ToppleCatResealTask extends ToppleCatScopedTask
+public abstract class ToppleCatResealTask extends ToppleCatReviewerPresentationTask
     implements ToppleCatApprovalInputs {
   @Internal
   public abstract DirectoryProperty getProjectRoot();

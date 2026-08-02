@@ -20,6 +20,9 @@ public abstract class ToppleCatExtension {
   /** True only when the current Gradle invocation explicitly supplied {@code --spec}. */
   public abstract Property<Boolean> getCommandLineSpecProvided();
 
+  /** Invocation-only Reviewer HTML presentation language; never project verification policy. */
+  public abstract Property<String> getCommandLineReportLanguage();
+
   /** Runtime-only Verify escalation; this never weakens a sealed hidden scope. */
   public abstract Property<Boolean> getAllHiddenRequested();
 

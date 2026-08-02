@@ -55,6 +55,13 @@ Both HTML reports are human, reviewer-only reading surfaces. Java/JUnit
 Acceptance Methods and Typed Case Rows remain the Executable Contract;
 generated JSON and HTML are projections.
 
+For either reading moment, the Reviewer may select `--language en` or
+`--language zh-TW` on that command. English is the default. This changes only
+ToppleCat-owned HTML presentation; it does not translate authored or
+producer-owned text, select a different Delivery Scope, alter the Executable
+Contract, or influence the Mechanical Seal, Current-run Evidence, Gates, or
+safe Implementation Agent feedback.
+
 ## Responsibility boundary
 
 | ToppleCat owns | The human, team, project, or external workflow owns |

@@ -32,6 +32,7 @@ import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import io.github.samzhu.topplecat.report.CaseResultStatus;
 import io.github.samzhu.topplecat.report.DeliveryScope;
 import io.github.samzhu.topplecat.report.HtmlBundleWriter;
+import io.github.samzhu.topplecat.report.ReportLanguage;
 import io.github.samzhu.topplecat.report.ReportViews;
 import io.github.samzhu.topplecat.report.VerificationClassification;
 import io.github.samzhu.topplecat.report.VerificationCounterexample;
@@ -155,6 +156,10 @@ public abstract class ToppleCatReportTask extends DefaultTask {
 
   @Input
   public abstract Property<Boolean> getAllHidden();
+
+  /** Presentation-only task input; it never enters evidence or safe agent feedback. */
+  @Input
+  public abstract Property<String> getReportLanguage();
 
   @TaskAction
   public void report() {
@@ -337,7 +342,8 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     verification =
         ReportViews.withRun(verification, runId, runStartedAt(runDirectory), generatedAt);
     Path reports = runDirectory.resolve("reports");
-    HtmlBundleWriter.verification(reports.resolve("verification"), verification);
+    HtmlBundleWriter.verification(
+        reports.resolve("verification"), verification, ReportLanguage.fromTag(getReportLanguage().get()));
     copyAttachments(verification, runDirectory, reports.resolve("verification"));
 
     EvidenceVerdict verdict =

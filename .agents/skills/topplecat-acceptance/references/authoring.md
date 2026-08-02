@@ -36,6 +36,14 @@ reviewer-facing title clearer; otherwise ToppleCat derives the title from the
 method name. Use optional `@As` text for compiler-described Step sentences and
 case IDs that identify the behavior or boundary.
 
+`@DisplayName` and `@As` are human-authored display prose. Keep the chosen text
+exact, including Traditional Chinese and named `@As` placeholders: ToppleCat
+preserves it through the compiler contract and Reviewer reports. Do not
+translate it or create a second language field. Reviewer HTML presentation may
+be chosen per invocation with `--language en` or `--language zh-TW`; that
+localizes only ToppleCat-owned report prose, not authored values or canonical
+machine outcomes.
+
 ## Typed case rows
 
 Put public JSON or YAML rows under
@@ -92,3 +100,5 @@ ordered values and enums, explicit-alphabet strings, lists, optionals, `oneOf`,
 
 A Property states a recorded invariant.
 Generated trials are Current-run Evidence, not Typed Case Rows.
+An optional JUnit `@DisplayName` on a Property is likewise preserved as its
+Reviewer-facing title.

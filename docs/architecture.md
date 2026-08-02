@@ -102,10 +102,17 @@ acceptance methods; no input means every AC. `--all-hidden-tests` broadens
 hidden typed rows only. Public acceptance and PBT follow the selected ACs.
 Mutation Testing remains full-contract.
 
+`--language` is a separate invocation-only presentation input for
+`toppleCatReview`, `toppleCatSeal`, `toppleCatReseal`, and `toppleCatVerify`.
+It accepts exactly `en` and `zh-TW`, defaults to `en`, and reaches only the
+Reviewer HTML-writing tasks. It is not Gradle DSL configuration, a browser or
+operating-system locale, a scope input, or an approval input. Invalid values
+fail during command configuration, before a formal Verify run starts.
+
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.15 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.16 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
@@ -156,6 +163,16 @@ Both report bundles are offline, self-contained, and CSP-safe. They load no
 external UI, font, syntax highlighter, Mermaid runtime, analytics, or CDN
 resource. Missing or unsafe local assets remain visible as escaped text or a
 placeholder rather than disappearing or executing content.
+
+The report-writing seam selects one complete English or Traditional Chinese
+catalog and writes matching `lang="en"` or `lang="zh-TW"` metadata. Catalog
+entries cover ToppleCat-owned headings, controls, accessibility prose,
+explanations, empty states, and fallbacks. Compiler-owned Scenario phases have
+one-to-one localized labels, while authored `@DisplayName`, `@As`, Property
+titles, selected Markdown, case data, raw failures, AC IDs, Gate names,
+verdicts, and PIT producer values remain the original bytes. Presentation
+metadata and catalogs do not enter report `data.json`, evidence, approvals, or
+safe agent feedback.
 
 Verification Report leads with the aggregate conclusion and a Problems Summary.
 It keeps Contract Integrity, Public Acceptance (including Expected Consumption),

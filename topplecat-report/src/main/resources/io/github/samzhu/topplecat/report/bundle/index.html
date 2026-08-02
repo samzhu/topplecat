@@ -1,20 +1,21 @@
 <!doctype html>
-<html lang="en">
+<html lang="__TOPPLECAT_LANGUAGE__">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; connect-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'">
-  <title>ToppleCat report</title>
+  <title>ToppleCat</title>
   <link rel="stylesheet" href="assets/report.css">
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to report content</a>
-  <header class="masthead"><div class="frame"><p class="product-name">ToppleCat</p><h1 id="title">Report</h1><p id="notice" class="notice"></p></div></header>
+  <a id="skip-link" class="skip-link" href="#main-content"></a>
+  <header class="masthead"><div class="frame"><p class="product-name">ToppleCat</p><h1 id="title"></h1><p id="notice" class="notice"></p></div></header>
   <div class="frame report-layout">
-    <aside id="outline" class="outline" aria-label="Report outline"></aside>
+    <aside id="outline" class="outline"></aside>
     <main id="main-content" tabindex="-1"><section id="summary"></section><section id="report"></section></main>
   </div>
   <script id="topplecat-report-data" type="application/json">__TOPPLECAT_DATA__</script>
+  <script id="topplecat-report-presentation" type="application/json">__TOPPLECAT_PRESENTATION__</script>
   <script src="assets/mermaid.js"></script>
   <script src="assets/report.js"></script>
 </body>

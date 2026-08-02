@@ -5,6 +5,7 @@ import io.github.samzhu.topplecat.core.ContractDefinitionJson;
 import io.github.samzhu.topplecat.core.Hashing;
 import io.github.samzhu.topplecat.junit.ToppleJunit;
 import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
+import io.github.samzhu.topplecat.report.ReportLanguage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,6 +52,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     extension.getPropertyBasedTesting().getEnabled().convention(true);
     extension.getCommandLineSpecPaths().convention(List.of());
     extension.getCommandLineSpecProvided().convention(false);
+    extension.getCommandLineReportLanguage().convention(ReportLanguage.EN.tag());
     extension.getAllHiddenRequested().convention(false);
     project
         .getPluginManager()
@@ -239,6 +241,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                               .getLayout()
                               .getBuildDirectory()
                               .file("topplecat/contract-definition.json"));
+                  task.getReportLanguage().set(extension.getCommandLineReportLanguage());
                   configureScopeTask(task, extension);
                 });
     TaskProvider<ToppleCatSealTask> hide =
@@ -567,6 +570,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                   task.getSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
                   task.getSpecOptionProvided().set(extension.getCommandLineSpecProvided());
                   task.getAllHidden().set(extension.getAllHiddenRequested());
+                  task.getReportLanguage().set(extension.getCommandLineReportLanguage());
                   task.getRunDirectory().set(runDirectory);
                   task.getContractIntegrityResultFile()
                       .set(

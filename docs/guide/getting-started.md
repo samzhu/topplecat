@@ -8,11 +8,11 @@ handoff. During development, continue to use ordinary `./gradlew test`.
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.15"
+    id("io.github.samzhu.topplecat") version "0.0.16"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.15")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.16")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -58,6 +58,11 @@ Run the reviewer sequence:
 ./gradlew toppleCatReview --spec specs/023-checkout/spec.md
 ./gradlew toppleCatSeal --spec specs/023-checkout/spec.md
 ```
+
+Reviewer HTML defaults to English. Add `--language zh-TW` to Review, Seal,
+Reseal, or Verify when the Reviewer wants Traditional Chinese ToppleCat-owned
+presentation. This invocation-only choice preserves authored display prose and
+machine values exactly as recorded.
 
 Seal moves the reviewer source to local custody. The implementation agent then
 receives only public material and works with `./gradlew test`.

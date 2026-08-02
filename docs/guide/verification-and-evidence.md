@@ -27,6 +27,14 @@ same selection for Check, Review, Seal, and Verify. `--all-hidden-tests`
 widens only hidden typed rows. Public acceptance and PBT follow the selected
 ACs; Mutation Testing remains full-contract.
 
+The Reviewer may add `--language zh-TW` to Review, Seal, Reseal, or Verify to
+render ToppleCat-owned Reviewer HTML in Traditional Chinese; `en` is the
+default. Seal and Reseal forward the selection to their dependent Spec Review,
+so a custody operation does not overwrite a localized review with English.
+The choice is made again for each invocation and does not enter the Seal or
+verification policy. Only `en` and `zh-TW` are valid; a blank or unsupported
+explicit value fails before formal verification begins.
+
 `toppleCatRestore` is a reviewer-only recovery and editing command. To revise
 custody, use:
 
@@ -39,7 +47,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.15 custody and approval schemas are current-only. A prior schema is not
+The 0.0.16 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -209,6 +217,14 @@ inline and fenced code, repository-local images, and Mermaid diagrams. Raw HTML
 and unsafe URLs never execute; missing assets and diagram failures keep visible
 fallback text. Reports fetch no external fonts, UI code, syntax highlighter,
 Mermaid runtime, analytics, or CDN assets.
+
+Each bundle declares the selected `lang` value and localizes every
+ToppleCat-owned heading, control, accessibility label, explanation, empty
+state, and fallback. The selected Markdown, `@DisplayName`, `@As`, Property
+title, Typed Case Row values, Gate identifiers and verdicts, PIT status,
+mutator, selector, producer description, and raw failure remain verbatim.
+The presentation choice is absent from the report JSON, Current-run Evidence,
+and `agent-feedback.json`; it cannot change a Gate verdict or seal integrity.
 
 ## Custody boundary
 

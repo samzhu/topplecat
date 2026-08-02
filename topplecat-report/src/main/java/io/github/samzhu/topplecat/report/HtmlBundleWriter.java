@@ -11,27 +11,49 @@ import java.nio.file.StandardCopyOption;
 public final class HtmlBundleWriter {
   private static final String ROOT = "/io/github/samzhu/topplecat/report/bundle/";
   private static final String DATA = "__TOPPLECAT_DATA__";
+  private static final String LANGUAGE = "__TOPPLECAT_LANGUAGE__";
+  private static final String PRESENTATION = "__TOPPLECAT_PRESENTATION__";
 
   private HtmlBundleWriter() {}
 
   public static void review(Path output, ReviewView view) {
-    write(output, ReportJson.writeReview(view));
+    review(output, view, ReportLanguage.EN);
+  }
+
+  /** Writes a Spec Review in the selected Reviewer presentation language. */
+  public static void review(Path output, ReviewView view, ReportLanguage language) {
+    write(output, ReportJson.writeReview(view), language);
   }
 
   /** Writes a Spec Review and copies only parser-approved repository-local image assets. */
   public static void review(Path output, ReviewView view, Path projectRoot) {
-    write(output, ReportJson.writeReview(view));
+    review(output, view, projectRoot, ReportLanguage.EN);
+  }
+
+  /** Writes a Spec Review in the selected language and copies approved local Spec assets. */
+  public static void review(
+      Path output, ReviewView view, Path projectRoot, ReportLanguage language) {
+    write(output, ReportJson.writeReview(view), language);
     copyReviewAssets(output, view, projectRoot);
   }
 
   public static void verification(Path output, VerificationView view) {
-    write(output, ReportJson.writeVerification(view));
+    verification(output, view, ReportLanguage.EN);
   }
 
-  private static void write(Path output, String json) {
+  /** Writes a Verification Report in the selected Reviewer presentation language. */
+  public static void verification(Path output, VerificationView view, ReportLanguage language) {
+    write(output, ReportJson.writeVerification(view), language);
+  }
+
+  private static void write(Path output, String json, ReportLanguage language) {
     try {
       Files.createDirectories(output.resolve("assets"));
-      String shell = resource("index.html").replace(DATA, safeScriptJson(json));
+      String shell =
+          resource("index.html")
+              .replace(DATA, safeScriptJson(json))
+              .replace(LANGUAGE, language.tag())
+              .replace(PRESENTATION, "{\"language\":\"" + language.tag() + "\"}");
       Files.writeString(output.resolve("index.html"), shell, StandardCharsets.UTF_8);
       Files.writeString(output.resolve("data.json"), json, StandardCharsets.UTF_8);
       copy("assets/report.css", output.resolve("assets/report.css"));

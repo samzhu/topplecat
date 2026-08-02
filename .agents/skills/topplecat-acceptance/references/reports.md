@@ -32,3 +32,10 @@ Reviewer reads both HTML reports and decides whether to accept the delivery;
 the Implementation Agent receives only public material and safe agent feedback.
 The acceptance-authoring skill prepares readable source material and never
 treats a generated page as another authoring surface.
+
+Reviewer HTML uses English by default and supports invocation-only
+`--language en` or `--language zh-TW` on Review, Seal, Reseal, and Verify.
+This localizes ToppleCat-owned report presentation and HTML accessibility
+metadata only. It does not translate authored contract prose, rename external
+producer outcomes, enter Current-run Evidence, or widen the Implementation
+Agent information boundary.

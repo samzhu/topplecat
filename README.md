@@ -76,16 +76,16 @@ and never enter ToppleCat evidence. See the
 
 ## Quick start
 
-ToppleCat 0.0.15 requires Java 25 and a compatible Gradle version.
+ToppleCat 0.0.16 requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.15"
+    id("io.github.samzhu.topplecat") version "0.0.16"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.15")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.16")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -104,6 +104,12 @@ selected Spec after the agent's done claim:
 ./gradlew test
 ./gradlew toppleCatVerify --spec specs/checkout/spec.md
 ```
+
+Reviewer HTML is English by default. To read ToppleCat-owned report prose in
+Traditional Chinese, add `--language zh-TW` to `toppleCatReview`,
+`toppleCatSeal`, `toppleCatReseal`, or `toppleCatVerify`. The choice applies
+only to that invocation's HTML; authored text and canonical values such as AC
+IDs, Gate names, verdicts, and PIT outcomes stay exactly as recorded.
 
 Start with the [getting-started guide](docs/guide/getting-started.md) or run the
 [JUnit sample](samples/junit-cart-orders).
@@ -148,6 +154,11 @@ complete Java, Stage, case, expected-value, and Property rules.
 | `build/topplecat/evidence.json` | Reviewer / automation | Machine-readable current-run verdict and Gate digests. |
 | `build/topplecat/agent-feedback.json` | Implementation Agent | Safe Gate-level remediation without reviewer answers. |
 
+Both Reviewer HTML reports accept the same invocation-only `--language en` or
+`--language zh-TW` presentation choice. This changes headings, accessibility
+text, controls, explanations, and HTML language metadata, but never report
+JSON, evidence, safe feedback, the Mechanical Seal, or the contract itself.
+
 The aggregate verdict is:
 
 - `PASS`: the current selected contract passed; the report may recommend
@@ -185,7 +196,7 @@ before proposing a new ToppleCat responsibility.
 - [Architecture](docs/architecture.md)
 - [Context glossary](CONTEXT.md)
 - [Documentation index](docs/README.md)
-- [0.0.15 release notes](docs/releases/0.0.15.md)
+- [0.0.16 release notes](docs/releases/0.0.16.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 
