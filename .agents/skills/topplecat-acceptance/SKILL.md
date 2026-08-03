@@ -2,7 +2,7 @@
 name: topplecat-acceptance
 description: Bind selected Spec Acceptance Conditions to ToppleCat Java/JUnit executable contracts. Use when authoring Acceptance Methods, public or reviewer-owned Typed Case Rows, or optional Property-Based Testing declarations for a Java delivery.
 metadata:
-  topplecat-version: "0.0.18"
+  topplecat-version: "0.0.19"
 ---
 
 # ToppleCat acceptance

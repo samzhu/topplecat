@@ -128,7 +128,7 @@ fail during command configuration, before a formal Verify run starts.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.18 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.19 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
