@@ -48,14 +48,21 @@ _Avoid_: a Property presented as hidden coverage
 
 **Mutation Testing／突變測試**:
 The safeguard that changes production behavior and measures whether public
-acceptance work detects the change. Its evidence is independent of other
-safeguards.
+acceptance work detects the change. For a selected AC, its unchanged public
+Acceptance Method must detect every mutation exactly attributed to that AC;
+its evidence is independent of other safeguards.
 
 **Mutation Attribution／突變歸因**:
 ToppleCat's mapping of a Mutation Testing result to the exact public Acceptance
 Method and Acceptance Condition whose execution covered it. Attribution
 preserves the producer's mutation outcome and does not infer business meaning
 from missing coverage.
+
+The Verification Report may list an undetected mutation for an AC when that
+AC's public method covered it but still passed, even if PIT globally reports
+`KILLED` because another AC detected it. Source coordinates and original source
+lines are reviewer-only diagnostics; an exact replacement is shown only when
+the producer description and unique source context establish it.
 
 **ToppleCat Managed Mutation Profile／ToppleCat 託管突變設定**:
 The versioned, product-owned PIT version and exact operator set used by formal
@@ -73,6 +80,11 @@ or any Gate, and never appears in public handoff material or
 The safeguard that exercises a human-approved invariant with bounded generated
 inputs. It is testing evidence, not proof and not a hidden variant.
 _Avoid_: a reviewer-specific generated invariant
+
+**Property Discard Evidence／Property 捨棄證據**:
+The canonical JSON choices for every generated input rejected before it became
+a completed Property trial. ToppleCat retains it as current-run evidence with
+a neutral explanation; it is not a new business rule or a Typed Case Row.
 
 **Independent Safeguard／獨立防線**:
 A safeguard whose current-run evidence answers only its own question and cannot
@@ -128,6 +140,13 @@ Mechanical Seal. It is custody, not encryption or a security boundary.
 **Current-run Evidence／本次執行證據**:
 The evidence produced by the active formal verification run. Archived output
 is diagnostic material and cannot replace it.
+
+**Aggregate Verdict／彙總判定**:
+The current formal run's `PASS`, `FAIL`, or `INCOMPLETE` conclusion for the
+selected Delivery Scope. `PASS` means every required Gate passed under the
+sealed policy in this run; it is evidence, not proof that the business rules
+are complete, an acceptance recommendation, or organizational approval.
+_Avoid_: delivery recommendation, sign-off, proof of correctness
 
 ## People and orchestration
 

@@ -3,6 +3,7 @@ package io.github.samzhu.topplecat.core;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -115,7 +116,7 @@ class PropertyModelTest {
             12,
             4,
             8,
-            0,
+            1,
             List.of(new PropertyClassification("boundary", 4, 33.333, 5.0)),
             42L,
             true,
@@ -124,11 +125,14 @@ class PropertyModelTest {
             new PropertyCounterexample("{\"amount\":0}", List.of(0, 1)),
             2,
             true,
+            List.of(new PropertyDiscardedInput("{\"amount\":-1}")),
             null);
     PropertyResults results =
         new PropertyResults(PropertyResults.SCHEMA_VERSION, "run-1", List.of(result));
 
     assertEquals(results, PropertyResultsJson.read(PropertyResultsJson.write(results)));
+    assertEquals(1, result.discardedInputs().size());
+    assertTrue(PropertyResultsJson.write(results).contains("discardedInputs"));
     assertThrows(
         ToppleCatException.class,
         () ->

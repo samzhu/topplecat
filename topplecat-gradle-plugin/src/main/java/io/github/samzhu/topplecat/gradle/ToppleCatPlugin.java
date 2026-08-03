@@ -47,7 +47,6 @@ public final class ToppleCatPlugin implements Plugin<Project> {
         .convention(project.getLayout().getProjectDirectory().dir("src/hiddenTest"));
     extension.getHiddenTests().getEnabled().convention(true);
     extension.getMutationTesting().getEnabled().convention(true);
-    extension.getMutationTesting().getThreshold().convention(100);
     extension.getExpectedConsumption().getEnabled().convention(true);
     extension.getPropertyBasedTesting().getEnabled().convention(true);
     extension.getCommandLineSpecPaths().convention(List.of());
@@ -531,16 +530,23 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                           + " @ToppleAcceptanceTest acceptance condition.");
                   task.getPublicTestSourceRoot()
                       .set(project.getLayout().getProjectDirectory().dir("src/test/java"));
+                  task.getProductionSourceDirectories()
+                      .from(main.getAllJava().getSourceDirectories());
                   task.getDefinitionFile()
                       .set(
                           project
                               .getLayout()
                               .getBuildDirectory()
                               .file("topplecat/contract-definition.json"));
+                  task.getSelectedSpecScopeFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/selected-spec-scope.json"));
                   task.getPitReportFile().set(runDirectory.file("pit/mutations.xml"));
                   task.getResultsFile().set(runDirectory.file("mutation-results.json"));
                   task.getRunDirectory().set(runDirectory);
-                  task.getThreshold().set(extension.getMutationTesting().getThreshold());
                   task.dependsOn(prepareRun, contractIntegrity);
                   task.mustRunAfter(verificationTest, hiddenTest, propertyTest);
                   task.usesService(custodyService);
@@ -916,7 +922,6 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     task.getApprovalExpectedConsumptionEnabled().convention(true);
     task.getApprovalPropertyEnabled().convention(true);
     task.getApprovalMutationEnabled().convention(true);
-    task.getApprovalMutationThreshold().convention(100);
     task.getApprovalSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
     task.getApprovalSpecOptionProvided().set(extension.getCommandLineSpecProvided());
   }
@@ -942,7 +947,6 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                 .set(configuration.expectedConsumptionEnabled());
             task.getApprovalPropertyEnabled().set(configuration.propertyBasedTestingEnabled());
             task.getApprovalMutationEnabled().set(configuration.mutationEnabled());
-            task.getApprovalMutationThreshold().set(extension.getMutationTesting().getThreshold());
           });
     }
   }
@@ -1022,6 +1026,12 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                                       .getAbsolutePath()));
                   task.getDescriptorDirectory()
                       .set(project.getLayout().getBuildDirectory().dir("topplecat/compiler"));
+                  task.getSelectedSpecScopeFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/selected-spec-scope.json"));
                   task.getWorkingDirectory().set(project.getLayout().getProjectDirectory());
                   task.getSourceDirectories().from(main.getAllJava().getSourceDirectories());
                   task.getMutableCodePaths().from(main.getOutput().getClassesDirs());

@@ -84,6 +84,45 @@ class PitMutationParserTest {
     assertEquals(1, empty.coveredMutantCount());
     assertEquals(1, empty.killedByAcceptanceMethodMutantCount());
     assertEquals(false, empty.attributionGap());
+    assertEquals(
+        List.of("AC-EMPTY"), attribution.mutations().getFirst().detectedAcceptanceConditionIds());
+    assertEquals(
+        List.of("AC-COUPON", "AC-EMPTY"),
+        attribution.mutations().getFirst().attributedAcceptanceConditionIds());
+  }
+
+  @Test
+  void retainsPitSourceAndBytecodeCoordinatesForMutationsOnTheSameSourceLine() {
+    List<PitMutation> mutations =
+        new PitMutationParser()
+            .parse(
+                managedXml(
+                    """
+                    <mutations>
+                      <mutation detected="true" status="KILLED">
+                        <sourceFile>OrderService.java</sourceFile><mutatedMethod>calculate</mutatedMethod>
+                        <methodDescription>(I)I</methodDescription><lineNumber>42</lineNumber><block>0</block><index>1</index>
+                        <mutatedClass>shop.OrderService</mutatedClass>
+                        <coveringTests></coveringTests><killingTests></killingTests><succeedingTests></succeedingTests>
+                      </mutation>
+                      <mutation detected="false" status="SURVIVED">
+                        <sourceFile>OrderService.java</sourceFile><mutatedMethod>calculate</mutatedMethod>
+                        <methodDescription>(I)I</methodDescription><lineNumber>42</lineNumber><block>0</block><index>2</index>
+                        <mutatedClass>shop.OrderService</mutatedClass>
+                        <coveringTests></coveringTests><killingTests></killingTests><succeedingTests></succeedingTests>
+                      </mutation>
+                    </mutations>
+                    """))
+            .mutations();
+
+    assertEquals(2, mutations.size());
+    assertEquals("OrderService.java", mutations.getFirst().sourceFile());
+    assertEquals("calculate", mutations.getFirst().mutatedMethod());
+    assertEquals("(I)I", mutations.getFirst().methodDescription());
+    assertEquals(42, mutations.getFirst().lineNumber());
+    assertEquals(0, mutations.getFirst().block());
+    assertEquals(1, mutations.getFirst().index());
+    assertEquals(2, mutations.get(1).index());
   }
 
   @Test

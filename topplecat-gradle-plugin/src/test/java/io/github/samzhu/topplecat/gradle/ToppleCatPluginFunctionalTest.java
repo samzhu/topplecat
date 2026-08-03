@@ -3,6 +3,7 @@ package io.github.samzhu.topplecat.gradle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -570,6 +571,12 @@ class ToppleCatPluginFunctionalTest {
         MutationGateResults.read(
             Files.readString(project.resolve("build/topplecat/mutation-results.json")));
     var rawMutation = mutation.mutations().getFirst();
+    assertNotNull(rawMutation.sourceFile());
+    assertNotNull(rawMutation.lineNumber());
+    assertNotNull(rawMutation.mutatedMethod());
+    assertNotNull(rawMutation.methodDescription());
+    assertNotNull(rawMutation.originalSourceLine());
+    assertTrue(verificationReport.contains("undetectedMutations"));
     String rawSelector =
         rawMutation.coveringTests().stream()
             .findFirst()
@@ -583,6 +590,10 @@ class ToppleCatPluginFunctionalTest {
             rawMutation.mutator(),
             rawMutation.description(),
             rawMutation.mutatedClass(),
+            rawMutation.sourceFile(),
+            rawMutation.mutatedMethod(),
+            rawMutation.methodDescription(),
+            rawMutation.originalSourceLine(),
             rawSelector,
             "CouponAcceptanceTest",
             "appliesCoupon",
@@ -590,13 +601,14 @@ class ToppleCatPluginFunctionalTest {
             "uniquelyAttributedMutationCount",
             "unattributedMutationCount",
             "coveredMutantCount",
-            "killedByAcceptanceMethodMutantCount",
-            "detectionRate")) {
+            "killedByAcceptanceMethodMutantCount")) {
       assertTrue(
           verificationReport.contains(reviewerOnly),
           "verification report omitted: " + reviewerOnly);
       assertFalse(feedback.contains(reviewerOnly), "agent feedback leaked: " + reviewerOnly);
     }
+    assertFalse(verificationReport.contains("detectionRate"));
+    assertFalse(feedback.contains("detectionRate"));
     assertFalse(Files.exists(project.resolve("src/hiddenTest")));
   }
 
@@ -843,6 +855,112 @@ class ToppleCatPluginFunctionalTest {
     assertFalse(
         Files.readString(project.resolve("build/topplecat/reports/verification/data.json"))
             .contains("onlyBHasAProperty"));
+  }
+
+  @Test
+  void selectedSpecRejectsSameNamedAcceptanceMethodOverloadsBeforeManagedPitRuns()
+      throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            propertyBasedTesting { enabled.set(false) }
+        }
+        """);
+    writeOverloadedAcceptanceMethods();
+    writePublicCasesForOverloadedAcceptanceMethods();
+    writeProductionClass();
+    Path spec = project.resolve("specs/a.md");
+    Files.createDirectories(spec.getParent());
+    Files.writeString(spec, "# A\n\nAC-A\n");
+
+    runner("toppleCatSeal", "--spec", "specs/a.md").build();
+    var failure = runner("toppleCatVerify", "--spec", "specs/a.md").buildAndFail();
+
+    assertTrue(
+        failure
+            .getOutput()
+            .contains(
+                "cannot safely target selected Acceptance Methods when"
+                    + " example.OverloadedAcceptanceTest"),
+        failure.getOutput());
+    assertTrue(
+        failure.getOutput().contains("both selected and unselected Acceptance Methods"),
+        failure.getOutput());
+  }
+
+  @Test
+  void selectedSpecMutationRunExcludesUnselectedAcAndRetainsPerAcDetection() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            propertyBasedTesting { enabled.set(false) }
+        }
+        """);
+    writeSelectedSpecMutationFixture();
+    Path spec = project.resolve("specs/selected.md");
+    Files.createDirectories(spec.getParent());
+    Files.writeString(spec, "# Selected\n\nAC-A\n\nAC-C\n");
+
+    runner("toppleCatSeal", "--spec", "specs/selected.md").build();
+    var verify = runner("toppleCatVerify", "--spec", "specs/selected.md").buildAndFail();
+
+    assertEquals(
+        TaskOutcome.SUCCESS, verify.task(":toppleCatManagedPit").getOutcome(), verify.getOutput());
+    assertEquals(
+        TaskOutcome.SUCCESS,
+        verify.task(":toppleCatMutationGate").getOutcome(),
+        verify.getOutput());
+    assertEquals(EvidenceVerdict.PASS, gate("JUNIT"));
+    assertEquals(EvidenceVerdict.FAIL, gate("MUTATION"));
+    assertEquals(EvidenceVerdict.FAIL, evidence().verdict());
+
+    MutationGateResults mutation =
+        MutationGateResults.read(
+            Files.readString(project.resolve("build/topplecat/mutation-results.json")));
+    var weakAcceptance =
+        mutation.assessments().stream()
+            .filter(assessment -> assessment.acId().equals("AC-A"))
+            .findFirst()
+            .orElseThrow();
+    var detectingAcceptance =
+        mutation.assessments().stream()
+            .filter(assessment -> assessment.acId().equals("AC-C"))
+            .findFirst()
+            .orElseThrow();
+    assertTrue(
+        weakAcceptance.coveredMutantCount() > weakAcceptance.killedByAcceptanceMethodMutantCount());
+    assertEquals(
+        detectingAcceptance.coveredMutantCount(),
+        detectingAcceptance.killedByAcceptanceMethodMutantCount());
+    assertTrue(
+        mutation.mutations().stream()
+            .anyMatch(
+                item ->
+                    item.status().equals("KILLED")
+                        && item.attributedAcceptanceConditionIds()
+                            .containsAll(List.of("AC-A", "AC-C"))
+                        && item.detectedAcceptanceConditionIds().equals(List.of("AC-C"))));
+    assertTrue(
+        mutation.mutations().stream()
+            .flatMap(
+                item ->
+                    java.util.stream.Stream.of(
+                        item.coveringTests(), item.killingTests(), item.succeedingTests()))
+            .flatMap(List::stream)
+            .noneMatch(selector -> selector.contains("unselectedAcceptanceFailsIfRun")));
+
+    String report =
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
+    String feedback = Files.readString(project.resolve("build/topplecat/agent-feedback.json"));
+    assertTrue(
+        Files.isRegularFile(project.resolve("build/topplecat/reports/verification/index.html")));
+    assertTrue(report.contains("\"AC-A\""));
+    assertTrue(report.contains("\"AC-C\""));
+    assertFalse(report.contains("\"AC-B\""));
+    assertFalse(feedback.contains("unselectedAcceptanceFailsIfRun"));
+    assertFalse(feedback.contains("CouponService"));
   }
 
   @Test
@@ -1433,6 +1551,125 @@ class ToppleCatPluginFunctionalTest {
         cases,
         "[{\"caseId\":\"%s\",\"acId\":\"%s\",\"inputs\":{},\"expected\":{\"discount\":%d}}]"
             .formatted(id, acId, discount));
+  }
+
+  private void writeOverloadedAcceptanceMethods() throws Exception {
+    Path source = project.resolve("src/test/java/example/OverloadedAcceptanceTest.java");
+    Files.createDirectories(source.getParent());
+    Files.writeString(
+        source,
+        """
+        package example;
+        import io.github.samzhu.topplecat.junit.ToppleAcceptanceTest;
+        import io.github.samzhu.topplecat.junit.ToppleCase;
+        import io.github.samzhu.topplecat.junit.ToppleScenario;
+        import io.github.samzhu.topplecat.junit.ToppleStage;
+        class OverloadedAcceptanceTest {
+            @ToppleAcceptanceTest("AC-A")
+            void checksCoupon(ToppleCase testCase, ToppleScenario scenario, FirstStage first) {
+                scenario.then(first).matches(testCase);
+            }
+            @ToppleAcceptanceTest("AC-B")
+            void checksCoupon(ToppleCase testCase, ToppleScenario scenario, SecondStage second) {
+                scenario.then(second).matches(testCase);
+            }
+            static class FirstStage extends ToppleStage {
+                void matches(ToppleCase testCase) { testCase.verify("discount", 100); }
+            }
+            static class SecondStage extends ToppleStage {
+                void matches(ToppleCase testCase) { testCase.verify("discount", 100); }
+            }
+        }
+        """);
+  }
+
+  private void writePublicCasesForOverloadedAcceptanceMethods() throws Exception {
+    Path cases = project.resolve("src/test/resources/topplecat/cases/overloaded.json");
+    Files.createDirectories(cases.getParent());
+    Files.writeString(
+        cases,
+        """
+        [
+          {"caseId":"overloaded-a","acId":"AC-A","inputs":{},"expected":{"discount":100}},
+          {"caseId":"overloaded-b","acId":"AC-B","inputs":{},"expected":{"discount":100}}
+        ]
+        """);
+  }
+
+  private void writeSelectedSpecMutationFixture() throws Exception {
+    Path production = project.resolve("src/main/java/example/CouponService.java");
+    Files.createDirectories(production.getParent());
+    Files.writeString(
+        production,
+        """
+        package example;
+        public final class CouponService {
+            public static int discountedTotal(int subtotal) { return subtotal - 10; }
+        }
+        """);
+    Path acceptance = project.resolve("src/test/java/example/ScopedMutationAcceptanceTest.java");
+    Files.createDirectories(acceptance.getParent());
+    Files.writeString(
+        acceptance,
+        """
+        package example;
+        import io.github.samzhu.topplecat.junit.ToppleAcceptanceTest;
+        import io.github.samzhu.topplecat.junit.ToppleCase;
+        import io.github.samzhu.topplecat.junit.ToppleScenario;
+        import io.github.samzhu.topplecat.junit.ToppleStage;
+        class ScopedMutationAcceptanceTest {
+            @ToppleAcceptanceTest("AC-A")
+            void weakAcceptance(ToppleCase testCase, ToppleScenario scenario, WeakStage coupon) {
+                scenario.then(coupon).callsDiscountWithoutObservingIt(testCase);
+            }
+            @ToppleAcceptanceTest("AC-C")
+            void detectingAcceptance(ToppleCase testCase, ToppleScenario scenario, DetectingStage coupon) {
+                scenario.then(coupon).verifiesDiscount(testCase);
+            }
+            static class WeakStage extends ToppleStage {
+                void callsDiscountWithoutObservingIt(ToppleCase testCase) {
+                    CouponService.discountedTotal(110);
+                    testCase.verify("discount", 100);
+                }
+            }
+            static class DetectingStage extends ToppleStage {
+                void verifiesDiscount(ToppleCase testCase) {
+                    testCase.verify("discount", CouponService.discountedTotal(110));
+                }
+            }
+        }
+        """);
+    Path unselected =
+        project.resolve("src/test/java/example/UnselectedMutationAcceptanceTest.java");
+    Files.writeString(
+        unselected,
+        """
+        package example;
+        import io.github.samzhu.topplecat.junit.ToppleAcceptanceTest;
+        import io.github.samzhu.topplecat.junit.ToppleCase;
+        import io.github.samzhu.topplecat.junit.ToppleScenario;
+        import io.github.samzhu.topplecat.junit.ToppleStage;
+        class UnselectedMutationAcceptanceTest {
+            @ToppleAcceptanceTest("AC-B")
+            void unselectedAcceptanceFailsIfRun(ToppleCase testCase, ToppleScenario scenario, UnselectedStage coupon) {
+                scenario.then(coupon).failsIfRun();
+            }
+            static class UnselectedStage extends ToppleStage {
+                void failsIfRun() { throw new AssertionError("AC-B must stay outside the selected delivery"); }
+            }
+        }
+        """);
+    Path cases = project.resolve("src/test/resources/topplecat/cases/scoped-mutation.json");
+    Files.createDirectories(cases.getParent());
+    Files.writeString(
+        cases,
+        """
+        [
+          {"caseId":"selected-weak","acId":"AC-A","inputs":{},"expected":{"discount":100}},
+          {"caseId":"unselected-failing","acId":"AC-B","inputs":{},"expected":{"discount":100}},
+          {"caseId":"selected-detecting","acId":"AC-C","inputs":{},"expected":{"discount":100}}
+        ]
+        """);
   }
 
   private void writePublicCasesForAAndB() throws Exception {

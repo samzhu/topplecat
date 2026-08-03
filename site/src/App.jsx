@@ -20,7 +20,7 @@ import stageFloorLayer from "./assets/scene/tabletop.svg";
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.17"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.18"';
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(
@@ -36,7 +36,7 @@ void appliesCoupon(
 const copyByLocale = {
   en: {
     htmlLang: "en",
-    documentTitle: "ToppleCat: Make every agent’s “done” prove itself",
+    documentTitle: "ToppleCat: Make every agent’s “done” earn a PASS",
     metaDescription:
       "ToppleCat verifies AI-delivered Java with executable acceptance contracts, hidden tests, mutation testing, property-based testing, and current-run evidence.",
     nav: {
@@ -49,10 +49,9 @@ const copyByLocale = {
       switchLanguage: "Current language: English. Switch to Traditional Chinese.",
     },
     hero: {
-      titleBefore: "Make every agent’s",
-      titleAfter: "“done” prove itself.",
+      titleChunks: ["Make every agent’s", "“done” earn a PASS."],
       summary:
-        "Executable Java acceptance contracts catch shortcuts, hard-coded answers, changed rules, and incomplete work.",
+        "Executable Java acceptance contracts challenge the same delivery with reviewer-owned cases, changed code, and generated inputs. Every required gate must pass in the current run.",
       explore: "See how it works",
       repository: "View on GitHub",
       scene:
@@ -74,14 +73,14 @@ const copyByLocale = {
       "challenges the implementation",
       "from different angles,",
       "and records",
-      "one fresh verdict",
+      "one current-run verdict",
       "for this delivery.",
     ],
     gates: {
       kicker: "Different checks catch different mistakes",
-      heading: "Your public contract runs first. Then ToppleCat pushes harder.",
+      heading: "One delivery. Independent checks from different angles.",
       summary:
-        "Hidden cases, changed code, and generated inputs test different failure modes. Contract integrity and expected-value checks keep the evidence honest.",
+        "Hidden cases, changed code, and generated inputs test different failure modes. Contract integrity and expected-value checks keep the evidence honest, and no result substitutes for another.",
       cards: [
         {
           label: "Hidden Tests",
@@ -132,7 +131,7 @@ const copyByLocale = {
     views: {
       heading: "One executable contract. Two human reports.",
       summary:
-        "The reviewer reads the complete selected Spec before handoff, then gets one failure-first report from formal verification. ToppleCat makes a delivery recommendation; the reviewer decides whether to accept it.",
+        "The reviewer reads the complete selected Spec before handoff, then gets one failure-first report from formal verification. ToppleCat records the contract verdict; the reviewer decides whether to accept the delivery.",
       items: [
         {
           title: "Spec Review",
@@ -188,7 +187,7 @@ const copyByLocale = {
       ],
       verdictLabel: "Aggregate verdict",
       verdictBody:
-        "Only every required gate passing in the current run lets ToppleCat recommend acceptance. The reviewer makes the final decision.",
+        "Only when every required gate passes in the current run does ToppleCat record PASS. The reviewer makes the final decision.",
     },
     install: {
       heading: "Try the sample before changing your project.",
@@ -209,7 +208,7 @@ const copyByLocale = {
   },
   "zh-TW": {
     htmlLang: "zh-Hant-TW",
-    documentTitle: "ToppleCat：讓每一個 agent 的「完成」都能自證",
+    documentTitle: "ToppleCat：agent 每次交付，都得先通過考驗，才拿得到 PASS",
     metaDescription:
       "ToppleCat 以可執行的 Java 驗收契約、隱藏測試、變異測試、性質導向測試與本次執行證據，驗證 AI 交付的程式碼。",
     nav: {
@@ -222,10 +221,9 @@ const copyByLocale = {
       switchLanguage: "目前語言：繁體中文。切換為英文。",
     },
     hero: {
-      titleBefore: "讓每一個 agent 的",
-      titleAfter: "「完成」都能自證。",
+      titleChunks: ["agent 每次交付，", "都得先通過考驗，", "才拿得到 PASS。"],
       summary:
-        "可執行的 Java 驗收契約，可找出取巧作法、寫死的答案、被改動的規則，以及未完成的工作。",
+        "可執行的 Java 驗收契約，會用審閱者案例、變更後的程式碼與產生的輸入，從不同角度檢驗同一份交付；本次執行的必要 gate 必須全部通過。",
       explore: "看看如何運作",
       repository: "在 GitHub 查看",
       scene:
@@ -247,14 +245,14 @@ const copyByLocale = {
       "ToppleCat 會重新執行",
       "已接受的契約，",
       "從不同角度挑戰實作，",
-      "並為這次交付",
-      "留下全新的判定。",
+      "並留下",
+      "只屬於本次執行的判定。",
     ],
     gates: {
       kicker: "不同檢查捕捉不同錯誤",
-      heading: "先跑公開契約。再讓 ToppleCat 加強驗證。",
+      heading: "同一份交付，接受不同角度的獨立檢查。",
       summary:
-        "隱藏案例、變更後的程式碼與產生的輸入，會測試不同的失敗模式。契約完整性與預期值檢查，確保證據可信。",
+        "隱藏案例、變更後的程式碼與產生的輸入，會測試不同的失敗模式。契約完整性與預期值檢查確保證據可信，而且任何一項結果都不能取代另一項。",
       cards: [
         {
           label: "隱藏測試",
@@ -305,7 +303,7 @@ const copyByLocale = {
     views: {
       heading: "一份可執行契約，兩份人類報告。",
       summary:
-        "交付前，審閱者閱讀完整的已選 Spec；正式驗證後，再從一份問題優先的報告查看結果。ToppleCat 提供交付建議，是否接受仍由審閱者決定。",
+        "交付前，審閱者閱讀完整的已選 Spec；正式驗證後，再從一份問題優先的報告查看結果。ToppleCat 記錄契約判定；是否接受交付仍由審閱者決定。",
       items: [
         {
           title: "Spec Review",
@@ -361,7 +359,7 @@ const copyByLocale = {
       ],
       verdictLabel: "彙總判定",
       verdictBody:
-        "只有本次執行中每個必要 gate 都通過，ToppleCat 才會建議接受；最後仍由審閱者決定。",
+        "只有本次執行中每個必要 gate 都通過，ToppleCat 才會記錄 PASS；最後仍由審閱者決定。",
     },
     install: {
       heading: "先執行範例，再改動自己的專案。",
@@ -625,7 +623,11 @@ function App() {
       <section className="hero hero-cinematic" id="top">
         <div className="hero-message">
           <h1>
-            {copy.hero.titleBefore}{locale === "en" ? " " : ""}{copy.hero.titleAfter}
+            {copy.hero.titleChunks.map((chunk, index) => (
+              <span className={locale === "zh-TW" ? "hero-title-chunk" : undefined} key={chunk}>
+                {chunk}{locale === "en" && index < copy.hero.titleChunks.length - 1 ? " " : ""}
+              </span>
+            ))}
           </h1>
           <p className="hero-summary">{copy.hero.summary}</p>
           <div className="hero-actions">

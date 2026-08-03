@@ -24,3 +24,21 @@ Production artwork is grouped by role under `src/assets`. See
 [`src/assets/README.md`](src/assets/README.md) for the inventory, naming rules,
 and sprite alignment contract. Generated drafts and discarded iterations do not
 belong in the production asset tree.
+
+## Social sharing
+
+The initial HTML head provides Open Graph and X Card metadata for crawlers that
+do not execute React. Its card image lives at
+`public/social/topplecat-social-card-v1.jpg`, where Vite preserves the stable
+public URL. Publish a new versioned filename for a card update so Meta and
+LinkedIn do not retain a cached previous image.
+
+## Search discovery
+
+The canonical English homepage is the only URL in `public/sitemap.xml`; the
+language query changes the client-side interface and is not an independently
+indexed page. `robots.txt` advertises that sitemap. The static HTML head holds
+the canonical URL, social metadata, and JSON-LD that describes the visible
+ToppleCat website and Java source project. Keep that metadata aligned with the
+visible English homepage; do not add AI-only files, hidden text, or FAQ markup
+for content that is not displayed.

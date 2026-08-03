@@ -2,7 +2,7 @@
 name: topplecat-acceptance
 description: Bind selected Spec Acceptance Conditions to ToppleCat Java/JUnit executable contracts. Use when authoring Acceptance Methods, public or reviewer-owned Typed Case Rows, or optional Property-Based Testing declarations for a Java delivery.
 metadata:
-  topplecat-version: "0.0.17"
+  topplecat-version: "0.0.18"
 ---
 
 # ToppleCat acceptance
@@ -55,7 +55,15 @@ case data.
 Bind every in-scope AC to one public `@ToppleAcceptanceTest` Acceptance Method
 and human-confirmed public rows. Add reviewer-owned rows for independently
 chosen examples. Add a bounded `@ToppleProperty` only when a recorded invariant
-deserves generated coverage.
+deserves generated coverage. Give every Property a JUnit `@DisplayName` that
+states both the generated input or repeated situation and the invariant checked
+for every completed trial. Write it in the Spec's business language so a
+Reviewer can understand what a runtime count such as 200/200 actually covered.
+Every discarded generator input remains canonical JSON Property evidence with
+a neutral explanation; it is not a Typed Case Row or a new rule.
+Give every selected Scenario Step an `@As` sentence in the Spec's business
+language. Describe the state, action, or observable result; never expose a Java
+method fallback, type placeholder, or technical parameter as Reviewer prose.
 
 Trace every top-level expected value to its `c.verify(...)` call inside a
 compiler-described Step. Follow the reference when several independent values
@@ -63,8 +71,9 @@ need separate assertion opportunities.
 
 Complete this step only when every in-scope AC maps one-to-one to a Java method,
 every row targets an existing AC, every top-level expected value has an
-assertion opportunity, and every authored API exists in ToppleCat's current
-public API.
+assertion opportunity, every Property title identifies both its trial subject
+and invariant, every selected Step has business-readable `@As` prose, and every
+authored API exists in ToppleCat's current public API.
 
 ## 3. Design the safeguards
 

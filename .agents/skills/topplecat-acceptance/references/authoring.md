@@ -31,10 +31,14 @@ concrete Stage. A selected Step is a non-private, non-static, non-final `void`
 method. Use `step().attach(...)` only for an attachment belonging to the
 active compiled Step.
 
-Use stable, business-readable method names. Add `@DisplayName` when it makes the
-reviewer-facing title clearer; otherwise ToppleCat derives the title from the
-method name. Use optional `@As` text for compiler-described Step sentences and
-case IDs that identify the behavior or boundary.
+Use stable, business-readable method names and give every selected acceptance
+method a `@DisplayName` that states what the Reviewer is checking. Give every
+selected Step an `@As` sentence that states its
+business-visible state, action, or observable result. Do not merely replace
+underscores in a Java method name or expose placeholders such as `<scenario>`,
+Java types, signatures, or technical parameter names as Reviewer prose. Use
+named `@As` placeholders only when a case value makes the sentence more
+specific without exposing implementation structure.
 
 `@DisplayName` and `@As` are human-authored display prose. Keep the chosen text
 exact, including Traditional Chinese and named `@As` placeholders: ToppleCat
@@ -81,11 +85,26 @@ Put optional Properties under `src/test` and tie each one to an existing AC:
 
 ```java
 @ToppleProperty("AC-CHECKOUT-001")
+@DisplayName("合法購物車的應付金額不得小於 0")
 void payableTotalNeverBecomesNegative(PropertyTrials trials) {
     trials.forAll(Generators.integers(0, 10_000))
         .check(total -> assertTrue(checkout.payable(total) >= 0));
 }
 ```
+
+Every Property must declare a JUnit `@DisplayName`. State both:
+
+- the generated input or repeated situation, such as legal carts or replaying
+  one checkout request with the same idempotency key; and
+- the invariant checked for every completed trial, such as a non-negative
+  payable total or no second payment and order.
+
+Use the Spec's business language. Do not use only a Java method name, a generic
+title such as `checkout property`, generator terminology, or a configured trial
+count. The title describes what is checked; Current-run Evidence supplies how
+many trials actually completed. Keep one invariant per Property. Good titles
+include `合法購物車的應付金額不得小於 0` and
+`相同結帳識別碼重送時不得重複付款或建立第二張訂單`.
 
 The method returns `void`, receives exactly one `PropertyTrials`, and calls one
 `forAll(...).check(...)`. `tries` must be between 1 and 100,000; discard and
@@ -98,7 +117,10 @@ ordered values and enums, explicit-alphabet strings, lists, optionals, `oneOf`,
 `requireCoverage` for a named business boundary. Recursive generators,
 `flatMap`, custom engines, and custom shrinkers are outside the supported API.
 
-A Property states a recorded invariant.
-Generated trials are Current-run Evidence, not Typed Case Rows.
-An optional JUnit `@DisplayName` on a Property is likewise preserved as its
-Reviewer-facing title.
+A Property states a recorded invariant. Generated trials are Current-run
+Evidence, not Typed Case Rows. ToppleCat preserves the required `@DisplayName`
+as its Reviewer-facing title so the report can combine that authored meaning
+with runtime counts without inferring business meaning from generator code.
+Every discarded generator input is retained as canonical JSON Property evidence
+with a neutral explanation and may be paginated in the Verification Report; it
+does not become a case row or a new rule.

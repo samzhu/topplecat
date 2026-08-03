@@ -47,8 +47,9 @@ or its evidence.
 
 When PIT produced mutants but none map exactly to a public Acceptance Method,
 the Mutation Gate fails because ToppleCat cannot claim public-contract
-attribution. When an AC did cover mutants but its own method did not kill enough
-of them for the sealed threshold, the Gate also fails. An AC with no covered
+attribution. When an AC did cover mutants but its own method did not detect
+every attributed mutant, that AC and the aggregate Gate fail; there is no
+percentage threshold or project-wide mutation score. An AC with no covered
 managed-profile mutant is instead an attribution gap for reviewer judgment once
 another AC has exact attribution. Inspect the reviewer-only
 `mutation-results.json` and Verification Report to see the unmodified PIT
@@ -67,7 +68,7 @@ on its own.
 
 ## Custody cannot be restored
 
-The 0.0.17 custody state is reviewer-local under
+The 0.0.18 custody state is reviewer-local under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`. The project must be opened
 at the same resolved path and with the reviewer state available. Prior-format
 custody is not migrated; create a new sealed reviewer state.

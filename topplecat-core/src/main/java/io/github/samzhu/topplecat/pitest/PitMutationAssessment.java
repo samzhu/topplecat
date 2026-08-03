@@ -9,22 +9,34 @@ public record PitMutationAssessment(
     List<String> acceptanceMethods,
     int coveredMutantCount,
     int killedByAcceptanceMethodMutantCount,
-    int sealedThreshold,
-    int detectionRate,
     List<PitOutcomeCount> pitOutcomeCounts,
     boolean attributionGap) {
+  /** Compatibility constructor for the retired percentage projection. */
+  public PitMutationAssessment(
+      String acId,
+      List<String> acceptanceMethods,
+      int coveredMutantCount,
+      int killedByAcceptanceMethodMutantCount,
+      int ignoredSealedThreshold,
+      int ignoredDetectionRate,
+      List<PitOutcomeCount> pitOutcomeCounts,
+      boolean attributionGap) {
+    this(
+        acId,
+        acceptanceMethods,
+        coveredMutantCount,
+        killedByAcceptanceMethodMutantCount,
+        pitOutcomeCounts,
+        attributionGap);
+  }
+
   public PitMutationAssessment {
     if (acId == null || acId.isBlank()) {
       throw new ToppleCatException("Mutation assessment AC id is required.");
     }
-    if (sealedThreshold < 0 || sealedThreshold > 100) {
-      throw new ToppleCatException("Mutation assessment threshold must be between 0 and 100.");
-    }
     if (coveredMutantCount < 0
         || killedByAcceptanceMethodMutantCount < 0
-        || killedByAcceptanceMethodMutantCount > coveredMutantCount
-        || detectionRate < 0
-        || detectionRate > 100) {
+        || killedByAcceptanceMethodMutantCount > coveredMutantCount) {
       throw new ToppleCatException("Mutation assessment counts are invalid for " + acId + ".");
     }
     acceptanceMethods = List.copyOf(acceptanceMethods == null ? List.of() : acceptanceMethods);
@@ -33,5 +45,28 @@ public record PitMutationAssessment(
       throw new ToppleCatException(
           "Mutation assessment attribution-gap state must match its covered mutant count.");
     }
+  }
+
+  /** Number of covered mutations the owning Acceptance Method detected. */
+  public int detectedCount() {
+    return killedByAcceptanceMethodMutantCount;
+  }
+
+  /**
+   * @deprecated percentage scores are no longer a Mutation Gate policy.
+   */
+  @Deprecated
+  public int sealedThreshold() {
+    return 100;
+  }
+
+  /**
+   * @deprecated percentage scores are no longer a Mutation Gate policy.
+   */
+  @Deprecated
+  public int detectionRate() {
+    return coveredMutantCount == 0
+        ? 0
+        : (killedByAcceptanceMethodMutantCount * 100) / coveredMutantCount;
   }
 }

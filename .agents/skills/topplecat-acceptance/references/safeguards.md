@@ -37,7 +37,9 @@ result. Formal Verify uses ToppleCat's fixed PIT 1.25.5
 mutants but none can be exactly attributed to a public Acceptance Method,
 `MUTATION=FAIL`. Once at least one mutant has exact attribution, an AC with no
 covered mutant is a nonblocking reviewer-visible attribution gap; it never
-receives inferred credit or a passing mutation score.
+receives inferred credit from another AC. A selected AC fails this safeguard
+when its public Acceptance Method lets an attributed altered program pass;
+there is no percentage threshold or project-wide mutation score.
 Project-wide `tasks.withType(PitestTask)` conventions belong only to a separate
 project PIT workflow and cannot change formal Verify's managed producer.
 
@@ -48,7 +50,8 @@ totals stay non-negative, ordering does not change a result, or applying the
 same idempotency key twice has the approved effect.
 
 Properties are public declarations. They do not read reviewer rows, satisfy
-Hidden Tests, consume expected case values, or contribute to mutation scores.
+Hidden Tests, consume expected case values, or improve Mutation Testing
+evidence.
 
 ## Contract integrity and expected consumption
 

@@ -88,7 +88,10 @@ for required in \
   'between 1 and 100,000' \
   'classify' \
   'requireCoverage' \
-  'Current-run Evidence'; do
+  'Current-run Evidence' \
+  '@DisplayName' \
+  '@As' \
+  'discarded generator input'; do
   grep -Fq -- "$required" "$skill_root/references/authoring.md" \
     || fail "authoring reference is missing current API: $required"
 done

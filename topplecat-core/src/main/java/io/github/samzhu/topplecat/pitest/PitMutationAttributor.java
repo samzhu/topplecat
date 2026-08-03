@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,20 +23,28 @@ public final class PitMutationAttributor {
    * boolean flag: only {@code killingTests} supplies contract-scoped detection evidence.
    */
   public static PitMutationAttribution attribute(
+      PitMutationReport report, Map<String, ? extends Set<String>> canonicalMethodsByAc) {
+    return attribute(report, canonicalMethodsByAc, ignored -> null);
+  }
+
+  /**
+   * Attributes a report and optionally resolves the original source line for each PIT mutation. The
+   * resolver is diagnostic-only; it cannot affect coverage, detection, or the Gate verdict.
+   */
+  public static PitMutationAttribution attribute(
       PitMutationReport report,
       Map<String, ? extends Set<String>> canonicalMethodsByAc,
-      int sealedThreshold) {
+      Function<PitMutation, String> originalSourceLineResolver) {
     if (report == null || !report.coverageMatrix()) {
       throw new ToppleCatException(
           "PIT fullMutationMatrix=true with coveringTests, killingTests, and succeedingTests is"
               + " required for automatic per-AC attribution.");
     }
-    if (sealedThreshold < 0 || sealedThreshold > 100) {
-      throw new ToppleCatException("PIT mutation threshold must be between 0 and 100.");
-    }
     ToppleCatManagedMutationProfile.validate(report);
 
     List<MethodBinding> bindings = bindings(canonicalMethodsByAc);
+    Function<PitMutation, String> sourceLineResolver =
+        originalSourceLineResolver == null ? ignored -> null : originalSourceLineResolver;
     Map<String, AcCounts> countsByAc = new TreeMap<>();
     for (String acId : canonicalMethodsByAc.keySet().stream().sorted().toList()) {
       countsByAc.put(acId, new AcCounts(methodsFor(acId, bindings)));
@@ -49,6 +58,8 @@ public final class PitMutationAttributor {
     for (PitMutation mutation : report.mutations()) {
       Set<String> covered = matchedAcceptanceConditions(mutation.coveringTests(), bindings);
       Set<String> killed = matchedAcceptanceConditions(mutation.killingTests(), bindings);
+      Set<String> detectedBy = new LinkedHashSet<>(killed);
+      detectedBy.retainAll(covered);
       // Parse succeeding selectors even though they are not score input. An ambiguous selector is
       // unusable reviewer evidence and must not silently disappear from the matrix.
       matchedAcceptanceConditions(mutation.succeedingTests(), bindings);
@@ -67,7 +78,7 @@ public final class PitMutationAttributor {
         AcCounts counts = countsByAc.get(acId);
         counts.covered++;
         increment(counts.outcomes, outcome);
-        if (killed.contains(acId)) {
+        if (detectedBy.contains(acId)) {
           counts.killed++;
         }
       }
@@ -76,12 +87,20 @@ public final class PitMutationAttributor {
               mutation.detected(),
               mutation.status(),
               mutation.mutatedClass(),
+              mutation.sourceFile(),
+              mutation.mutatedMethod(),
+              mutation.methodDescription(),
+              mutation.lineNumber(),
+              mutation.block(),
+              mutation.index(),
               mutation.mutator(),
               mutation.description(),
               mutation.coveringTests(),
               mutation.killingTests(),
               mutation.succeedingTests(),
-              covered.stream().sorted().toList()));
+              covered.stream().sorted().toList(),
+              detectedBy.stream().sorted().toList(),
+              sourceLineResolver.apply(mutation)));
     }
 
     List<PitMutationAssessment> assessments =
@@ -90,14 +109,11 @@ public final class PitMutationAttributor {
                 entry -> {
                   String acId = entry.getKey();
                   AcCounts counts = entry.getValue();
-                  int rate = counts.covered == 0 ? 0 : (counts.killed * 100) / counts.covered;
                   return new PitMutationAssessment(
                       acId,
                       counts.acceptanceMethods,
                       counts.covered,
                       counts.killed,
-                      sealedThreshold,
-                      rate,
                       outcomeCounts(counts.outcomes),
                       counts.covered == 0);
                 })
@@ -114,6 +130,17 @@ public final class PitMutationAttributor {
         mutatorSummaries(outcomesByMutator),
         assessments,
         evidence);
+  }
+
+  /**
+   * @deprecated use {@link #attribute(PitMutationReport, Map)}.
+   */
+  @Deprecated
+  public static PitMutationAttribution attribute(
+      PitMutationReport report,
+      Map<String, ? extends Set<String>> canonicalMethodsByAc,
+      int ignoredSealedThreshold) {
+    return attribute(report, canonicalMethodsByAc);
   }
 
   private static List<MethodBinding> bindings(

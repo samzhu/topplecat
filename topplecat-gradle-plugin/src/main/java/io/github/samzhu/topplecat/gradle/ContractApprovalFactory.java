@@ -152,8 +152,6 @@ final class ContractApprovalFactory {
     if (approved.propertyBasedTestingEnabled() != current.propertyBasedTestingEnabled())
       result.add("propertyBasedTestingEnabled");
     if (approved.mutationEnabled() != current.mutationEnabled()) result.add("mutationEnabled");
-    if (approved.mutationThreshold() != current.mutationThreshold())
-      result.add("mutationThreshold");
     result.sort(Comparator.naturalOrder());
     return result;
   }

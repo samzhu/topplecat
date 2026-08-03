@@ -8,12 +8,15 @@ import io.github.samzhu.topplecat.core.ScenarioTemplateRenderer;
 import io.github.samzhu.topplecat.core.SourceRef;
 import io.github.samzhu.topplecat.core.StepTemplate;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
+import io.github.samzhu.topplecat.pitest.PitMutationAssessment;
 import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
+import io.github.samzhu.topplecat.pitest.PitMutationEvidence;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /** Factories that enforce the information boundary before rendering begins. */
@@ -251,16 +254,326 @@ public final class ReportViews {
   /** Adds reviewer-only raw PIT attribution after the mutation producer result is available. */
   public static VerificationView withMutationAttribution(
       VerificationView view, PitMutationAttribution mutationAttribution) {
+    VerificationView attached =
+        new VerificationView(
+            VerificationView.SCHEMA_VERSION,
+            view.generatedAt(),
+            view.verdict(),
+            view.expectedConsumptionEnforced(),
+            view.gates(),
+            view.acceptanceConditions(),
+            view.deliveryScope(),
+            mutationAttribution,
+            view.run());
+    return withAcSafeguards(attached);
+  }
+
+  /** Projects already-assessed safeguard evidence into the fixed order of every AC card. */
+  private static VerificationView withAcSafeguards(VerificationView view) {
+    Map<String, PitMutationAssessment> mutations =
+        view.mutationAttribution() == null
+            ? Map.of()
+            : view.mutationAttribution().assessments().stream()
+                .collect(
+                    java.util.stream.Collectors.toMap(
+                        PitMutationAssessment::acId, item -> item, (left, right) -> left));
+    List<VerificationAcceptanceCondition> assessed =
+        view.acceptanceConditions().stream()
+            .map(
+                ac ->
+                    assessAc(
+                        ac, view.gates(), mutations.get(ac.acId()), view.mutationAttribution()))
+            .sorted(
+                Comparator.comparing(
+                        (VerificationAcceptanceCondition ac) ->
+                            ac.status() == CaseResultStatus.PASS)
+                    .thenComparing(ac -> ac.status() == CaseResultStatus.NOT_REPORTED)
+                    .thenComparing(VerificationAcceptanceCondition::acId))
+            .toList();
     return new VerificationView(
         VerificationView.SCHEMA_VERSION,
         view.generatedAt(),
-        view.verdict(),
+        suiteVerdict(assessed, view.gates()),
         view.expectedConsumptionEnforced(),
         view.gates(),
-        view.acceptanceConditions(),
+        assessed,
         view.deliveryScope(),
-        mutationAttribution,
+        view.mutationAttribution(),
         view.run());
+  }
+
+  private static VerificationAcceptanceCondition assessAc(
+      VerificationAcceptanceCondition ac,
+      List<EvidenceGate> gates,
+      PitMutationAssessment mutation,
+      PitMutationAttribution mutationAttribution) {
+    List<VerificationMutationDetail> undetectedMutations =
+        undetectedMutations(ac.acId(), mutationAttribution);
+    List<VerificationSafeguard> safeguards =
+        List.of(
+            caseSafeguard(
+                "PUBLIC_ACCEPTANCE",
+                "JUNIT",
+                ac.cases().stream()
+                    .filter(testCase -> testCase.visibility() == CaseVisibility.PUBLIC)
+                    .toList(),
+                gates),
+            caseSafeguard(
+                "HIDDEN_TESTS",
+                "REVIEWER_JUNIT",
+                ac.cases().stream()
+                    .filter(testCase -> testCase.visibility() == CaseVisibility.HIDDEN)
+                    .toList(),
+                gates),
+            expectedSafeguard(ac, gates),
+            propertySafeguard(ac, gates),
+            mutationSafeguard(mutation, gate(gates, "MUTATION")));
+    CaseResultStatus status =
+        safeguards.stream().anyMatch(item -> item.verdict() == EvidenceVerdict.FAIL)
+            ? CaseResultStatus.FAIL
+            : safeguards.stream().anyMatch(item -> item.verdict() == EvidenceVerdict.INCOMPLETE)
+                ? CaseResultStatus.NOT_REPORTED
+                : CaseResultStatus.PASS;
+    return new VerificationAcceptanceCondition(
+        ac.acId(),
+        ac.title(),
+        ac.scenario(),
+        status,
+        ac.cases(),
+        ac.stepSources(),
+        ac.stepPhases(),
+        ac.properties(),
+        safeguards,
+        undetectedMutations);
+  }
+
+  private static VerificationSafeguard caseSafeguard(
+      String name, String gateName, List<VerificationCase> cases, List<EvidenceGate> gates) {
+    EvidenceGate gate = gate(gates, gateName);
+    if (cases.stream().anyMatch(item -> item.status() == CaseResultStatus.FAIL)) {
+      return safeguard(
+          name, EvidenceVerdict.FAIL, "A case in this acceptance run failed.", gateName);
+    }
+    if (!cases.isEmpty()
+        && cases.stream().allMatch(item -> item.status() == CaseResultStatus.PASS)) {
+      return safeguard(name, EvidenceVerdict.PASS, "All recorded cases passed.", gateName);
+    }
+    return absentSafeguard(
+        name, gate, gateName, "No current case evidence was recorded for this AC.");
+  }
+
+  private static VerificationSafeguard expectedSafeguard(
+      VerificationAcceptanceCondition ac, List<EvidenceGate> gates) {
+    EvidenceGate gate = gate(gates, "EXPECTED_CONSUMPTION");
+    boolean hasExpected = ac.cases().stream().anyMatch(testCase -> !testCase.expected().isEmpty());
+    boolean unverified =
+        ac.cases().stream()
+            .flatMap(testCase -> testCase.expectedConsumption().values().stream())
+            .anyMatch(state -> !"ASSERTED".equals(state));
+    boolean missing =
+        ac.cases().stream()
+            .flatMap(testCase -> testCase.expectedConsumption().values().stream())
+            .anyMatch("UNKNOWN"::equals);
+    if (missing) {
+      return safeguard(
+          "EXPECTED_RESULT_CHECK",
+          EvidenceVerdict.INCOMPLETE,
+          "The current run did not record an expected-result comparison for this AC.",
+          "EXPECTED_CONSUMPTION");
+    }
+    if (unverified) {
+      return safeguard(
+          "EXPECTED_RESULT_CHECK",
+          EvidenceVerdict.FAIL,
+          "An authored expected result was read or declared but not compared with the actual"
+              + " result.",
+          "EXPECTED_CONSUMPTION");
+    }
+    if (hasExpected && !ac.cases().isEmpty()) {
+      return safeguard(
+          "EXPECTED_RESULT_CHECK",
+          EvidenceVerdict.PASS,
+          "Every authored expected result was compared with the program's actual result.",
+          "EXPECTED_CONSUMPTION");
+    }
+    return absentSafeguard(
+        "EXPECTED_RESULT_CHECK",
+        gate,
+        "EXPECTED_CONSUMPTION",
+        "This AC has no authored expected result to check.");
+  }
+
+  private static VerificationSafeguard propertySafeguard(
+      VerificationAcceptanceCondition ac, List<EvidenceGate> gates) {
+    EvidenceGate gate = gate(gates, "PROPERTY");
+    if (ac.properties().stream().anyMatch(property -> "FAIL".equals(property.status()))) {
+      return safeguard(
+          "PROPERTY_BASED_TESTING",
+          EvidenceVerdict.FAIL,
+          "A generated input violated the authored Property rule.",
+          "PROPERTY");
+    }
+    if (ac.properties().stream().anyMatch(property -> "INCOMPLETE".equals(property.status()))) {
+      return safeguard(
+          "PROPERTY_BASED_TESTING",
+          EvidenceVerdict.INCOMPLETE,
+          "Property-Based Testing did not produce complete current-run evidence.",
+          "PROPERTY");
+    }
+    if (!ac.properties().isEmpty()) {
+      return safeguard(
+          "PROPERTY_BASED_TESTING",
+          EvidenceVerdict.PASS,
+          "All completed generated inputs satisfied the authored Property rule.",
+          "PROPERTY");
+    }
+    return absentSafeguard(
+        "PROPERTY_BASED_TESTING",
+        gate,
+        "PROPERTY",
+        "This AC has no Property declaration in the current scope.");
+  }
+
+  private static VerificationSafeguard mutationSafeguard(
+      PitMutationAssessment assessment, EvidenceGate gate) {
+    if (assessment == null) {
+      return absentSafeguard(
+          "MUTATION_TESTING",
+          gate,
+          "MUTATION",
+          "No mutation was exactly attributed to this AC in the current run.");
+    }
+    if (assessment.attributionGap()) {
+      return safeguard(
+          "MUTATION_TESTING",
+          EvidenceVerdict.NOT_APPLICABLE,
+          "No mutation was exactly attributed to this Acceptance Method in the current run.",
+          "MUTATION");
+    }
+    if (assessment.killedByAcceptanceMethodMutantCount() < assessment.coveredMutantCount()) {
+      return safeguard(
+          "MUTATION_TESTING",
+          EvidenceVerdict.FAIL,
+          "An altered program still passed this AC's public acceptance, so the current acceptance"
+              + " may not reveal a problem in this function.",
+          "MUTATION");
+    }
+    return safeguard(
+        "MUTATION_TESTING",
+        EvidenceVerdict.PASS,
+        "Every attributed altered program made this AC's public acceptance fail as expected.",
+        "MUTATION");
+  }
+
+  private static List<VerificationMutationDetail> undetectedMutations(
+      String acId, PitMutationAttribution attribution) {
+    if (attribution == null) {
+      return List.of();
+    }
+    List<VerificationMutationDetail> result = new ArrayList<>();
+    List<PitMutationEvidence> mutations = attribution.mutations();
+    for (int index = 0; index < mutations.size(); index++) {
+      PitMutationEvidence mutation = mutations.get(index);
+      if (!mutation.attributedAcceptanceConditionIds().contains(acId)
+          || mutation.detectedAcceptanceConditionIds().contains(acId)) {
+        continue;
+      }
+      Replacement replacement = replacement(mutation);
+      result.add(
+          new VerificationMutationDetail(
+              index + 1,
+              mutation.status(),
+              mutation.detected(),
+              mutation.mutatedClass(),
+              mutation.sourceFile(),
+              mutation.mutatedMethod(),
+              mutation.methodDescription(),
+              mutation.lineNumber(),
+              mutation.block(),
+              mutation.index(),
+              mutation.description(),
+              mutation.originalSourceLine(),
+              replacement.before(),
+              replacement.after()));
+    }
+    return List.copyOf(result);
+  }
+
+  /** Identifies only replacements supported by both the PIT description and the original line. */
+  private static Replacement replacement(PitMutationEvidence mutation) {
+    String sourceLine = mutation.originalSourceLine();
+    if (sourceLine == null || sourceLine.isBlank()) {
+      return Replacement.NONE;
+    }
+    String description = mutation.description().toLowerCase(Locale.ROOT);
+    List<Replacement> candidates =
+        List.of(
+            new Replacement("+", "-", "addition with subtraction"),
+            new Replacement("-", "+", "subtraction with addition"),
+            new Replacement("*", "/", "multiplication with division"),
+            new Replacement("/", "*", "division with multiplication"),
+            new Replacement("%", "*", "modulus with multiplication"),
+            new Replacement("<", ">", "less than with greater than"),
+            new Replacement(">", "<", "greater than with less than"),
+            new Replacement("<=", ">=", "less than or equal with greater than or equal"),
+            new Replacement(">=", "<=", "greater than or equal with less than or equal"),
+            new Replacement("==", "!=", "equality with inequality"),
+            new Replacement("!=", "==", "inequality with equality"));
+    return candidates.stream()
+        .filter(candidate -> description.contains(candidate.descriptionPhrase()))
+        .filter(candidate -> sourceLine.contains(candidate.before()))
+        .findFirst()
+        .orElseGet(
+            () -> {
+              String marker = "replaced return value with";
+              int markerIndex = description.indexOf(marker);
+              if (markerIndex >= 0 && sourceLine.stripLeading().startsWith("return")) {
+                String after =
+                    mutation.description().substring(markerIndex + marker.length()).trim();
+                return after.isBlank()
+                    ? Replacement.NONE
+                    : new Replacement("the original return value", after);
+              }
+              return Replacement.NONE;
+            });
+  }
+
+  private record Replacement(String before, String after, String descriptionPhrase) {
+    private static final Replacement NONE = new Replacement(null, null, "");
+
+    private Replacement(String before, String after) {
+      this(before, after, "");
+    }
+  }
+
+  private static VerificationSafeguard safeguard(
+      String name, EvidenceVerdict verdict, String explanation, String technicalGate) {
+    return new VerificationSafeguard(name, verdict, explanation, technicalGate);
+  }
+
+  private static VerificationSafeguard absentSafeguard(
+      String name, EvidenceGate gate, String technicalGate, String availableExplanation) {
+    if (gate.verdict() == EvidenceVerdict.DISABLED
+        || gate.verdict() == EvidenceVerdict.INCOMPLETE
+        || gate.verdict() == EvidenceVerdict.NOT_APPLICABLE) {
+      return safeguard(name, gate.verdict(), reason(gate), technicalGate);
+    }
+    return safeguard(name, EvidenceVerdict.NOT_APPLICABLE, availableExplanation, technicalGate);
+  }
+
+  private static EvidenceGate gate(List<EvidenceGate> gates, String name) {
+    return gates.stream()
+        .filter(item -> name.equals(item.name()))
+        .findFirst()
+        .orElse(
+            new EvidenceGate(
+                name, EvidenceVerdict.INCOMPLETE, "Current-run evidence is unavailable."));
+  }
+
+  private static String reason(EvidenceGate gate) {
+    return gate.reason() == null || gate.reason().isBlank()
+        ? "Current-run evidence did not establish this safeguard."
+        : gate.reason();
   }
 
   /** Adds run identity and counts after all case and Gate evidence is available. */
@@ -284,6 +597,16 @@ public final class ReportViews {
                 .flatMap(ac -> ac.cases().stream())
                 .filter(testCase -> testCase.status() == CaseResultStatus.FAIL)
                 .count();
+    int passedAcs =
+        (int)
+            view.acceptanceConditions().stream()
+                .filter(ac -> ac.status() == CaseResultStatus.PASS)
+                .count();
+    int incompleteAcs =
+        (int)
+            view.acceptanceConditions().stream()
+                .filter(ac -> ac.status() == CaseResultStatus.NOT_REPORTED)
+                .count();
     return new VerificationView(
         VerificationView.SCHEMA_VERSION,
         view.generatedAt(),
@@ -294,7 +617,15 @@ public final class ReportViews {
         view.deliveryScope(),
         view.mutationAttribution(),
         new VerificationRunSummary(
-            runId, startedAt, finishedAt, failedGates, incompleteGates, failedAcs, failedCases));
+            runId,
+            startedAt,
+            finishedAt,
+            failedGates,
+            incompleteGates,
+            failedAcs,
+            failedCases,
+            passedAcs,
+            incompleteAcs));
   }
 
   private static CaseResultStatus suiteVerdict(

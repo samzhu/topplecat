@@ -2,13 +2,14 @@
 
 <p align="center"><img src="docs/images/topplecat-readme-hero.png" alt="ToppleCat 推倒 AI 程式代理的假完成宣稱" width="100%"></p>
 
-<p align="center"><strong>把 AI 程式代理的「已完成」變成這次執行留下的證據。</strong></p>
+<p align="center"><strong>agent 每次交付，都得先通過考驗，才拿得到 PASS。</strong></p>
 
 <p align="center"><a href="README.md">English</a> · <a href="LICENSE">Apache-2.0</a></p>
 
 ToppleCat 是給 Java/JUnit 團隊使用的委派驗證 Gate：團隊把已選 Spec 交給 AI
 程式代理實作，人類仍負責驗收。AI 宣稱完成後，ToppleCat 會重新執行封印過的
-可執行契約，產生本次執行證據與給人類閱讀的建議。
+可執行契約；只有本次執行的每個必要 Gate 都通過，才會記錄 `PASS`，再把判定
+背後的證據交給人類 Reviewer。
 
 一般 Java 驗收測試與有型別的 JSON/YAML 案例資料列是事實來源。產生的 JSON
 與 HTML 只解釋檢查了什麼，不會變成第二份規格。
@@ -26,8 +27,10 @@ Reviewer 可以在把工作交給 AI 前準備更多獨立證據：
   算術被改壞。
 
 實作完成後，ToppleCat 會獨立執行每一個啟用的 safeguard，並把結果放在同一份
-報告。`PASS` 可以支持「接受交付」的建議，但最後由人類決定。若 Spec 從未寫出
-VIP 折扣，ToppleCat 也不會自行猜出這條規則。
+報告。若選定 AC 的公開驗收讓一個精確歸因的改動程式通過，該 AC 的 Mutation
+Testing 與整體執行會失敗；只有每個必要 Gate 都通過，ToppleCat 才會為本次
+執行記錄 `PASS`。最後仍由人類閱讀證據並決定。若 Spec 從未寫出 VIP 折扣，
+ToppleCat 也不會自行猜出這條規則。
 
 ## 放在交付流程中的位置
 
@@ -36,7 +39,7 @@ VIP 折扣，ToppleCat 也不會自行猜出這條規則。
     -> Spec Review：確認將用什麼驗收
     -> AI 使用一般 ./gradlew test 回饋完成實作
     -> toppleCatVerify：產生新的正式證據
-    -> Verification Report：建議接受、拒絕或證據不完整
+    -> Verification Report：呈現本次 verdict 與各 AC 證據
     -> 人類決定如何處理交付
 ```
 
@@ -62,18 +65,23 @@ Expected Consumption 另外確認作者寫下的預期值真的有被斷言。
 官方結果。專案自己的 PIT task 維持獨立，不會進入 ToppleCat evidence。詳細規則見
 [驗證與證據指南](docs/guide/verification-and-evidence.md#independent-formal-work)。
 
+如果某個 AC 未改變的公開驗收漏掉了歸因到它的突變，報告會先顯示已偵測與未偵測的數量，
+再只列出未偵測的改動卡片。卡片說明改變、正式原始碼位置，以及該驗收仍然通過；只有 PIT
+描述與唯一的原始碼行足以支持時，才會顯示確切替換。這些細節只給審閱者，不會進入安全的
+agent feedback。
+
 ## 快速開始
 
-ToppleCat 0.0.17 需要 Java 25 與相容的 Gradle。
+ToppleCat 0.0.18 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.17"
+    id("io.github.samzhu.topplecat") version "0.0.18"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.17")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.18")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -135,7 +143,7 @@ Typed Case Rows 提供輸入與預期結果：
 | 產物 | 對象 | 用途 |
 | --- | --- | --- |
 | `build/topplecat/reports/review/index.html` | Reviewer | 交付前的 Spec Review：完整已選 Spec 與其綁定的可執行材料，不是執行結果。 |
-| `build/topplecat/reports/verification/index.html` | Reviewer | 本次正式執行的 Verification Report，包含私有診斷與接受／拒絕／不完整建議。 |
+| `build/topplecat/reports/verification/index.html` | Reviewer | 本次正式執行的 Verification Report，先呈現各 AC 結果與私有診斷。 |
 | `build/topplecat/evidence.json` | Reviewer／automation | machine-readable 本次 verdict 與 Gate 摘要值。 |
 | `build/topplecat/agent-feedback.json` | Implementation Agent | 不含 reviewer 答案的安全 Gate 層級修正方向。 |
 
@@ -145,9 +153,9 @@ Typed Case Rows 提供輸入與預期結果：
 
 整體 verdict 有三種：
 
-- `PASS`：本次已選契約通過，報告可以建議接受交付；
-- `FAIL`：完整執行發現問題，報告可以建議拒絕或修改交付；以及
-- `INCOMPLETE`：沒有取得足夠可信的本次執行證據，不能建議接受。
+- `PASS`：本次執行中，已選 AC 的每個必要 Gate 都通過；
+- `FAIL`：完整執行發現阻擋性的 AC 或 Gate 問題；以及
+- `INCOMPLETE`：沒有取得足夠可信的本次執行證據。
 
 無論哪一種結果，最後都由人類決定。
 
@@ -173,7 +181,7 @@ ToppleCat 從可執行驗收邊界開始：
 - [架構](docs/architecture.md)
 - [共同語言](CONTEXT.md)
 - [文件索引](docs/README.md)
-- [0.0.17 release notes](docs/releases/0.0.17.zh-TW.md)
+- [0.0.18 release notes](docs/releases/0.0.18.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 
@@ -181,4 +189,4 @@ Repository 也提供
 [`topplecat-acceptance`](.agents/skills/topplecat-acceptance/SKILL.md)
 skill，協助把已選 AC 寫成可執行 Java 驗收方法、公開與 reviewer 案例，以及
 選用的 Properties。人類或 External Workflow 仍負責執行 ToppleCat，並決定如何
-處理它的建議。
+處理它的證據。

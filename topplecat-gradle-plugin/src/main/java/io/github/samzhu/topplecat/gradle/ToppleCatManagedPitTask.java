@@ -1,13 +1,17 @@
 package io.github.samzhu.topplecat.gradle;
 
 import io.github.samzhu.topplecat.core.CompilerScenarioDescriptor;
+import io.github.samzhu.topplecat.core.SelectedSpecScope;
+import io.github.samzhu.topplecat.core.SelectedSpecScopeJson;
 import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.inject.Inject;
@@ -46,6 +50,10 @@ public abstract class ToppleCatManagedPitTask extends DefaultTask {
 
   @Internal
   public abstract DirectoryProperty getDescriptorDirectory();
+
+  @org.gradle.api.tasks.InputFile
+  @org.gradle.api.tasks.PathSensitive(org.gradle.api.tasks.PathSensitivity.NONE)
+  public abstract RegularFileProperty getSelectedSpecScopeFile();
 
   @Internal
   public abstract DirectoryProperty getWorkingDirectory();
@@ -107,11 +115,27 @@ public abstract class ToppleCatManagedPitTask extends DefaultTask {
   }
 
   private AcceptanceTestTargets acceptanceTestTargets() {
+    SelectedSpecScope scope;
+    Set<String> selectedAcIds;
+    try {
+      scope =
+          SelectedSpecScopeJson.read(
+              Files.readString(getSelectedSpecScopeFile().get().getAsFile().toPath()));
+      selectedAcIds = Set.copyOf(scope.acceptanceConditionIds());
+    } catch (IOException | RuntimeException exception) {
+      throw new GradleException(
+          "ToppleCat managed PIT could not read the selected Delivery Scope.", exception);
+    }
+    List<CompilerScenarioDescriptor> descriptors =
+        CompilerDescriptorReader.read(List.of(getDescriptorDirectory().get().getAsFile().toPath()));
+    rejectAmbiguousSelectedOverloads(scope, selectedAcIds, descriptors);
+
     Set<String> classes = new TreeSet<>();
     Set<String> methods = new TreeSet<>();
-    for (CompilerScenarioDescriptor descriptor :
-        CompilerDescriptorReader.read(
-            List.of(getDescriptorDirectory().get().getAsFile().toPath()))) {
+    for (CompilerScenarioDescriptor descriptor : descriptors) {
+      if (scope.selected() && !selectedAcIds.contains(descriptor.acId())) {
+        continue;
+      }
       classes.add(descriptor.declaringBinaryName());
       methods.add(descriptor.methodName());
     }
@@ -120,6 +144,43 @@ public abstract class ToppleCatManagedPitTask extends DefaultTask {
           "ToppleCat compiler emitted no public @ToppleAcceptanceTest descriptors for PIT.");
     }
     return new AcceptanceTestTargets(List.copyOf(classes), List.copyOf(methods));
+  }
+
+  /**
+   * PIT's JUnit 5 producer cannot select a compiler-defined Acceptance Method by its JVM
+   * descriptor. A selected delivery must therefore stop before PIT when its target test class also
+   * contains an unselected public Acceptance Method.
+   */
+  private static void rejectAmbiguousSelectedOverloads(
+      SelectedSpecScope scope,
+      Set<String> selectedAcIds,
+      List<CompilerScenarioDescriptor> descriptors) {
+    if (!scope.selected()) {
+      return;
+    }
+    Map<String, List<CompilerScenarioDescriptor>> descriptorsByClass = new HashMap<>();
+    for (CompilerScenarioDescriptor descriptor : descriptors) {
+      descriptorsByClass
+          .computeIfAbsent(descriptor.declaringBinaryName(), ignored -> new ArrayList<>())
+          .add(descriptor);
+    }
+    for (Map.Entry<String, List<CompilerScenarioDescriptor>> entry :
+        descriptorsByClass.entrySet()) {
+      boolean selected =
+          entry.getValue().stream()
+              .anyMatch(descriptor -> selectedAcIds.contains(descriptor.acId()));
+      boolean unselected =
+          entry.getValue().stream()
+              .anyMatch(descriptor -> !selectedAcIds.contains(descriptor.acId()));
+      if (selected && unselected) {
+        throw new GradleException(
+            "ToppleCat managed PIT cannot safely target selected Acceptance Methods when "
+                + entry.getKey()
+                + " has both selected and unselected Acceptance Methods. PIT cannot filter its "
+                + "JUnit 5 producer by compiler method descriptor, so select every Acceptance "
+                + "Method in that class or move the selected ACs to a dedicated class.");
+      }
+    }
   }
 
   private void writeAdditionalClasspath() {

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.PropertyCounterexample;
 import io.github.samzhu.topplecat.core.PropertyDefinition;
+import io.github.samzhu.topplecat.core.PropertyDiscardedInput;
 import io.github.samzhu.topplecat.core.PropertyExecutionEvent;
 import io.github.samzhu.topplecat.core.PropertyExecutionEventJson;
 import io.github.samzhu.topplecat.core.PropertyExecutionState;
@@ -436,6 +437,7 @@ class PropertyEvidenceAssessmentTest {
           null,
           0,
           false,
+          List.of(new PropertyDiscardedInput("{\"discarded\":true}")),
           "Coverage target was not reached.");
     }
     if (terminalState == PropertyExecutionState.COMPLETED_COUNTEREXAMPLE) {

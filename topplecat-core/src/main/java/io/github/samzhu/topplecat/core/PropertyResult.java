@@ -21,7 +21,48 @@ public record PropertyResult(
     PropertyCounterexample shrunkCounterexample,
     int shrinkAttempts,
     boolean shrinkComplete,
+    List<PropertyDiscardedInput> discardedInputs,
     String incompleteReason) {
+  /** Compatibility constructor for results written before discarded inputs were retained. */
+  public PropertyResult(
+      String acId,
+      String methodIdentity,
+      PropertyExecutionState state,
+      int requestedTrials,
+      int completedTrials,
+      int edgeTrials,
+      int randomTrials,
+      int discards,
+      List<PropertyClassification> classifications,
+      long seed,
+      boolean replayVerified,
+      String replayToken,
+      PropertyCounterexample originalCounterexample,
+      PropertyCounterexample shrunkCounterexample,
+      int shrinkAttempts,
+      boolean shrinkComplete,
+      String incompleteReason) {
+    this(
+        acId,
+        methodIdentity,
+        state,
+        requestedTrials,
+        completedTrials,
+        edgeTrials,
+        randomTrials,
+        discards,
+        classifications,
+        seed,
+        replayVerified,
+        replayToken,
+        originalCounterexample,
+        shrunkCounterexample,
+        shrinkAttempts,
+        shrinkComplete,
+        List.of(),
+        incompleteReason);
+  }
+
   public PropertyResult {
     required(acId, "acId");
     required(methodIdentity, "methodIdentity");
@@ -43,6 +84,11 @@ public record PropertyResult(
             : classifications.stream()
                 .sorted(Comparator.comparing(PropertyClassification::label))
                 .toList();
+    discardedInputs = List.copyOf(discardedInputs == null ? List.of() : discardedInputs);
+    if (discards != discardedInputs.size()) {
+      throw new ToppleCatException(
+          "Property discard count must equal the complete discarded-input evidence.");
+    }
     if (classifications.stream().map(PropertyClassification::label).distinct().count()
         != classifications.size()) {
       throw new ToppleCatException("Property result has duplicate classification labels.");

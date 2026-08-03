@@ -44,9 +44,6 @@ interface ToppleCatApprovalInputs {
   Property<Boolean> getApprovalMutationEnabled();
 
   @Internal
-  Property<Integer> getApprovalMutationThreshold();
-
-  @Internal
   ListProperty<String> getApprovalSelectedSpecPaths();
 
   @Internal
@@ -69,8 +66,7 @@ interface ToppleCatApprovalInputs {
             getApprovalHiddenTestsEnabled().get(),
             getApprovalExpectedConsumptionEnabled().get(),
             getApprovalPropertyEnabled().get(),
-            getApprovalMutationEnabled().get(),
-            getApprovalMutationThreshold().get());
+            getApprovalMutationEnabled().get());
     SelectedSpecScope scope =
         SpecScopeResolver.resolve(
                 getApprovalBuildRoot().get().getAsFile().toPath(),

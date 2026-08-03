@@ -132,9 +132,7 @@ if assessment is None:
 if assessment.get("coveredMutantCount", 0) < 1:
     raise SystemExit("The acceptance method did not cover the surviving mutant")
 if assessment.get("killedByAcceptanceMethodMutantCount", 0) >= assessment.get("coveredMutantCount", 0):
-    raise SystemExit("The managed survivor did not reduce the acceptance-method detection rate")
-if assessment.get("detectionRate", 100) >= assessment.get("sealedThreshold", 0):
-    raise SystemExit("The acceptance-method detection rate did not fall below its threshold")
+    raise SystemExit("The managed survivor did not leave an attributed mutation undetected")
 if assessment.get("attributionGap"):
     raise SystemExit("The managed survivor must be attributed to the public acceptance method")
 mutations = mutation.get("mutations", [])

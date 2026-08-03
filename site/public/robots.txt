@@ -1,2 +1,3 @@
 User-agent: *
 Allow: /
+Sitemap: https://topplecat.samzhu.dev/sitemap.xml

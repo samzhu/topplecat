@@ -1,6 +1,7 @@
 package io.github.samzhu.topplecat.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -18,13 +19,16 @@ class ReviewerContractApprovalJsonTest {
   }
 
   @Test
-  void changesTheApprovalDigestWhenAContractFileOrPolicyChanges() {
+  void changesTheApprovalDigestWhenTheContractChangesButNotForRetiredMutationThresholds() {
     assertNotEquals(
         approval("a".repeat(64), 100).approvalDigest(),
         approval("b".repeat(64), 100).approvalDigest());
-    assertNotEquals(
+    assertEquals(
         approval("a".repeat(64), 100).approvalDigest(),
         approval("a".repeat(64), 99).approvalDigest());
+    assertFalse(
+        ReviewerContractApprovalJson.write(approval("a".repeat(64), 100))
+            .contains("mutationThreshold"));
   }
 
   @Test

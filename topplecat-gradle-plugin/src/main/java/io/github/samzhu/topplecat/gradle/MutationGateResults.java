@@ -89,7 +89,10 @@ public record MutationGateResults(
     boolean failingAttributedAssessment =
         assessments.stream()
             .filter(assessment -> !assessment.attributionGap())
-            .anyMatch(assessment -> assessment.detectionRate() < assessment.sealedThreshold());
+            .anyMatch(
+                assessment ->
+                    assessment.killedByAcceptanceMethodMutantCount()
+                        < assessment.coveredMutantCount());
     return failingAttributedAssessment ? EvidenceVerdict.FAIL : EvidenceVerdict.PASS;
   }
 }

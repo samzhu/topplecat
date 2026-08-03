@@ -9,8 +9,10 @@ That human reads Spec Review before implementation handoff and Verification
 Report after the implementation agent's done claim, then decides whether to
 accept the delivery. A team may run the commands locally, in CI, or through an
 external workflow; ToppleCat supplies verification and evidence but does not
-own that orchestration. Verification Report may recommend acceptance or
-rejection from the Gate results, while the human keeps the final decision.
+own that orchestration. ToppleCat records `PASS` only when every required Gate
+passes in the current run. Verification Report shows that verdict and its
+evidence; it does not recommend acceptance or rejection. The human keeps the
+final decision.
 
 ## Reviewer workflow
 
@@ -25,7 +27,13 @@ rejection from the Gate results, while the human keeps the final decision.
 `--spec` is repeatable and selects the delivery at invocation time. Use the
 same selection for Check, Review, Seal, and Verify. `--all-hidden-tests`
 widens only hidden typed rows. Public acceptance and PBT follow the selected
-ACs; Mutation Testing remains full-contract.
+ACs; Mutation Testing is attributed independently to each selected AC's public
+Acceptance Method. An unselected AC cannot affect this run's verdict.
+PIT cannot express a compiler JVM descriptor when selecting JUnit 5 tests. If
+one selected AC shares its test class with an unselected public Acceptance
+Method, formal Verify stops before PIT rather than run that class ambiguously.
+Select every AC in that class or place the selected methods in a dedicated
+class.
 
 The Reviewer may add `--language zh-TW` to Review, Seal, Reseal, or Verify to
 render ToppleCat-owned Reviewer HTML in Traditional Chinese; `en` is the
@@ -47,7 +55,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.17 custody and approval schemas are current-only. A prior schema is not
+The 0.0.18 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -115,10 +123,12 @@ that same method detected it. If PIT produced mutants but none can be exactly
 attributed to any public Acceptance Method, the Mutation Gate fails
 (`MUTATION=FAIL`). Once at least one mutant is exactly attributed, any remaining
 unattributed mutants stay in reviewer evidence and do not directly affect the
-Gate. Each AC with covered mutants independently meets or misses its sealed
-threshold from exact `killingTests`. An AC with no covered mutant is an
-attribution gap: once another AC has exact attribution it is nonblocking and
-the reviewer report says `此 AC 沒有取得本次 managed mutation profile 的歸因證據，需要 reviewer 判斷。`
+Gate. Each selected AC with covered mutants must have its own public Acceptance
+Method detect every mutation attributed to that method. One AC cannot supply
+detection credit to another, and there is no percentage threshold or
+project-wide mutation score. An AC with no covered mutant is an attribution
+gap: once another AC has exact attribution it is nonblocking and the reviewer
+report says `此 AC 沒有取得本次 managed mutation profile 的歸因證據，需要 reviewer 判斷。`
 Missing, malformed, interrupted, stale, profile-mismatched, non-full-matrix,
 or zero-mutant producer evidence makes Mutation Testing incomplete. PIT's own
 status, `detected`, raw mutator, and description remain visible without being
@@ -162,7 +172,10 @@ Contract integrity is mandatory and cannot be disabled. `DISABLED` is an
 explicit sealed policy decision; `NOT_APPLICABLE` is an enabled safeguard with
 no applicable declaration. Neither is presented as a pass.
 
-The aggregate evidence verdict is only `PASS`, `FAIL`, or `INCOMPLETE`.
+The aggregate evidence verdict is only `PASS`, `FAIL`, or `INCOMPLETE`. `PASS`
+means every required Gate passed under the sealed policy in this run; it does
+not mean that the Spec contains every business rule or that the delivery has
+organizational approval.
 `toppleCatVerify` and `toppleCatReport` finish evidence, reports, safe feedback,
 and rehide before failing Gradle for an aggregate `FAIL` or `INCOMPLETE`.
 
@@ -200,13 +213,12 @@ quality-advisory output.
 ### Reading Mutation results
 
 For each AC, Verification Report first answers a plain question: while
-verifying this delivery, did the public Acceptance Method notice enough
-temporary changes to production behavior to meet its sealed requirement? For
-example, “10 relevant changes; public acceptance noticed 8; meets the sealed
-80% requirement” means that AC met this safeguard's recorded rule for this
-run. “Below requirement” uses the same three values. This reports what the
-Acceptance Method distinguished during the temporary verification changes; it
-does not prove that the original program is correct in every situation.
+verifying this delivery, did the unchanged public Acceptance Method detect
+every temporary production change that was exactly attributed to that AC? A
+surviving attributed change fails that AC and the aggregate Gate. This reports
+what the Acceptance Method distinguished during the temporary verification
+changes; it does not prove that the original program is correct in every
+situation.
 
 Public Acceptance, Hidden Tests, and Mutation Testing appear separately for the
 same AC. A missing Mutation result says “No data”; it is never a pass. If the
@@ -217,6 +229,24 @@ profile, operator IDs, attribution counts, selectors, and descriptions exactly
 as recorded. The English and Traditional Chinese reports use the same reading
 order and evidence values.
 
+When an AC did not detect attributed changes, its Mutation Testing section also
+shows the assessed total, detected, and undetected counts, followed only by
+undetected-change cards. Each card answers `What changed?`, `Where?`, and `What
+happened?`: the last statement is that this AC's unchanged public acceptance
+still passed. A PIT `KILLED` outcome is not by itself AC detection; if another
+Acceptance Method killed the mutation, the current AC still receives an
+undetected card when its own method covered and passed it. The card shows the
+original source line only when current production sources resolve one unique
+location. It states the producer description and an explicit limitation when
+the available evidence cannot establish an exact before/after replacement.
+
+The technical details remain collapsed and retain the raw PIT status,
+`detected` flag, mutator, description, source coordinates, original source
+line, and covering/killing/succeeding selector relationships. The assessed
+mutation details are built in the Java report model; browser rendering is only
+a projection. None of these reviewer-only diagnostics enters
+`agent-feedback.json` or public implementation handoff material.
+
 `build/topplecat/evidence.json` is the machine verdict for the current run.
 Each run starts in `build/topplecat/runs/current/`, receives a fresh UUID when
 archived, and retains only a small recent archive set. Stable copies are for
@@ -224,12 +254,19 @@ inspection, never inputs to a later verdict.
 
 Spec Review reads the complete selected SDD before executable material. It says
 that the specification is prepared but not executed. Verification Report starts
-with accepted, rejected, or incomplete, then lists concrete failed findings
-before incomplete findings. Its five separate sections preserve the meaning of
-Contract Integrity, Public Acceptance and Expected Consumption, Hidden Tests,
-Property-Based Testing, and Mutation Testing. A field-level expected/actual
+with pass, fail, or missing evidence, then lists the selected ACs needing
+attention before the complete AC list. Each AC keeps the fixed order Contract
+rule and result, Public Acceptance, Hidden Tests, Expected Result Check,
+Property-Based Testing, and Mutation Testing. A collapsed technical section
+preserves the canonical Gate names and evidence. A field-level expected/actual
 comparison is reviewer-only diagnostic context for the failed compiler Step; it
 does not alter the JUnit assertion or Expected Consumption result.
+
+Contract Integrity is shown once in the main summary, not as a failure of every
+AC. When the checked contract matches its Mechanical Seal, the summary says so.
+When it does not—or ToppleCat lacks trustworthy current integrity evidence—the
+summary says downstream AC work did not run; unexecuted ACs are not presented as
+functional failures.
 
 Both HTML bundles are offline, self-contained, and CSP-safe. Spec Review
 supports headings, paragraphs, lists, task lists, block quotes, tables, links,

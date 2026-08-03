@@ -62,6 +62,12 @@ public final class PitMutationParser {
                 booleanAttribute(mutation, "detected"),
                 status,
                 requiredChild(mutation, "mutatedClass"),
+                optionalChild(mutation, "sourceFile"),
+                optionalChild(mutation, "mutatedMethod"),
+                optionalChild(mutation, "methodDescription"),
+                optionalIntegerChild(mutation, "lineNumber", 1),
+                optionalIntegerChild(mutation, "block", 0),
+                optionalIntegerChild(mutation, "index", 0),
                 requiredChild(mutation, "mutator"),
                 requiredChild(mutation, "description"),
                 testNames(covering),
@@ -106,6 +112,31 @@ public final class PitMutationParser {
       throw new ToppleCatException("PIT mutation element is required: " + name);
     }
     return value;
+  }
+
+  private static String optionalChild(Element element, String name) {
+    Element child = directChild(element, name);
+    if (child == null || child.getTextContent() == null || child.getTextContent().isBlank()) {
+      return null;
+    }
+    return child.getTextContent();
+  }
+
+  private static Integer optionalIntegerChild(Element element, String name, int minimum) {
+    String value = optionalChild(element, name);
+    if (value == null) {
+      return null;
+    }
+    try {
+      int parsed = Integer.parseInt(value.trim());
+      if (parsed < minimum) {
+        throw new ToppleCatException(
+            "PIT mutation element must be at least " + minimum + ": " + name);
+      }
+      return parsed;
+    } catch (NumberFormatException exception) {
+      throw new ToppleCatException("PIT mutation element must be an integer: " + name, exception);
+    }
   }
 
   private static List<String> testNames(Element container) {

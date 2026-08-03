@@ -6,13 +6,29 @@ public record VerificationPolicy(
     boolean hiddenTestsEnabled,
     boolean expectedConsumptionEnabled,
     boolean propertyBasedTestingEnabled,
-    boolean mutationEnabled,
-    int mutationThreshold) {
+    boolean mutationEnabled) {
+  /**
+   * Compatibility constructor for approvals authored before mutation became AC-scoped.
+   *
+   * <p>The former percentage is deliberately ignored and is not part of the sealed policy.
+   */
+  public VerificationPolicy(
+      String toppleCatVersion,
+      boolean hiddenTestsEnabled,
+      boolean expectedConsumptionEnabled,
+      boolean propertyBasedTestingEnabled,
+      boolean mutationEnabled,
+      int ignoredMutationThreshold) {
+    this(
+        toppleCatVersion,
+        hiddenTestsEnabled,
+        expectedConsumptionEnabled,
+        propertyBasedTestingEnabled,
+        mutationEnabled);
+  }
+
   public VerificationPolicy {
-    if (toppleCatVersion == null
-        || toppleCatVersion.isBlank()
-        || mutationThreshold < 0
-        || mutationThreshold > 100) {
+    if (toppleCatVersion == null || toppleCatVersion.isBlank()) {
       throw new ToppleCatException("Verification policy is invalid.");
     }
   }

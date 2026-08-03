@@ -2,6 +2,7 @@ package io.github.samzhu.topplecat.junit.property;
 
 import io.github.samzhu.topplecat.core.PropertyClassification;
 import io.github.samzhu.topplecat.core.PropertyCounterexample;
+import io.github.samzhu.topplecat.core.PropertyDiscardedInput;
 import io.github.samzhu.topplecat.core.PropertyExecutionState;
 import io.github.samzhu.topplecat.core.PropertyResult;
 import java.math.BigDecimal;
@@ -109,6 +110,7 @@ final class PropertyEngine {
               null,
               0,
               false,
+              stats.discardedInputs,
               null),
           null);
     } catch (PropertyInfrastructureException exception) {
@@ -147,6 +149,7 @@ final class PropertyEngine {
             new PropertyCounterexample(shrunk.candidate().choices(), shrunk.path()),
             shrunk.attempts(),
             shrunk.complete(),
+            stats.discardedInputs,
             null),
         new AssertionError("ToppleCat Property counterexample"));
   }
@@ -171,6 +174,7 @@ final class PropertyEngine {
             null,
             0,
             false,
+            stats.discardedInputs,
             reason),
         new AssertionError(reason));
   }
@@ -390,7 +394,7 @@ final class PropertyEngine {
       Generator<?> base, Predicate<Object> predicate, SplitMix64 random, Stats stats) {
     Candidate candidate = sample(base, random, stats);
     if (!accepts(predicate, candidate.value())) {
-      stats.discards++;
+      stats.recordDiscard(candidate.choices());
       return null;
     }
     return candidate(
@@ -774,7 +778,13 @@ final class PropertyEngine {
     int edgeTrials;
     int randomTrials;
     int discards;
+    final List<PropertyDiscardedInput> discardedInputs = new ArrayList<>();
     final Map<String, Integer> classifications = new LinkedHashMap<>();
+
+    void recordDiscard(String choicesJson) {
+      discards++;
+      discardedInputs.add(new PropertyDiscardedInput(choicesJson));
+    }
   }
 
   private static final class PropertyInfrastructureException extends RuntimeException {

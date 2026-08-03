@@ -161,7 +161,7 @@ class MutationGateResultsTest {
   }
 
   @Test
-  void permitsAReviewerLoweredThresholdWithoutChangingRawSurvivorEvidence() {
+  void failsWhenAnAttributedAcceptanceMethodDoesNotDetectEveryMutation() {
     MutationGateResults results =
         new MutationGateResults(
             MutationGateResults.SCHEMA_VERSION,
@@ -197,7 +197,7 @@ class MutationGateResultsTest {
                 mutation(true, "KILLED", List.of("AC-ORDER")),
                 mutation(false, "SURVIVED", List.of("AC-ORDER"))));
 
-    assertEquals(EvidenceVerdict.PASS, results.verdict());
+    assertEquals(EvidenceVerdict.FAIL, results.verdict());
     assertEquals("SURVIVED", results.mutations().get(1).status());
     assertEquals(false, results.mutations().get(1).detected());
   }

@@ -23,8 +23,8 @@ ACTIVE_TERMINOLOGY_PATHS = (
     "docs/guide",
     "CONTEXT.md",
     "docs/design",
-    "docs/releases/0.0.17.md",
-    "docs/releases/0.0.17.zh-TW.md",
+    "docs/releases/0.0.18.md",
+    "docs/releases/0.0.18.zh-TW.md",
     "samples",
     ".agents/skills",
     "site/src",
@@ -80,8 +80,8 @@ REQUIRED_DOC_INDEX_LINKS = (
     "architecture.md",
     "design/README.md",
     "../CONTEXT.md",
-    "releases/0.0.17.md",
-    "releases/0.0.17.zh-TW.md",
+    "releases/0.0.18.md",
+    "releases/0.0.18.zh-TW.md",
     "validation/README.md",
 )
 REQUIRED_DESIGN_SECTIONS = (
@@ -93,7 +93,9 @@ REQUIRED_DESIGN_SECTIONS = (
     "## Acceptance evidence",
     "## Consequences and alternatives",
 )
-CURRENT_RELEASE_FILES = {"0.0.17.md", "0.0.17.zh-TW.md"}
+CURRENT_RELEASE_FILES = {"0.0.18.md", "0.0.18.zh-TW.md"}
+HISTORICAL_RELEASE_FILES = {"0.0.17.md", "0.0.17.zh-TW.md"}
+EXPECTED_RELEASE_FILES = CURRENT_RELEASE_FILES | HISTORICAL_RELEASE_FILES
 RELEASE_NOTE = re.compile(r"^(\d+\.\d+\.\d+)(\.zh-TW)?\.md$")
 CONTEXT_TERMS = (
     "Executable Contract",
@@ -301,9 +303,9 @@ def main() -> int:
                 continue
             language = "zh-TW" if match.group(2) else "en"
             release_versions.setdefault(match.group(1), set()).add(language)
-        if release_files != CURRENT_RELEASE_FILES:
+        if release_files != EXPECTED_RELEASE_FILES:
             failures.append(
-                "docs/releases: expected only the 0.0.17 English and Traditional-Chinese notes"
+                "docs/releases: expected the 0.0.17 historical and 0.0.18 current English and Traditional-Chinese notes"
             )
         for version, languages in sorted(release_versions.items()):
             if languages != {"en", "zh-TW"}:
@@ -368,8 +370,8 @@ def main() -> int:
             if re.search(pattern, text):
                 failures.append(f"{relative}: uses replaced terminology matching {pattern}; {replacement}")
 
-    english_release = ROOT / "docs/releases/0.0.17.md"
-    chinese_release = ROOT / "docs/releases/0.0.17.zh-TW.md"
+    english_release = ROOT / "docs/releases/0.0.18.md"
+    chinese_release = ROOT / "docs/releases/0.0.18.zh-TW.md"
     if english_release.is_file() and chinese_release.is_file():
         release_markers = (
             (
@@ -381,6 +383,8 @@ def main() -> int:
                     "--language zh-TW",
                     "Property-Based Testing",
                     "Mutation Testing",
+                    "mutationTesting { threshold.set(...) }",
+                    "0.0.18",
                 ),
             ),
             (
@@ -392,6 +396,8 @@ def main() -> int:
                     "--language zh-TW",
                     "Property-Based Testing",
                     "Mutation Testing",
+                    "mutationTesting { threshold.set(...) }",
+                    "0.0.18",
                 ),
             ),
         )
@@ -400,7 +406,7 @@ def main() -> int:
             for marker in markers:
                 if marker not in text:
                     failures.append(
-                        f"{release.relative_to(ROOT)}: missing synchronized 0.0.17 change {marker}"
+                        f"{release.relative_to(ROOT)}: missing synchronized 0.0.18 change {marker}"
                     )
 
     if failures:

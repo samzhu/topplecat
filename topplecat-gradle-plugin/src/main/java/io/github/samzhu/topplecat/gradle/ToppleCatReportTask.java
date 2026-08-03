@@ -36,6 +36,7 @@ import io.github.samzhu.topplecat.report.ReportLanguage;
 import io.github.samzhu.topplecat.report.ReportViews;
 import io.github.samzhu.topplecat.report.VerificationClassification;
 import io.github.samzhu.topplecat.report.VerificationCounterexample;
+import io.github.samzhu.topplecat.report.VerificationDiscardedInput;
 import io.github.samzhu.topplecat.report.VerificationProperty;
 import io.github.samzhu.topplecat.report.VerificationView;
 import java.io.IOException;
@@ -177,7 +178,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
             VerificationScope.SCHEMA_VERSION,
             selectedScope.scope(),
             allHidden ? VerificationScope.HIDDEN_ALL : VerificationScope.HIDDEN_SELECTED_SPECS,
-            VerificationScope.MUTATION_ALL_PUBLIC_ACCEPTANCE_CONTRACTS,
+            VerificationScope.MUTATION_SELECTED_ACCEPTANCE_CONDITIONS,
             selectedScope.scope().selected()
                 ? VerificationScope.PROPERTY_PUBLIC_SELECTED_SPECS
                 : VerificationScope.PROPERTY_PUBLIC_FULL_CONTRACT);
@@ -493,6 +494,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                   null,
                   0,
                   false,
+                  List.of(),
                   "Property declaration did not produce trustworthy current-run completion.")
               : verificationProperty(definition, execution);
       result.computeIfAbsent(definition.acId(), ignored -> new ArrayList<>()).add(property);
@@ -540,6 +542,9 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                 result.shrunkCounterexample().shrinkPath()),
         result.shrinkAttempts(),
         result.shrinkComplete(),
+        result.discardedInputs().stream()
+            .map(item -> new VerificationDiscardedInput(item.choicesJson()))
+            .toList(),
         result.incompleteReason());
   }
 

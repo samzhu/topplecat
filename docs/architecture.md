@@ -78,6 +78,11 @@ Formal Verify owns its PIT producer: it pins PIT 1.25.5, passes only the fixed
 Acceptance Methods, requests a non-timestamped XML full matrix, and reruns
 without task-output or build-cache reuse. A project PIT task or report never
 becomes ToppleCat evidence.
+PIT's JUnit 5 producer cannot select an Acceptance Method by its compiler JVM
+descriptor. If a selected delivery would target a test class that also contains
+an unselected public Acceptance Method, ToppleCat stops before PIT rather than
+let that unselected AC execute. Select every Acceptance Method in that class or
+place the selected ACs in a dedicated class.
 The managed producer is not a consumer `PitestTask`, so project-wide
 `tasks.withType(PitestTask)` conventions remain confined to the project's own
 PIT workflow.
@@ -95,12 +100,23 @@ An AC with zero covered mutants is a nonblocking attribution gap once another
 AC has exact attribution; it never receives inferred credit from Hidden Tests,
 Properties, helpers, or another acceptance method.
 
+The reviewer-only mutation evidence also retains PIT's source file, production
+class, method and descriptor, line number, bytecode block and index when
+provided. The Gradle projection resolves an original source line only when the
+configured production sources identify one unambiguous file and line; missing
+or ambiguous context remains unavailable. Java builds the per-AC list of
+undetected mutations from exact covering and killing relationships. The HTML
+renders that assessed list and never recomputes attribution or the Gate. A
+globally `KILLED` mutation can therefore remain an undetected detail for an AC
+whose own public method passed while another AC supplied the killing selector.
+These reviewer-only coordinates and details do not enter safe feedback.
+
 ## Scope and custody
 
 `--spec` is the sole selection input. It maps external Spec ACs to executable
 acceptance methods; no input means every AC. `--all-hidden-tests` broadens
-hidden typed rows only. Public acceptance and PBT follow the selected ACs.
-Mutation Testing remains full-contract.
+hidden typed rows only. Public acceptance, PBT, and Mutation Testing follow the
+selected ACs. An unselected AC cannot affect the current delivery verdict.
 
 `--language` is a separate invocation-only presentation input for
 `toppleCatReview`, `toppleCatSeal`, `toppleCatReseal`, and `toppleCatVerify`.
@@ -112,7 +128,7 @@ fail during command configuration, before a formal Verify run starts.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.17 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.18 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
@@ -174,25 +190,27 @@ verdicts, and PIT producer values remain the original bytes. Presentation
 metadata and catalogs do not enter report `data.json`, evidence, approvals, or
 safe agent feedback.
 
-Verification Report leads with the aggregate conclusion and a Problems Summary.
-It keeps Contract Integrity, Public Acceptance (including Expected Consumption),
-Hidden Tests, Property-Based Testing, and Mutation Testing in separate sections.
+Verification Report leads with the aggregate conclusion, selected-AC counts,
+and Needs Attention list. Its main summary presents Contract Integrity once:
+on pass, it says the selected executable contract matches its Mechanical Seal;
+on a mismatch or missing integrity proof, it says downstream AC work did not
+run. Each AC card keeps that global result out of per-AC failure presentation
+and presents Public Acceptance, Hidden Tests, Expected Result Check,
+Property-Based Testing, and Mutation Testing in that order.
 When a `ToppleCase.verify(...)` comparison differs, the active compiler Step
 receives reviewer-only structured expected/actual field differences; that data
 never enters evidence feedback for the implementation agent.
 
-Within Mutation Testing, the primary reading order is AC-first. For each AC,
-the report keeps Public Acceptance, Hidden Tests, and Mutation Testing as
-separate results, then explains whether the public Acceptance Method noticed
-enough temporary production-behavior changes to meet its sealed requirement.
-It projects existing covered, noticed, threshold, and detection values without
-recalculating policy. An unavailable per-AC result remains visible as no data,
-with the recorded `DISABLED`, `NOT_APPLICABLE`, or `INCOMPLETE` reason when
-applicable. The managed profile, PIT-wide outcomes, operator IDs, attribution
-counts, selectors, mutator descriptions, and raw PIT outcomes stay unchanged
-inside collapsed reviewer technical details. This presentation does not change
-Current-run Evidence, the Mechanical Seal, a Gate, the aggregate verdict, or
-safe Implementation Agent feedback.
+Within Mutation Testing, the primary reading order is AC-first. For each
+selected AC, a mutation that still passes its unchanged public Acceptance Method
+is `FAIL`; detecting every attributed mutation is `PASS`; and no exact
+attribution remains a neutral gap or the recorded incomplete/disabled state.
+There is no percentage threshold or project-wide mutation score. The managed
+profile, PIT-wide outcomes, operator IDs, attribution counts, selectors, mutator
+descriptions, and raw PIT outcomes stay unchanged inside collapsed reviewer
+technical details. This presentation does not change Current-run Evidence, the
+Mechanical Seal, a Gate, the aggregate verdict, or safe Implementation Agent
+feedback.
 
 Direct `toppleCatCheck` logs reviewer-only, non-blocking Contract Quality
 Advisories about hidden expected-output shapes and opaque identifier literals,
@@ -201,5 +219,8 @@ inside formal `toppleCatVerify` suppresses advisory output. Advisories do not
 enter the ContractDefinition, Mechanical Seal, Verify evidence, Verification Report,
 `agent-feedback.json`, or any Gate.
 
-The aggregate verdict is `PASS`, `FAIL`, or `INCOMPLETE`. Individual gates may
+The aggregate verdict is `PASS`, `FAIL`, or `INCOMPLETE`. ToppleCat records
+`PASS` only when every required Gate passes in the current run. That verdict is
+contract evidence, not an acceptance recommendation, proof that the selected
+business rules are complete, or organizational approval. Individual gates may
 also be `DISABLED` or `NOT_APPLICABLE`; neither is a passing result.

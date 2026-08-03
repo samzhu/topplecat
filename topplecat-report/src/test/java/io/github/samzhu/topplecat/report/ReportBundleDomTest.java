@@ -228,6 +228,7 @@ class ReportBundleDomTest {
             null,
             null,
             new VerificationRunSummary("run-1", NOW.minusSeconds(3), NOW, 1, 1, 1, 1));
+    view = ReportViews.withMutationAttribution(view, null);
     Path bundle = tempDir.resolve("verification");
     HtmlBundleWriter.verification(bundle, view);
 
@@ -237,16 +238,19 @@ class ReportBundleDomTest {
       client.waitForBackgroundJavaScript(250);
 
       assertEquals("Verification Report", page.getTitleText());
-      assertTrue(page.asNormalizedText().contains("Delivery rejected — verification failed"));
+      assertTrue(page.asNormalizedText().contains("Verification failed"));
+      assertTrue(
+          ((HtmlElement) page.querySelector("#summary"))
+              .getTextContent()
+              .contains(
+                  "Contract Integrity passed: the selected executable contract matches its"
+                      + " Mechanical Seal."));
       assertNotNull(page.querySelector("#problems"));
       assertNotNull(page.querySelector("#contract-integrity"));
       assertNotNull(page.querySelector("#public-acceptance"));
       assertNotNull(page.querySelector("#hidden-tests"));
       assertNotNull(page.querySelector("#property-testing"));
       assertNotNull(page.querySelector("#mutation-testing"));
-      assertTrue(
-          page.asNormalizedText()
-              .contains("No data. This run has no Mutation result to show for this AC."));
       assertTrue(page.asNormalizedText().contains("Sealed policy disabled mutation."));
       assertTrue(page.asNormalizedText().contains("Field-level expected and actual comparison"));
       assertTrue(page.asNormalizedText().contains("Step data"));
@@ -271,13 +275,78 @@ class ReportBundleDomTest {
 
       assertEquals("zh-TW", ((HtmlElement) page.querySelector("html")).getAttribute("lang"));
       assertEquals("驗證報告", page.getTitleText());
-      assertTrue(page.asNormalizedText().contains("交付遭拒，驗證失敗"));
+      assertTrue(page.asNormalizedText().contains("驗證失敗"));
+      assertTrue(
+          ((HtmlElement) page.querySelector("#summary"))
+              .getTextContent()
+              .contains("契約完整性已通過：已選可執行契約符合其機械封印。"));
       assertEquals(
           "驗證報告篩選器",
           ((HtmlElement) page.querySelector(".filter-controls")).getAttribute("aria-label"));
-      assertTrue(page.asNormalizedText().contains("JUNIT"));
+      assertTrue(page.asNormalizedText().contains("公開驗收"));
       assertTrue(page.asNormalizedText().contains("FAIL"));
-      assertFalse(page.asNormalizedText().contains("Delivery rejected — verification failed"));
+      assertFalse(page.asNormalizedText().contains("交付遭拒"));
+    }
+  }
+
+  @Test
+  void verificationSummaryExplainsSealMismatchWithoutPresentingAcExecutionAsFailure()
+      throws Exception {
+    VerificationView view =
+        new VerificationView(
+            VerificationView.SCHEMA_VERSION,
+            NOW,
+            CaseResultStatus.NOT_REPORTED,
+            true,
+            List.of(
+                new EvidenceGate(
+                    "CONTRACT_INTEGRITY", EvidenceVerdict.FAIL, "The sealed contract changed."),
+                new EvidenceGate("JUNIT", EvidenceVerdict.INCOMPLETE, null),
+                new EvidenceGate("REVIEWER_JUNIT", EvidenceVerdict.INCOMPLETE, null),
+                new EvidenceGate("EXPECTED_CONSUMPTION", EvidenceVerdict.INCOMPLETE, null),
+                new EvidenceGate("PROPERTY", EvidenceVerdict.INCOMPLETE, null),
+                new EvidenceGate("MUTATION", EvidenceVerdict.INCOMPLETE, null)),
+            List.of(mutationAcceptanceCondition("AC-CHECKOUT", "Checkout total")),
+            null,
+            null,
+            new VerificationRunSummary("run-integrity", NOW, NOW, 1, 0, 0, 0));
+    view = ReportViews.withMutationAttribution(view, null);
+
+    Path englishBundle = tempDir.resolve("integrity-failure-en");
+    HtmlBundleWriter.verification(englishBundle, view);
+    Path traditionalChineseBundle = tempDir.resolve("integrity-failure-zh-TW");
+    HtmlBundleWriter.verification(traditionalChineseBundle, view, ReportLanguage.ZH_TW);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(englishBundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      assertTrue(
+          ((HtmlElement) page.querySelector("#summary"))
+              .getTextContent()
+              .contains(
+                  "Contract Integrity failed: the selected executable contract no longer matches"
+                      + " its Mechanical Seal, so downstream AC work did not run."));
+      assertTrue(
+          page.querySelector("#all-acs")
+              .getTextContent()
+              .contains("downstream AC work did not run"));
+      assertEquals(0, page.querySelectorAll(".ac-card").getLength());
+    }
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page =
+          client.getPage(traditionalChineseBundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      assertTrue(
+          ((HtmlElement) page.querySelector("#summary"))
+              .getTextContent()
+              .contains("契約完整性失敗：已選可執行契約已不符合其機械封印，因此未執行下游 AC 工作。"));
+      assertTrue(page.querySelector("#all-acs").getTextContent().contains("未執行下游 AC 工作"));
+      assertEquals(0, page.querySelectorAll(".ac-card").getLength());
     }
   }
 
@@ -290,33 +359,68 @@ class ReportBundleDomTest {
             true,
             "KILLED",
             "example.Production",
+            "Production.java",
+            "discountedTotal",
+            "(I)I",
+            12,
+            0,
+            0,
             mutator,
-            "changed production behavior",
+            "Replaced integer addition with subtraction",
+            List.of("example.MeetsAcceptance#matches()V", "example.BelowAcceptance#matches()V"),
+            List.of("example.BelowAcceptance#matches()V"),
             List.of("example.MeetsAcceptance#matches()V"),
-            List.of("example.MeetsAcceptance#matches()V"),
-            List.of(),
-            List.of("AC-MEETS"));
+            List.of("AC-MEETS", "AC-BELOW"),
+            List.of("AC-BELOW"),
+            "return subtotal + 10;");
     PitMutationEvidence survived =
         new PitMutationEvidence(
             false,
             "SURVIVED",
             "example.Production",
+            "Production.java",
+            "discountedTotal",
+            "(I)I",
+            18,
+            0,
+            1,
             mutator,
             "changed another production behavior",
-            List.of("example.BelowAcceptance#matches()V"),
+            List.of("example.MeetsAcceptance#matches()V"),
             List.of(),
-            List.of("example.BelowAcceptance#matches()V"),
-            List.of("AC-BELOW"));
+            List.of("example.MeetsAcceptance#matches()V"),
+            List.of("AC-MEETS"),
+            List.of(),
+            "return subtotal - 10;");
+    PitMutationEvidence detected =
+        new PitMutationEvidence(
+            true,
+            "KILLED",
+            "example.Production",
+            "Production.java",
+            "discountedTotal",
+            "(I)I",
+            14,
+            0,
+            2,
+            mutator,
+            "Replaced integer subtraction with addition",
+            List.of("example.MeetsAcceptance#matches()V"),
+            List.of("example.MeetsAcceptance#matches()V"),
+            List.of(),
+            List.of("AC-MEETS"),
+            List.of("AC-MEETS"),
+            "return subtotal - 10;");
     PitMutationAttribution attribution =
         new PitMutationAttribution(
             ToppleCatManagedMutationProfile.PIT_VERSION,
             ToppleCatManagedMutationProfile.PROFILE_ID,
             ToppleCatManagedMutationProfile.operatorIds(),
-            3,
-            3,
+            10,
+            10,
             0,
             List.of(
-                new PitOutcomeCount("KILLED", true, 2), new PitOutcomeCount("SURVIVED", false, 1)),
+                new PitOutcomeCount("KILLED", true, 9), new PitOutcomeCount("SURVIVED", false, 1)),
             List.of(),
             List.of(),
             List.of(
@@ -325,20 +429,20 @@ class ReportBundleDomTest {
                     List.of("example.MeetsAcceptance#matches()V"),
                     10,
                     8,
-                    80,
-                    80,
-                    List.of(new PitOutcomeCount("KILLED", true, 8)),
+                    List.of(
+                        new PitOutcomeCount("KILLED", true, 9),
+                        new PitOutcomeCount("SURVIVED", false, 1)),
                     false),
                 new PitMutationAssessment(
                     "AC-BELOW",
                     List.of("example.BelowAcceptance#matches()V"),
-                    10,
-                    7,
-                    80,
-                    70,
-                    List.of(new PitOutcomeCount("KILLED", true, 7)),
+                    1,
+                    1,
+                    List.of(new PitOutcomeCount("KILLED", true, 1)),
                     false)),
-            List.of(killed, killed, survived));
+            List.of(
+                killed, survived, detected, detected, detected, detected, detected, detected,
+                detected, detected));
     VerificationView view =
         new VerificationView(
             VerificationView.SCHEMA_VERSION,
@@ -352,7 +456,9 @@ class ReportBundleDomTest {
                 new EvidenceGate("EXPECTED_CONSUMPTION", EvidenceVerdict.PASS, null),
                 new EvidenceGate("PROPERTY", EvidenceVerdict.NOT_APPLICABLE, null),
                 new EvidenceGate(
-                    "MUTATION", EvidenceVerdict.FAIL, "Per-AC detection missed threshold.")),
+                    "MUTATION",
+                    EvidenceVerdict.FAIL,
+                    "One selected AC did not detect every attributed alteration.")),
             List.of(
                 mutationAcceptanceCondition("AC-MEETS", "Meets its requirement"),
                 mutationAcceptanceCondition("AC-BELOW", "Misses its requirement"),
@@ -360,6 +466,7 @@ class ReportBundleDomTest {
             null,
             attribution,
             new VerificationRunSummary("run-mutation", NOW, NOW, 1, 0, 0, 0));
+    view = ReportViews.withMutationAttribution(view, attribution);
     Path bundle = tempDir.resolve("mutation-verification");
     HtmlBundleWriter.verification(bundle, view);
 
@@ -371,36 +478,53 @@ class ReportBundleDomTest {
       String text = page.asNormalizedText();
       assertTrue(
           text.contains(
-              "During verification, ToppleCat temporarily changes production behavior and checks it"
-                  + " again with this AC's public acceptance work."));
-      assertTrue(text.contains("Meets requirement"));
+              "ToppleCat deliberately changed production logic and reran this AC's unchanged public"
+                  + " acceptance."));
       assertTrue(
           text.contains(
-              "10 relevant changes; public acceptance noticed 8; meets the sealed 80%"
-                  + " requirement."));
-      assertTrue(text.contains("Below requirement"));
+              "This AC was assessed against 10 attributed changes: 8 detected, 2 undetected."));
+      HtmlDetails noData = (HtmlDetails) page.querySelector("#verification-AC-NO-DATA");
+      noData.setOpen(true);
       assertTrue(
-          text.contains(
-              "Of 10 relevant changes, public acceptance noticed 7, below the sealed 80%"
-                  + " requirement."));
-      assertTrue(text.contains("No data. This run has no Mutation result to show for this AC."));
-      HtmlElement meets = (HtmlElement) page.querySelector("#mutation-ac-AC-MEETS");
+          noData
+              .getTextContent()
+              .contains("No mutation was exactly attributed to this AC in the current run."));
+      HtmlElement meets = (HtmlElement) page.querySelector("#verification-AC-MEETS");
       assertTrue(meets.getTextContent().contains("Public Acceptance"));
       assertTrue(meets.getTextContent().contains("Hidden Tests"));
       assertTrue(meets.getTextContent().contains("Mutation Testing"));
+      assertEquals(2, meets.querySelectorAll(".undetected-mutation").getLength());
+      assertTrue(meets.getTextContent().contains("The operator changed from + to -."));
+      assertTrue(
+          meets
+              .getTextContent()
+              .contains("ToppleCat cannot safely state an exact before/after replacement"));
+      assertTrue(meets.getTextContent().contains("Production.java"));
+      assertTrue(meets.getTextContent().contains("Line: 12"));
+      assertTrue(
+          meets.getTextContent().contains("This AC's unchanged public acceptance still passed."));
       assertFalse(meets.getTextContent().contains("PIT"));
+      HtmlElement below = (HtmlElement) page.querySelector("#verification-AC-BELOW");
+      assertTrue(
+          below
+              .getTextContent()
+              .contains(
+                  "This AC was assessed against 1 attributed changes: 1 detected, 0 undetected."));
+      assertEquals(0, below.querySelectorAll(".undetected-mutation").getLength());
       HtmlDetails technicalDetails =
           (HtmlDetails) page.querySelector("#mutation-technical-details");
       assertFalse(technicalDetails.isOpen(), "PIT evidence stays collapsed by default");
       assertTrue(technicalDetails.getTextContent().contains("KILLED"));
       assertTrue(technicalDetails.getTextContent().contains("SURVIVED"));
-      assertTrue(technicalDetails.getTextContent().contains("changed production behavior"));
+      assertTrue(
+          technicalDetails.getTextContent().contains("Replaced integer addition with subtraction"));
     }
 
     String englishData = Files.readString(bundle.resolve("data.json"));
     VerificationView recorded = ReportJson.readVerification(englishData);
     assertEquals(view, recorded);
-    assertEquals(80, recorded.mutationAttribution().assessments().getFirst().detectionRate());
+    assertFalse(englishData.contains("detectionRate"));
+    assertFalse(englishData.contains("sealedThreshold"));
     assertEquals("KILLED", recorded.mutationAttribution().mutations().getFirst().status());
 
     Path traditionalChineseBundle = tempDir.resolve("mutation-verification-zh-TW");
@@ -414,17 +538,21 @@ class ReportBundleDomTest {
       client.waitForBackgroundJavaScript(250);
 
       String text = page.asNormalizedText();
-      assertTrue(text.contains("驗證時，ToppleCat 暫時改變正式程式的行為，再用這個 AC 的公開驗收檢查。"));
-      assertTrue(text.contains("符合要求"));
-      assertTrue(text.contains("10 個相關改動，公開驗收發現 8 個，符合封存的 80% 要求。"));
-      assertTrue(text.contains("低於要求"));
-      assertTrue(text.contains("10 個相關改動，公開驗收只發現 7 個，低於封存的 80% 要求。"));
-      assertTrue(text.contains("無資料。本次執行沒有此 AC 可顯示的突變測試結果。"));
+      assertTrue(text.contains("驗證時，ToppleCat 暫時改變正式程式的行為，再用這個 AC 未改變的公開驗收檢查。"));
+      assertTrue(text.contains("這個 AC 共評估 10 個已歸因改動：偵測到 8 個，未偵測到 2 個。"));
+      HtmlElement below = (HtmlElement) page.querySelector("#verification-AC-BELOW");
+      assertTrue(below.getTextContent().contains("這個 AC 共評估 1 個已歸因改動：偵測到 1 個，未偵測到 0 個。"));
+      assertEquals(0, below.querySelectorAll(".undetected-mutation").getLength());
+      HtmlDetails noData = (HtmlDetails) page.querySelector("#verification-AC-NO-DATA");
+      noData.setOpen(true);
+      assertTrue(noData.getTextContent().contains("本次執行沒有突變被精確歸因到這個 AC。"));
       HtmlDetails technicalDetails =
           (HtmlDetails) page.querySelector("#mutation-technical-details");
       assertFalse(technicalDetails.isOpen(), "技術細節預設維持收合");
       assertTrue(technicalDetails.getTextContent().contains("KILLED"));
       assertTrue(technicalDetails.getTextContent().contains("SURVIVED"));
+      assertTrue(technicalDetails.getTextContent().contains("Production.java"));
+      assertTrue(technicalDetails.getTextContent().contains("AC-BELOW"));
     }
   }
 

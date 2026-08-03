@@ -3,14 +3,15 @@
 ## Acceptance methods and typed rows
 
 Bind each AC to exactly one literal public `@ToppleAcceptanceTest("AC-...")`
-method. Give it an optional `@DisplayName` that says what a reviewer is checking.
+method. Give it a business-readable JUnit `@DisplayName` that says what a
+reviewer is checking.
 The method is a small Scenario orchestration, not a home for setup, assertions,
 or business calls.
 
 `@DisplayName` is authored business prose, not ToppleCat interface copy. It
 may use Traditional Chinese or other Unicode text and is preserved exactly in
 the compiler descriptor, contract, runtime narrative, JSON projection, and
-Reviewer HTML. The same rule applies to an optional JUnit `@DisplayName` on a
+Reviewer HTML. The same rule applies to the required JUnit `@DisplayName` on a
 `@ToppleProperty`: it is the Property title, never text to be translated.
 
 ```java
@@ -99,6 +100,7 @@ cannot create rows, consume expected values, or improve mutation results.
 
 ```java
 @ToppleProperty("AC-ORDER-CREATE")
+@DisplayName("Reordering lines preserves the order total")
 void lineOrderDoesNotChangeTotal(PropertyTrials trials) {
     trials.forAll(Generators.lists(Generators.integers(0, 10), 0, 8))
         .check(lines -> assertEquals(total(lines), total(reversed(lines))));
@@ -120,7 +122,10 @@ Use `classify` and `requireCoverage` for a named business boundary. An unmet
 coverage requirement, exhausted filter, malformed generator, or unstable replay
 makes evidence `INCOMPLETE`. Generated trial values are current-run evidence,
 not case rows; reports use generator-preserved JSON choices rather than an
-arbitrary Java object's `toString()`.
+arbitrary Java object's `toString()`. The `@DisplayName` must name the
+generated input or situation and the invariant being checked. Every discarded
+generator input is retained as JSON evidence with a neutral explanation; the
+Verification Report paginates that list when it is long.
 
 ## Reviewer material and external context
 

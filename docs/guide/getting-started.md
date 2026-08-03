@@ -8,11 +8,11 @@ handoff. During development, continue to use ordinary `./gradlew test`.
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.17"
+    id("io.github.samzhu.topplecat") version "0.0.18"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.17")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.18")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -30,6 +30,7 @@ rows under `src/test/resources/topplecat/cases/`.
 
 ```java
 @ToppleAcceptanceTest("AC-ORDER-CREATE")
+@DisplayName("Create an accepted order")
 void createsOrder(ToppleCase c, ToppleScenario scenario, OrderStage order) {
     scenario.given(order).an_order(c.input("order", Order.class));
     scenario.when(order).submits_it();
@@ -37,10 +38,12 @@ void createsOrder(ToppleCase c, ToppleScenario scenario, OrderStage order) {
 }
 ```
 
-The method orchestrates one compiler-described Scenario. `OrderStage` is a
+The method orchestrates one compiler-described Scenario. Give each public Step
+method a business-readable `@As` sentence. `OrderStage` is a
 non-final concrete `ToppleStage` with an accessible no-argument constructor;
 ToppleCat provides one fresh proxy for each row. Add Properties under `src/test`
-when an invariant deserves generated coverage; they use `@ToppleProperty` and
+when an invariant deserves generated coverage; they use `@ToppleProperty`, a
+JUnit `@DisplayName` naming the generated situation and invariant, and
 `PropertyTrials`.
 
 ## Add reviewer-owned material
@@ -67,7 +70,7 @@ machine values exactly as recorded.
 Seal moves the reviewer source to local custody. The implementation agent then
 receives only public material and works with `./gradlew test`.
 
-## Verify a completion claim
+## Make the delivery earn a PASS
 
 ```bash
 ./gradlew toppleCatVerify --spec specs/023-checkout/spec.md
@@ -77,9 +80,14 @@ The formal run creates fresh public acceptance evidence and separately records
 Hidden Tests, Mutation Testing, Property-Based Testing, and expected-value
 consumption. Once contract integrity passes, each enabled safeguard runs even
 if an earlier one fails; reports and safe feedback appear before the one
-aggregate Gradle failure. Public Properties follow the selected ACs. Use
-`--all-hidden-tests` only when a reviewer deliberately expands hidden rows
-beyond the selected ACs.
+aggregate Gradle failure. Public Acceptance, Properties, and Mutation Testing
+follow the selected ACs; an attributed mutation that its owning public
+Acceptance Method fails to detect fails that AC. Use `--all-hidden-tests` only
+when a reviewer deliberately expands hidden rows beyond the selected ACs.
+
+ToppleCat records `PASS` only when every required Gate passes in this run. The
+Reviewer reads the evidence behind that verdict and still decides whether to
+accept the delivery.
 
 Read `build/topplecat/evidence.json` for the machine verdict. Spec Review at
 `build/topplecat/reports/review/index.html` and Verification Report at

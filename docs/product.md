@@ -2,9 +2,9 @@
 
 ToppleCat is a delegation verification gate for Java/JUnit projects.
 
-**AI accelerates implementation; humans strengthen verification. ToppleCat
-turns an AI agent's done claim into current-run evidence that a human can
-inspect.**
+**AI accelerates implementation; humans strengthen verification. The delivery
+behind an AI agent's done claim earns a current-run `PASS` only when every
+required Gate passes.**
 
 ToppleCat verifies the human-selected Executable Contract under the sealed
 policy. It does not decide whether the upstream Spec is complete or grant
@@ -18,12 +18,12 @@ Rows, prepares reviewer-owned examples and optional Properties, and reads Spec
 Review to confirm what will be checked. The agent implements against only the
 public handoff and uses ordinary `./gradlew test` feedback.
 
-After the agent claims completion, the same developer may act as the Reviewer:
-run formal Verify, read Verification Report, and decide whether the evidence is
-sufficient to submit or accept the change. A ToppleCat `PASS` can support an
-accept recommendation and `FAIL` can support a reject recommendation. The
-human makes the final decision, and neither result proves that no business rule
-was omitted.
+After the agent claims completion, the same developer may act as the Reviewer.
+Formal Verify runs the sealed public acceptance and every enabled Independent
+Safeguard. ToppleCat records `PASS` only when every required Gate passes in the
+current run; the Reviewer reads Verification Report and decides whether that
+evidence is sufficient for the next delivery decision. Neither `PASS` nor
+`FAIL` proves that no business rule was omitted.
 
 The team may run ToppleCat locally, in CI, or through another workflow. That
 placement does not change the product boundary.
@@ -63,6 +63,16 @@ producer-owned text, select a different Delivery Scope, alter the Executable
 Contract, or influence the Mechanical Seal, Current-run Evidence, Gates, or
 safe Implementation Agent feedback.
 
+## Public project page
+
+The public project page gives Java developers an adoption-oriented view of the
+same product boundary: an agent's done claim earns `PASS` only when every
+required Gate passes in a current run. It explains the independent checks and
+the Reviewer’s final responsibility in English and Traditional Chinese, then
+points developers to the Java/JUnit installation path and source repository.
+It is a public introduction, not another report, contract input, verification
+surface, or source of organizational approval.
+
 ## Responsibility boundary
 
 | ToppleCat owns | The human, team, project, or external workflow owns |
@@ -82,8 +92,8 @@ approval system, or security boundary.
 
 Hidden Tests, Property-Based Testing, and Mutation Testing answer different
 questions. They may appear together in Verification Report, but one result
-never supplies evidence for another and the results are never blended into a
-quality score.
+never supplies evidence for another and Mutation Testing is never blended into
+a project-wide score.
 
 An absent result keeps its reason:
 
@@ -97,13 +107,24 @@ sealed ToppleCat Gate policy. A project's other PIT workflows remain outside
 ToppleCat evidence.
 
 In Verification Report, Mutation Testing starts with the Reviewer question for
-each AC: did its public Acceptance Method notice enough temporary production-
-behavior changes to meet the sealed requirement? The report states the relevant
-change count, noticed count, and requirement in ordinary language, or says
-there is no data and preserves the current-run reason. Public Acceptance,
-Hidden Tests, and Mutation Testing stay visibly separate for that AC. Raw PIT
-outcomes and attribution remain available as reviewer technical evidence; they
-do not become a claim that the unmodified program is correct in every case.
+each selected AC: did its unchanged public Acceptance Method detect every
+temporary production-behavior change attributed to it? An attributed mutation
+that still passes that acceptance fails the AC and the aggregate Gate. Public
+Acceptance, Hidden Tests, Expected Result Check, Property-Based Testing, and
+Mutation Testing stay visibly separate in the same AC card. Raw PIT outcomes
+and attribution remain available as reviewer technical evidence; they do not
+become a claim that the unmodified program is correct in every case.
+
+For an AC that misses attributed changes, the reviewer-facing Mutation Testing
+section explains the total, detected, and undetected counts and then shows only
+the undetected changes. Each detail identifies what changed, where the
+production source was located when that context is unambiguous, and that the
+AC's unchanged public acceptance still passed. Exact before/after wording is
+shown only when PIT's description and the original source line support it;
+otherwise the report states the limitation. A mutation globally marked
+`KILLED` may still be listed for an AC when another AC supplied the killing
+method. These details remain reviewer-only and do not affect the existing Gate
+policy or safe agent feedback.
 
 ## Product-fit test
 

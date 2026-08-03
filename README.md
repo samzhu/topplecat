@@ -4,15 +4,16 @@
   <img src="docs/images/topplecat-readme-hero.png" alt="ToppleCat tipping over an AI agent's fake done claim" width="100%">
 </p>
 
-<p align="center"><strong>Turn an AI agent's “done” into current-run evidence.</strong></p>
+<p align="center"><strong>Make every agent's “done” earn a PASS.</strong></p>
 
 <p align="center"><a href="README.zh-TW.md">繁體中文</a> · <a href="LICENSE">Apache-2.0</a></p>
 
 ToppleCat is a Java/JUnit delegation-verification gate for teams that ask AI
 coding agents to implement a selected Spec while a human remains responsible
 for acceptance. After the agent says the work is done, ToppleCat runs the
-sealed executable acceptance contract and produces fresh evidence plus a
-human-readable recommendation.
+sealed executable acceptance contract. It records a current-run `PASS` only
+when every required Gate passes, then gives the human Reviewer the evidence
+behind that verdict.
 
 Ordinary Java acceptance tests and typed JSON or YAML case rows are the source
 of truth. Generated JSON and HTML explain what was checked; they never become a
@@ -33,9 +34,12 @@ agent:
   notices a changed boundary or arithmetic operation.
 
 After implementation, ToppleCat runs each enabled safeguard independently and
-shows all results together. A `PASS` can support a recommendation to accept the
-delivery, but the human makes the final decision. ToppleCat cannot infer a
-missing rule, such as a VIP discount that the Spec never stated.
+shows all results together. A selected AC whose public acceptance lets an
+attributed altered program pass fails Mutation Testing and the aggregate run;
+only when every required Gate passes does ToppleCat record `PASS` for the
+current run. The human reads the evidence and makes the delivery decision.
+ToppleCat cannot infer a missing rule, such as a VIP discount that the Spec
+never stated.
 
 ## How it fits into delivery
 
@@ -44,7 +48,7 @@ human selects the Spec and prepares the executable contract
     -> Spec Review: confirm what will be checked
     -> AI agent implements with ordinary ./gradlew test feedback
     -> toppleCatVerify: produce fresh formal evidence
-    -> Verification Report: recommend accept, reject, or incomplete
+    -> Verification Report: show the current verdict and AC evidence
     -> human decides what happens to the delivery
 ```
 
@@ -74,18 +78,25 @@ preserves PIT's official outcomes. Project-specific PIT tasks remain separate
 and never enter ToppleCat evidence. See the
 [verification guide](docs/guide/verification-and-evidence.md#independent-formal-work).
 
+When an AC's unchanged public acceptance misses an attributed mutation, its
+report section shows the detected and undetected counts followed by cards for
+only the undetected changes. The cards explain the change, source location, and
+that the acceptance still passed; exact replacements are shown only when the
+PIT description and unambiguous source line support them. These reviewer-only
+details stay out of safe agent feedback.
+
 ## Quick start
 
-ToppleCat 0.0.17 requires Java 25 and a compatible Gradle version.
+ToppleCat 0.0.18 requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.17"
+    id("io.github.samzhu.topplecat") version "0.0.18"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.17")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.18")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -150,7 +161,7 @@ complete Java, Stage, case, expected-value, and Property rules.
 | Artifact | Audience | Purpose |
 | --- | --- | --- |
 | `build/topplecat/reports/review/index.html` | Reviewer | Spec Review before handoff: the complete selected Spec and bound executable material, not an execution result. |
-| `build/topplecat/reports/verification/index.html` | Reviewer | Verification Report for the current formal run, including private diagnostics and the accept/reject/incomplete recommendation. |
+| `build/topplecat/reports/verification/index.html` | Reviewer | Verification Report for the current formal run, with AC-first results and private diagnostics. |
 | `build/topplecat/evidence.json` | Reviewer / automation | Machine-readable current-run verdict and Gate digests. |
 | `build/topplecat/agent-feedback.json` | Implementation Agent | Safe Gate-level remediation without reviewer answers. |
 
@@ -161,12 +172,10 @@ JSON, evidence, safe feedback, the Mechanical Seal, or the contract itself.
 
 The aggregate verdict is:
 
-- `PASS`: the current selected contract passed; the report may recommend
-  accepting the delivery;
-- `FAIL`: completed verification found a problem; the report may recommend
-  rejecting or revising the delivery; or
+- `PASS`: every required Gate passed for the selected ACs in the current run;
+- `FAIL`: completed verification found a blocking AC or Gate problem; or
 - `INCOMPLETE`: ToppleCat could not obtain enough trustworthy current-run
-  evidence to recommend acceptance.
+  evidence.
 
 The human keeps the final decision in every case.
 
@@ -196,7 +205,7 @@ before proposing a new ToppleCat responsibility.
 - [Architecture](docs/architecture.md)
 - [Context glossary](CONTEXT.md)
 - [Documentation index](docs/README.md)
-- [0.0.17 release notes](docs/releases/0.0.17.md)
+- [0.0.18 release notes](docs/releases/0.0.18.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 
@@ -205,4 +214,4 @@ The repository also provides the
 for turning selected ACs into executable Java acceptance methods, public and
 reviewer case rows, and optional Properties. Humans or external workflow
 automation remain responsible for running ToppleCat and deciding what to do
-with its recommendation.
+with its evidence.

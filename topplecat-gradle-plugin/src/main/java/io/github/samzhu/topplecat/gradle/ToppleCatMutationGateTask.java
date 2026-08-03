@@ -1,6 +1,8 @@
 package io.github.samzhu.topplecat.gradle;
 
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
+import io.github.samzhu.topplecat.core.SelectedSpecScope;
+import io.github.samzhu.topplecat.core.SelectedSpecScopeJson;
 import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import io.github.samzhu.topplecat.pitest.PitMutationAttributor;
 import io.github.samzhu.topplecat.pitest.PitMutationParser;
@@ -13,12 +15,12 @@ import java.util.Map;
 import java.util.Set;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
@@ -30,6 +32,9 @@ import org.gradle.api.tasks.TaskAction;
 public abstract class ToppleCatMutationGateTask extends DefaultTask {
   @Internal
   public abstract DirectoryProperty getPublicTestSourceRoot();
+
+  @Internal
+  public abstract ConfigurableFileCollection getProductionSourceDirectories();
 
   @org.gradle.api.tasks.InputFile
   public abstract RegularFileProperty getDefinitionFile();
@@ -60,8 +65,16 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
   @Internal
   public abstract DirectoryProperty getRunDirectory();
 
-  @Input
+  /**
+   * @deprecated retained only for direct task compatibility; it never affects formal policy.
+   */
+  @Deprecated
+  @Internal
   public abstract Property<Integer> getThreshold();
+
+  @org.gradle.api.tasks.InputFile
+  @PathSensitive(PathSensitivity.NONE)
+  public abstract RegularFileProperty getSelectedSpecScopeFile();
 
   /** Internal Verify-only switch: direct diagnostic execution still fails at this task. */
   @Internal
@@ -82,7 +95,12 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
     try {
       attribution =
           PitMutationAttributor.attribute(
-              new PitMutationParser().parse(report), testsByAc, getThreshold().get());
+              new PitMutationParser().parse(report),
+              testsByAc,
+              PitMutationSourceLineResolver.forDirectories(
+                  getProductionSourceDirectories().getFiles().stream()
+                      .map(java.io.File::toPath)
+                      .toList()));
     } catch (RuntimeException exception) {
       VerificationRunArtifacts.markCompleted(
           getRunDirectory().get().getAsFile().toPath(), VerificationRunArtifacts.MUTATION);
@@ -125,8 +143,13 @@ public abstract class ToppleCatMutationGateTask extends DefaultTask {
     Map<String, Set<String>> result = new LinkedHashMap<>();
     Path definition = getDefinitionFile().get().getAsFile().toPath();
     try {
-      ContractDefinitionJson.read(Files.readString(definition))
-          .acceptanceConditions()
+      SelectedSpecScope scope =
+          SelectedSpecScopeJson.read(
+              Files.readString(getSelectedSpecScopeFile().get().getAsFile().toPath()));
+      ContractDefinitionJson.read(Files.readString(definition)).acceptanceConditions().stream()
+          .filter(
+              contract ->
+                  !scope.selected() || scope.acceptanceConditionIds().contains(contract.acId()))
           .forEach(
               contract ->
                   result

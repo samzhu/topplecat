@@ -182,6 +182,10 @@ class PropertyEngineTest {
 
     assertEquals(PropertyExecutionState.COMPLETED_INCOMPLETE, outcome.result().state());
     assertEquals(11, outcome.result().discards());
+    assertEquals(11, outcome.result().discardedInputs().size());
+    assertTrue(
+        outcome.result().discardedInputs().stream()
+            .allMatch(input -> !input.choicesJson().isBlank()));
   }
 
   private static PropertyEngine.Config config(int tries, long seed) {

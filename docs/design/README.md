@@ -9,11 +9,7 @@ Current product facts belong in the [Product definition](../product.md),
 
 ## Active designs
 
-There are no active product designs.
-
-An empty list is normal. It means every accepted design has either been
-implemented and merged into current documentation or removed before
-delegation.
+There are currently no accepted designs awaiting implementation.
 
 ## Decide by content
 
