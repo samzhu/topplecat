@@ -69,7 +69,7 @@ the enabled safeguards independently:
 | Capability | Evidence that can pass its gate | Cannot be supplemented by |
 | --- | --- | --- |
 | Hidden Tests | Executed hidden typed rows for the selected ACs | Properties or mutation reports |
-| Mutation Testing | A current usable producer report attributed to public acceptance methods | Hidden rows or Properties |
+| Mutation Testing | A passing Public Acceptance baseline and a current usable producer report attributed to public acceptance methods | Hidden rows or Properties |
 | Property-Based Testing | Current matching Property events and JUnit XML | Hidden rows or mutation reports |
 
 For example, if a selected delivery has five Properties but one has only a
@@ -85,6 +85,12 @@ If Hidden Tests are enabled and a selected AC has no executed hidden row,
 it cannot change that result. A team choosing PBT without hidden rows
 must explicitly disable `hiddenTests`, reseal the policy, and receives
 `REVIEWER_JUNIT=DISABLED` with the actual `PROPERTY` result.
+
+Mutation Testing has a different prerequisite: Public Acceptance must first
+pass. If a public example already fails, `MUTATION=INCOMPLETE`; a temporary
+PIT run cannot establish whether the unchanged public Acceptance Method would
+have caught a separately changed production behavior. Any available PIT output
+stays reviewer technical context and does not become a Mutation Gate verdict.
 
 Formal Verify uses only ToppleCat's managed PIT 1.25.5 producer. It targets
 compiler-emitted public Acceptance Methods, fixes the
@@ -138,13 +144,13 @@ Contract integrity is the only precondition. Verify first runs the current Check
 to rebuild the compiler definition it compares with the Mechanical Seal. If it
 is `PASS`, Verify runs public acceptance, hidden typed-row retest,
 Property-Based Testing, and Mutation
-Testing in that fixed order. A completed safeguard that finds a problem is
-`FAIL`, not a reason to skip later safeguards. JUnit-like tasks retain XML,
-sidecars, and completion markers after assertion failures; the mutation task
-writes usable findings before the aggregate failure exit. The report waits for
-all enabled safeguards or their explicit interruption, aggregates expected
-consumption, writes evidence, reports, and safe feedback, re-hides reviewer
-source, and only then fails Gradle for an aggregate `FAIL` or `INCOMPLETE`.
+Testing in that fixed order. Hidden Tests and Properties remain independent
+when Public Acceptance finds a problem; Mutation Testing instead records its
+baseline as unavailable. JUnit-like tasks retain XML and sidecars after
+assertion failures. The report waits for all enabled safeguards or their
+explicit interruption, aggregates expected consumption, writes evidence,
+reports, and safe feedback, re-hides reviewer source, and only then fails
+Gradle for an aggregate `FAIL` or `INCOMPLETE`.
 
 An interrupted task is `INCOMPLETE`; a completed task with missing or malformed
 current-run evidence (including JUnit runtime sidecars) is also `INCOMPLETE`.
@@ -220,6 +226,11 @@ what the Acceptance Method distinguished during the temporary verification
 changes; it does not prove that the original program is correct in every
 situation.
 
+That question is only meaningful after Public Acceptance passes. If it did not,
+the AC's Mutation Testing section says evidence is unavailable because the
+baseline failed. It does not show attributed counts or call PIT output a
+detected or undetected change for that AC.
+
 Public Acceptance, Hidden Tests, and Mutation Testing appear separately for the
 same AC. A missing Mutation result says “No data”; it is never a pass. If the
 current evidence says `DISABLED`, `NOT_APPLICABLE`, or `INCOMPLETE`, the report
@@ -261,6 +272,10 @@ Property-Based Testing, and Mutation Testing. A collapsed technical section
 preserves the canonical Gate names and evidence. A field-level expected/actual
 comparison is reviewer-only diagnostic context for the failed compiler Step; it
 does not alter the JUnit assertion or Expected Consumption result.
+On a wide display, the AC list uses the available report workspace so a Reviewer
+can compare its five sections without horizontal page overflow; the same view
+collapses to one column on narrow screens. Spec Review keeps its separate,
+readable prose width.
 
 Contract Integrity is shown once in the main summary, not as a failure of every
 AC. When the checked contract matches its Mechanical Seal, the summary says so.

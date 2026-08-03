@@ -92,6 +92,12 @@ public abstract class ToppleCatReportTask extends DefaultTask {
       "Mutation Testing did not complete in this verification run.";
   private static final String MUTATION_EVIDENCE_INCOMPLETE =
       "Mutation Testing current-run evidence was missing or could not be read.";
+  private static final String MUTATION_BASELINE_INCOMPLETE =
+      "Mutation Testing could not establish a reliable baseline because public acceptance found"
+          + " a problem in this run.";
+  private static final String MUTATION_BASELINE_UNAVAILABLE =
+      "Mutation Testing could not establish a reliable baseline because public acceptance did"
+          + " not complete successfully in this run.";
   private static final String MUTATION_CONTRACT_DETECTION_FAILED =
       "Mutation Testing found a public Acceptance Method without enough contract-scoped"
           + " detection evidence.";
@@ -247,7 +253,12 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     ExecutionSummary executionSummary =
         executions(runDirectory, definitionDigestsByCaseId, definedCaseIds);
     Map<String, ReportViews.CaseExecution> executions = executionSummary.executions();
-    Set<String> selectedAcIds = Set.copyOf(selectedScope.scope().acceptanceConditionIds());
+    Set<String> selectedAcIds =
+        selectedScope.scope().selected()
+            ? Set.copyOf(selectedScope.scope().acceptanceConditionIds())
+            : reviewerDefinition.acceptanceConditions().stream()
+                .map(AcceptanceContract::acId)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     Set<String> executedHiddenRowAcIds =
         executedHiddenRowAcceptanceConditions(verificationCases, executions);
     int executedHiddenRows =
@@ -274,8 +285,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
             runId);
     GateOutcome property = properties.gate();
     Set<String> selectedReviewerCoverage = new java.util.LinkedHashSet<>(executedHiddenRowAcIds);
-    boolean missingSelectedReviewerCoverage =
-        selectedScope.scope().selected() && !selectedReviewerCoverage.containsAll(selectedAcIds);
+    boolean missingSelectedReviewerCoverage = !selectedReviewerCoverage.containsAll(selectedAcIds);
     Instant generatedAt = Instant.now();
     GateOutcome junit =
         integrityPassed
@@ -311,7 +321,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         !integrityPassed
             ? GateOutcome.incomplete(INTEGRITY_PRECONDITION)
             : getMutationEnabled().get()
-                ? mutationVerdict(runDirectory)
+                ? mutationVerdict(runDirectory, junit)
                 : GateOutcome.disabled(getMutationDisabledReason().get());
     List<EvidenceGate> reviewerGates =
         List.of(
@@ -926,7 +936,13 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         executionSummary.narrativeEvidenceUsable());
   }
 
-  private GateOutcome mutationVerdict(Path runDirectory) {
+  private GateOutcome mutationVerdict(Path runDirectory, GateOutcome publicAcceptance) {
+    if (publicAcceptance.verdict() == EvidenceVerdict.FAIL) {
+      return GateOutcome.incomplete(MUTATION_BASELINE_INCOMPLETE);
+    }
+    if (publicAcceptance.verdict() != EvidenceVerdict.PASS) {
+      return GateOutcome.incomplete(MUTATION_BASELINE_UNAVAILABLE);
+    }
     String incompleteReason = getMutationIncompleteReason().getOrElse("").trim();
     if (!incompleteReason.isEmpty()) {
       return GateOutcome.incomplete("Mutation Testing did not run: " + incompleteReason);

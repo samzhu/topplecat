@@ -436,6 +436,15 @@ public final class ReportViews {
 
   private static VerificationSafeguard mutationSafeguard(
       PitMutationAssessment assessment, EvidenceGate gate) {
+    if (gate.verdict() == EvidenceVerdict.DISABLED
+        || gate.verdict() == EvidenceVerdict.INCOMPLETE
+        || gate.verdict() == EvidenceVerdict.NOT_APPLICABLE) {
+      return absentSafeguard(
+          "MUTATION_TESTING",
+          gate,
+          "MUTATION",
+          "Mutation Testing has no applicable current-run evidence for this AC.");
+    }
     if (assessment == null) {
       return absentSafeguard(
           "MUTATION_TESTING",

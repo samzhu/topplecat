@@ -68,10 +68,14 @@ The three capabilities are Independent Safeguards: they share only scope,
 integrity, reports, and the aggregate verdict. Reviewer custody is used only
 for Hidden Tests. A Property result cannot supply Hidden Test coverage. A
 mutation result cannot supply Property evidence. Once contract integrity
-passes, each enabled safeguard produces its own current-run result even if an
-earlier safeguard fails. `REVIEWER_JUNIT` is `PASS` only when current-run
-hidden typed rows executed. When enabled but those rows are missing it is
-`INCOMPLETE`; an explicit policy decision is `DISABLED`.
+passes, Hidden Tests and Properties produce their own current-run result even
+if Public Acceptance fails. Managed Mutation Testing has one additional
+prerequisite: Public Acceptance must pass to establish its baseline. When that
+baseline fails, `MUTATION` is `INCOMPLETE` rather than a claim about mutation
+detection. `REVIEWER_JUNIT` is `PASS` only when every AC in the delivery has a
+current-run hidden typed row; a missing row makes that AC's Hidden Tests and
+the aggregate Reviewer JUnit result `INCOMPLETE`. An explicit policy decision
+is `DISABLED`.
 
 Formal Verify owns its PIT producer: it pins PIT 1.25.5, passes only the fixed
 `topplecat-managed-v1` 12-operator profile, targets compiler-emitted public
@@ -161,6 +165,9 @@ it `FAIL`; absent or incomplete current proof is `INCOMPLETE`.
 When it passes, formal Verify runs public acceptance, hidden typed rows,
 Properties, and Mutation Testing in that order, then aggregates expected-value
 consumption and writes reports before its one aggregate Gradle failure exit.
+If Public Acceptance fails, the managed PIT task may still leave producer
+diagnostics, but the Mutation Gate is `INCOMPLETE` because no trustworthy
+passing baseline exists.
 Verify reuses an existing Mechanical Seal through an internal custody check; it
 does not run Review, Seal, or update approval.
 
@@ -197,6 +204,8 @@ on a mismatch or missing integrity proof, it says downstream AC work did not
 run. Each AC card keeps that global result out of per-AC failure presentation
 and presents Public Acceptance, Hidden Tests, Expected Result Check,
 Property-Based Testing, and Mutation Testing in that order.
+The AC workspace uses the available main report column on wider screens while
+Spec Review keeps its prose-oriented measure; narrow screens remain one column.
 When a `ToppleCase.verify(...)` comparison differs, the active compiler Step
 receives reviewer-only structured expected/actual field differences; that data
 never enters evidence feedback for the implementation agent.
@@ -205,6 +214,9 @@ Within Mutation Testing, the primary reading order is AC-first. For each
 selected AC, a mutation that still passes its unchanged public Acceptance Method
 is `FAIL`; detecting every attributed mutation is `PASS`; and no exact
 attribution remains a neutral gap or the recorded incomplete/disabled state.
+When Public Acceptance itself fails, Mutation Testing remains unavailable for
+every AC in that run even if PIT wrote producer diagnostics; the report never
+uses those diagnostics as a detection verdict.
 There is no percentage threshold or project-wide mutation score. The managed
 profile, PIT-wide outcomes, operator IDs, attribution counts, selectors, mutator
 descriptions, and raw PIT outcomes stay unchanged inside collapsed reviewer

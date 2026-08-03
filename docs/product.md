@@ -106,6 +106,12 @@ attributes observations to exact public Acceptance Methods, and applies a
 sealed ToppleCat Gate policy. A project's other PIT workflows remain outside
 ToppleCat evidence.
 
+Managed Mutation Testing also requires a passing Public Acceptance baseline.
+When a public example already finds a problem, ToppleCat records Mutation
+Testing as `INCOMPLETE`: it cannot truthfully say how the unchanged Acceptance
+Method reacted to a temporary production change. Any producer output remains
+reviewer technical context, not a Mutation verdict for that AC.
+
 In Verification Report, Mutation Testing starts with the Reviewer question for
 each selected AC: did its unchanged public Acceptance Method detect every
 temporary production-behavior change attributed to it? An attributed mutation

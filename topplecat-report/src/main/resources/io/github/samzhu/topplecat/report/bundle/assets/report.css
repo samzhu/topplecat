@@ -78,6 +78,7 @@ h4 { margin: 1.2rem 0 .4rem; font-size: 1rem; }
 .report-intro.verification.FAIL { border-left-color: var(--red); }.report-intro.verification.PASS { border-left-color: var(--green); }.report-intro.verification.INCOMPLETE { border-left-color: var(--amber); }
 .report-intro h2 { margin-bottom: .35rem; }
 .document, .report-section { min-width: 0; max-width: min(80ch, 100%); margin: 0 0 3.5rem; }
+.verification-workspace { max-width: 100%; }
 .document + .document { padding-top: 2rem; border-top: 1px solid var(--line); }
 .document-identity, .technical-meta, .meta { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
 .document h2 { margin-top: 0; }.document h3 { margin-top: 1.5rem; }

@@ -12,6 +12,8 @@ import io.github.samzhu.topplecat.core.ExpectedActualComparison;
 import io.github.samzhu.topplecat.core.ExpectedActualDifference;
 import io.github.samzhu.topplecat.core.NarrativeStep;
 import io.github.samzhu.topplecat.core.NarrativeStepStatus;
+import io.github.samzhu.topplecat.core.SelectedSpecDocument;
+import io.github.samzhu.topplecat.core.SelectedSpecScope;
 import io.github.samzhu.topplecat.pitest.PitMutationAssessment;
 import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import io.github.samzhu.topplecat.pitest.PitMutationEvidence;
@@ -553,6 +555,330 @@ class ReportBundleDomTest {
       assertTrue(technicalDetails.getTextContent().contains("SURVIVED"));
       assertTrue(technicalDetails.getTextContent().contains("Production.java"));
       assertTrue(technicalDetails.getTextContent().contains("AC-BELOW"));
+    }
+  }
+
+  @Test
+  void verificationKeepsEveryAcReadableWhenSeveralIndependentSafeguardsFindProblems()
+      throws Exception {
+    VerificationView view =
+        new VerificationView(
+            VerificationView.SCHEMA_VERSION,
+            NOW,
+            CaseResultStatus.FAIL,
+            true,
+            List.of(
+                new EvidenceGate("CONTRACT_INTEGRITY", EvidenceVerdict.PASS, null),
+                new EvidenceGate("JUNIT", EvidenceVerdict.FAIL, "One public example failed."),
+                new EvidenceGate(
+                    "REVIEWER_JUNIT", EvidenceVerdict.FAIL, "One reviewer example failed."),
+                new EvidenceGate(
+                    "EXPECTED_CONSUMPTION",
+                    EvidenceVerdict.FAIL,
+                    "One expected result was not compared."),
+                new EvidenceGate(
+                    "PROPERTY", EvidenceVerdict.FAIL, "One Property found a counterexample."),
+                new EvidenceGate(
+                    "MUTATION",
+                    EvidenceVerdict.NOT_APPLICABLE,
+                    "Mutation Testing is unavailable for this fixture.")),
+            List.of(
+                multiFailureAc(
+                    "AC-PUBLIC",
+                    "Reject an invalid public checkout",
+                    CaseResultStatus.FAIL,
+                    "ASSERTED",
+                    true,
+                    false),
+                multiFailureAc(
+                    "AC-HIDDEN",
+                    "Reject the reviewer checkout boundary",
+                    CaseResultStatus.PASS,
+                    "ASSERTED",
+                    false,
+                    true),
+                multiFailureAc(
+                    "AC-EXPECTED",
+                    "Compare the complete receipt",
+                    CaseResultStatus.PASS,
+                    "READ",
+                    false,
+                    false),
+                multiFailureAc(
+                    "AC-PROPERTY",
+                    "Keep the payable total valid",
+                    CaseResultStatus.PASS,
+                    "ASSERTED",
+                    false,
+                    false),
+                multiFailureAc(
+                    "AC-CONTROL-ONE",
+                    "Keep the first control checkout",
+                    CaseResultStatus.PASS,
+                    "ASSERTED",
+                    false,
+                    false),
+                multiFailureAc(
+                    "AC-CONTROL-TWO",
+                    "Keep the second control checkout",
+                    CaseResultStatus.PASS,
+                    "ASSERTED",
+                    false,
+                    false)),
+            DeliveryScope.from(
+                SelectedSpecScope.create(
+                    List.of(
+                        new SelectedSpecDocument("specs/cart-pricing/spec.md", "a".repeat(64)),
+                        new SelectedSpecDocument("specs/checkout/spec.md", "b".repeat(64))),
+                    List.of(
+                        "AC-CONTROL-ONE",
+                        "AC-CONTROL-TWO",
+                        "AC-EXPECTED",
+                        "AC-HIDDEN",
+                        "AC-PROPERTY",
+                        "AC-PUBLIC")),
+                "enabled",
+                "enabled",
+                "enabled",
+                6,
+                1),
+            null,
+            null);
+    view =
+        ReportViews.withVerificationProperties(
+            view,
+            Map.of(
+                "AC-PROPERTY",
+                List.of(
+                    new VerificationProperty(
+                        "Generated legal carts never have a negative payable total",
+                        "CheckoutProperties#payableTotalIsNonNegative(PropertyTrials)",
+                        "FAIL",
+                        200,
+                        12,
+                        0,
+                        12,
+                        1,
+                        List.of(),
+                        1L,
+                        true,
+                        "replay-token",
+                        new VerificationCounterexample("{\"cart\":\"large\"}", List.of()),
+                        new VerificationCounterexample("{\"cart\":\"minimal\"}", List.of(0)),
+                        1,
+                        true,
+                        List.of(new VerificationDiscardedInput("{\"cart\":\"discarded\"}")),
+                        null))));
+    view = ReportViews.withMutationAttribution(view, null);
+
+    Path bundle = tempDir.resolve("multi-failure-verification");
+    HtmlBundleWriter.verification(bundle, view);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      assertEquals(6, page.querySelectorAll(".ac-card").getLength());
+      assertTrue(
+          ((HtmlElement) page.querySelector("#all-acs"))
+              .getAttribute("class")
+              .contains("verification-workspace"));
+      String problemLinks = page.querySelector("#problems").getTextContent();
+      assertTrue(problemLinks.contains("AC-PUBLIC"));
+      assertTrue(problemLinks.contains("AC-HIDDEN"));
+      assertTrue(problemLinks.contains("AC-EXPECTED"));
+      assertTrue(problemLinks.contains("AC-PROPERTY"));
+      assertFalse(problemLinks.contains("AC-CONTROL-ONE"));
+      assertFalse(problemLinks.contains("AC-CONTROL-TWO"));
+      assertNotNull(page.querySelector("#problems a[href='#verification-AC-PUBLIC']"));
+      assertNotNull(page.querySelector("#problems a[href='#verification-AC-HIDDEN']"));
+      assertNotNull(page.querySelector("#problems a[href='#verification-AC-EXPECTED']"));
+      assertNotNull(page.querySelector("#problems a[href='#verification-AC-PROPERTY']"));
+
+      for (String acId :
+          List.of(
+              "AC-PUBLIC",
+              "AC-HIDDEN",
+              "AC-EXPECTED",
+              "AC-PROPERTY",
+              "AC-CONTROL-ONE",
+              "AC-CONTROL-TWO")) {
+        assertOrder(
+            ((HtmlElement) page.querySelector("#verification-" + acId)).getTextContent(),
+            "Public Acceptance",
+            "Hidden Tests",
+            "Expected Result Check",
+            "Property-Based Testing",
+            "Mutation Testing");
+      }
+
+      HtmlElement affected = (HtmlElement) page.querySelector("#verification-AC-PROPERTY");
+      String safeguardOrder = affected.getTextContent();
+      assertTrue(
+          safeguardOrder.contains("Generated legal carts never have a negative payable total"));
+      assertTrue(safeguardOrder.contains("12 of 200 requested generated inputs completed"));
+      assertTrue(safeguardOrder.contains("discarded inputs: 1"));
+      assertTrue(
+          safeguardOrder.contains(
+              "A generated input violated this Property, so this check stopped early."));
+      assertTrue(
+          ((HtmlElement) page.querySelector("#verification-AC-CONTROL-ONE"))
+              .getAttribute("class")
+              .contains("PASS"));
+      assertTrue(
+          ((HtmlElement) page.querySelector("#verification-AC-CONTROL-TWO"))
+              .getAttribute("class")
+              .contains("PASS"));
+    }
+
+    Path traditionalChineseBundle = tempDir.resolve("multi-failure-verification-zh-TW");
+    HtmlBundleWriter.verification(traditionalChineseBundle, view, ReportLanguage.ZH_TW);
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page =
+          client.getPage(traditionalChineseBundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      assertEquals("zh-TW", ((HtmlElement) page.querySelector("html")).getAttribute("lang"));
+      assertEquals("驗證報告", page.getTitleText());
+      assertTrue(page.asNormalizedText().contains("所有 AC"));
+      assertTrue(page.asNormalizedText().contains("Keep the first control checkout"));
+    }
+  }
+
+  @Test
+  void verificationMarksMutationEvidenceUnavailableWhenPublicAcceptanceHasNoReliableBaseline()
+      throws Exception {
+    String mutator = ToppleCatManagedMutationProfile.operatorIds().getFirst();
+    PitMutationAttribution attribution =
+        new PitMutationAttribution(
+            ToppleCatManagedMutationProfile.PIT_VERSION,
+            ToppleCatManagedMutationProfile.PROFILE_ID,
+            ToppleCatManagedMutationProfile.operatorIds(),
+            1,
+            1,
+            0,
+            List.of(new PitOutcomeCount("SURVIVED", false, 1)),
+            List.of(),
+            List.of(),
+            List.of(
+                new PitMutationAssessment(
+                    "AC-BASELINE",
+                    List.of("example.CheckoutAcceptance#checks()V"),
+                    1,
+                    0,
+                    List.of(),
+                    false)),
+            List.of(
+                new PitMutationEvidence(
+                    false,
+                    "SURVIVED",
+                    "example.CheckoutService",
+                    "CheckoutService.java",
+                    "total",
+                    "(I)I",
+                    21,
+                    0,
+                    0,
+                    mutator,
+                    "Replaced integer addition with subtraction",
+                    List.of("example.CheckoutAcceptance#checks()V"),
+                    List.of(),
+                    List.of("example.CheckoutAcceptance#checks()V"),
+                    List.of("AC-BASELINE"),
+                    List.of(),
+                    "return subtotal + tax;")));
+    VerificationView view =
+        new VerificationView(
+            VerificationView.SCHEMA_VERSION,
+            NOW,
+            CaseResultStatus.FAIL,
+            true,
+            List.of(
+                new EvidenceGate("CONTRACT_INTEGRITY", EvidenceVerdict.PASS, null),
+                new EvidenceGate("JUNIT", EvidenceVerdict.FAIL, "A public example failed."),
+                new EvidenceGate("REVIEWER_JUNIT", EvidenceVerdict.PASS, null),
+                new EvidenceGate("EXPECTED_CONSUMPTION", EvidenceVerdict.PASS, null),
+                new EvidenceGate("PROPERTY", EvidenceVerdict.NOT_APPLICABLE, null),
+                new EvidenceGate(
+                    "MUTATION",
+                    EvidenceVerdict.INCOMPLETE,
+                    "Mutation Testing could not establish a reliable baseline because public"
+                        + " acceptance found a problem in this run.")),
+            List.of(mutationAcceptanceCondition("AC-BASELINE", "Calculate the checkout total")),
+            null,
+            attribution,
+            null);
+    view = ReportViews.withMutationAttribution(view, attribution);
+
+    assertEquals(
+        EvidenceVerdict.INCOMPLETE,
+        view.acceptanceConditions().getFirst().safeguards().stream()
+            .filter(safeguard -> safeguard.name().equals("MUTATION_TESTING"))
+            .findFirst()
+            .orElseThrow()
+            .verdict());
+
+    Path bundle = tempDir.resolve("mutation-baseline-unavailable");
+    HtmlBundleWriter.verification(bundle, view);
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+
+      HtmlElement card = (HtmlElement) page.querySelector("#verification-AC-BASELINE");
+      assertTrue(
+          card.getTextContent()
+              .contains(
+                  "Mutation Testing could not establish a reliable baseline because public"
+                      + " acceptance found a problem in this run."));
+      assertFalse(
+          card.getTextContent().contains("This AC was assessed against 1 attributed changes"));
+      HtmlDetails technical = (HtmlDetails) page.querySelector("#mutation-technical-details");
+      assertFalse(technical.isOpen());
+      assertTrue(technical.getTextContent().contains("SURVIVED"));
+      assertTrue(technical.getTextContent().contains("Replaced integer addition with subtraction"));
+    }
+  }
+
+  private VerificationAcceptanceCondition multiFailureAc(
+      String acId,
+      String title,
+      CaseResultStatus publicStatus,
+      String expectedConsumption,
+      boolean publicFails,
+      boolean hiddenFails)
+      throws Exception {
+    List<VerificationCase> cases =
+        List.of(
+            new VerificationCase(
+                acId + "-public",
+                CaseVisibility.PUBLIC,
+                JSON.readTree("{\"cart\":\"public\"}"),
+                JSON.readTree("{\"receipt\":{\"accepted\":true}}"),
+                publicFails ? CaseResultStatus.FAIL : publicStatus,
+                Map.of("receipt", expectedConsumption),
+                List.of(),
+                publicFails ? "The public example found a problem." : null),
+            new VerificationCase(
+                acId + "-hidden",
+                CaseVisibility.HIDDEN,
+                JSON.readTree("{\"cart\":\"reviewer-example\"}"),
+                JSON.readTree("{\"receipt\":{\"accepted\":true}}"),
+                hiddenFails ? CaseResultStatus.FAIL : CaseResultStatus.PASS,
+                Map.of("receipt", "ASSERTED"),
+                List.of(),
+                hiddenFails ? "The reviewer example found a problem." : null));
+    return new VerificationAcceptanceCondition(acId, title, CaseResultStatus.PASS, cases);
+  }
+
+  private static void assertOrder(String text, String... fragments) {
+    int previous = -1;
+    for (String fragment : fragments) {
+      int current = text.indexOf(fragment);
+      assertTrue(current > previous, "expected " + fragment + " after the prior safeguard");
+      previous = current;
     }
   }
 

@@ -14,6 +14,7 @@ import io.github.samzhu.topplecat.core.PropertyResultsJson;
 import io.github.samzhu.topplecat.core.ToppleEvidence;
 import io.github.samzhu.topplecat.core.ToppleEvidenceJson;
 import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
+import io.github.samzhu.topplecat.report.ReportJson;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -186,6 +187,57 @@ class ToppleCatPluginFunctionalTest {
     assertEquals(EvidenceVerdict.INCOMPLETE, gate("REVIEWER_JUNIT"));
     assertEquals(EvidenceVerdict.PASS, gate("PROPERTY"));
     assertEquals(EvidenceVerdict.INCOMPLETE, evidence().verdict());
+  }
+
+  @Test
+  void wholeContractMarksOnlyTheAcWithoutAReviewerRowAsHiddenEvidenceIncomplete() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            propertyBasedTesting { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeTwoAcceptanceConditionsWithPropertyOnlyOnB();
+    writePublicCasesForAAndB();
+    writeHiddenCase("coupon-a-reviewer", "AC-A", 100);
+
+    runner("toppleCatSeal").build();
+    runner("toppleCatVerify").buildAndFail();
+
+    assertEquals(EvidenceVerdict.PASS, gate("JUNIT"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("REVIEWER_JUNIT"));
+    assertEquals(EvidenceVerdict.DISABLED, gate("PROPERTY"));
+    assertEquals(EvidenceVerdict.DISABLED, gate("MUTATION"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, evidence().verdict());
+
+    var report =
+        ReportJson.readVerification(
+            Files.readString(project.resolve("build/topplecat/reports/verification/data.json")));
+    var complete =
+        report.acceptanceConditions().stream()
+            .filter(ac -> ac.acId().equals("AC-A"))
+            .findFirst()
+            .orElseThrow();
+    var missing =
+        report.acceptanceConditions().stream()
+            .filter(ac -> ac.acId().equals("AC-B"))
+            .findFirst()
+            .orElseThrow();
+    assertEquals(
+        EvidenceVerdict.PASS,
+        complete.safeguards().stream()
+            .filter(safeguard -> safeguard.name().equals("HIDDEN_TESTS"))
+            .findFirst()
+            .orElseThrow()
+            .verdict());
+    assertEquals(
+        EvidenceVerdict.INCOMPLETE,
+        missing.safeguards().stream()
+            .filter(safeguard -> safeguard.name().equals("HIDDEN_TESTS"))
+            .findFirst()
+            .orElseThrow()
+            .verdict());
   }
 
   @Test
@@ -542,6 +594,38 @@ class ToppleCatPluginFunctionalTest {
       assertFalse(feedback.contains(rawMutationDetail));
     }
     assertFalse(Files.exists(project.resolve("src/hiddenTest")));
+  }
+
+  @Test
+  void publicAcceptanceFailureLeavesMutationEvidenceIncompleteEvenWhenTheProducerRuns()
+      throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            propertyBasedTesting { enabled.set(false) }
+        }
+        """);
+    writeManagedMutationFixture();
+    Path acceptance = project.resolve("src/test/java/example/CouponAcceptanceTest.java");
+    Files.writeString(
+        acceptance,
+        Files.readString(acceptance)
+            .replace("CouponService.discountedTotal(110)", "CouponService.discountedTotal(109)"));
+
+    runner("toppleCatSeal").build();
+    var verify = runner("toppleCatVerify").buildAndFail();
+
+    assertEquals(TaskOutcome.FAILED, verify.task(":toppleCatManagedPit").getOutcome());
+    assertEquals(EvidenceVerdict.FAIL, gate("JUNIT"));
+    assertEquals(EvidenceVerdict.INCOMPLETE, gate("MUTATION"));
+    assertEquals(EvidenceVerdict.FAIL, evidence().verdict());
+    String report =
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
+    assertTrue(
+        report.contains(
+            "Mutation Testing could not establish a reliable baseline because public acceptance"
+                + " found a problem in this run."));
   }
 
   @Test
