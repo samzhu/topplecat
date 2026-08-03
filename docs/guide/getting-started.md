@@ -8,11 +8,11 @@ handoff. During development, continue to use ordinary `./gradlew test`.
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.19"
+    id("io.github.samzhu.topplecat") version "0.0.20"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.19")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.20")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -78,12 +78,14 @@ receives only public material and works with `./gradlew test`.
 
 The formal run creates fresh public acceptance evidence and separately records
 Hidden Tests, Mutation Testing, Property-Based Testing, and expected-value
-consumption. Once contract integrity passes, each enabled safeguard runs even
-if an earlier one fails; reports and safe feedback appear before the one
-aggregate Gradle failure. Public Acceptance, Properties, and Mutation Testing
-follow the selected ACs; an attributed mutation that its owning public
-Acceptance Method fails to detect fails that AC. Use `--all-hidden-tests` only
-when a reviewer deliberately expands hidden rows beyond the selected ACs.
+consumption. Hidden Tests and Properties remain independent when Public
+Acceptance fails. Mutation Testing needs a passing Public Acceptance baseline;
+otherwise its result is `INCOMPLETE`, not a conclusion about changed production
+behavior. Reports and safe feedback appear before the one aggregate Gradle
+failure. Public Acceptance, Properties, and Mutation Testing follow the
+selected ACs; an attributed mutation that its owning public Acceptance Method
+fails to detect fails that AC. Use `--all-hidden-tests` only when a reviewer
+deliberately expands hidden rows beyond the selected ACs.
 
 ToppleCat records `PASS` only when every required Gate passes in this run. The
 Reviewer reads the evidence behind that verdict and still decides whether to

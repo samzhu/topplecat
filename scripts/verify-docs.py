@@ -23,8 +23,8 @@ ACTIVE_TERMINOLOGY_PATHS = (
     "docs/guide",
     "CONTEXT.md",
     "docs/design",
-    "docs/releases/0.0.19.md",
-    "docs/releases/0.0.19.zh-TW.md",
+    "docs/releases/0.0.20.md",
+    "docs/releases/0.0.20.zh-TW.md",
     "samples",
     ".agents/skills",
     "site/src",
@@ -80,8 +80,8 @@ REQUIRED_DOC_INDEX_LINKS = (
     "architecture.md",
     "design/README.md",
     "../CONTEXT.md",
-    "releases/0.0.19.md",
-    "releases/0.0.19.zh-TW.md",
+    "releases/0.0.20.md",
+    "releases/0.0.20.zh-TW.md",
     "validation/README.md",
 )
 REQUIRED_DESIGN_SECTIONS = (
@@ -93,7 +93,7 @@ REQUIRED_DESIGN_SECTIONS = (
     "## Acceptance evidence",
     "## Consequences and alternatives",
 )
-CURRENT_RELEASE_FILES = {"0.0.19.md", "0.0.19.zh-TW.md"}
+CURRENT_RELEASE_FILES = {"0.0.20.md", "0.0.20.zh-TW.md"}
 EXPECTED_RELEASE_FILES = CURRENT_RELEASE_FILES
 RELEASE_NOTE = re.compile(r"^(\d+\.\d+\.\d+)(\.zh-TW)?\.md$")
 CONTEXT_TERMS = (
@@ -304,7 +304,7 @@ def main() -> int:
             release_versions.setdefault(match.group(1), set()).add(language)
         if release_files != EXPECTED_RELEASE_FILES:
             failures.append(
-                "docs/releases: expected only the current 0.0.19 English and Traditional-Chinese notes"
+                "docs/releases: expected only the current 0.0.20 English and Traditional-Chinese notes"
             )
         for version, languages in sorted(release_versions.items()):
             if languages != {"en", "zh-TW"}:
@@ -369,34 +369,30 @@ def main() -> int:
             if re.search(pattern, text):
                 failures.append(f"{relative}: uses replaced terminology matching {pattern}; {replacement}")
 
-    english_release = ROOT / "docs/releases/0.0.19.md"
-    chinese_release = ROOT / "docs/releases/0.0.19.zh-TW.md"
+    english_release = ROOT / "docs/releases/0.0.20.md"
+    chinese_release = ROOT / "docs/releases/0.0.20.zh-TW.md"
     if english_release.is_file() and chinese_release.is_file():
         release_markers = (
             (
                 english_release,
                 (
-                    "reports/public",
-                    "topplecat.review-view.v7",
-                    "topplecat.verification-view.v9",
-                    "--language zh-TW",
+                    "AC-first Verification Report",
+                    "Public Acceptance",
                     "Property-Based Testing",
                     "Mutation Testing",
-                    "mutationTesting { threshold.set(...) }",
-                    "0.0.19",
+                    "INCOMPLETE",
+                    "0.0.20",
                 ),
             ),
             (
                 chinese_release,
                 (
-                    "reports/public",
-                    "topplecat.review-view.v7",
-                    "topplecat.verification-view.v9",
-                    "--language zh-TW",
+                    "以 AC 為主的驗證報告",
+                    "Public Acceptance",
                     "Property-Based Testing",
                     "Mutation Testing",
-                    "mutationTesting { threshold.set(...) }",
-                    "0.0.19",
+                    "INCOMPLETE",
+                    "0.0.20",
                 ),
             ),
         )
@@ -405,7 +401,7 @@ def main() -> int:
             for marker in markers:
                 if marker not in text:
                     failures.append(
-                        f"{release.relative_to(ROOT)}: missing synchronized 0.0.19 change {marker}"
+                        f"{release.relative_to(ROOT)}: missing synchronized 0.0.20 change {marker}"
                     )
 
     if failures:
