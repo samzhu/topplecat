@@ -388,8 +388,8 @@
   const mutationDetail = item => {
     const exact = item.replacementBefore && item.replacementAfter;
     const changed = exact
-      ? t('mutation.exactReplacement', `<code>${e(item.replacementBefore)}</code>`, `<code>${e(item.replacementAfter)}</code>`)
-      : `${t('mutation.reportedDescription', `<code>${e(item.description)}</code>`)}<p class="meta">${t('mutation.noExactReplacement')}</p>`;
+      ? `<p>${t('mutation.exactReplacement', `<code>${e(item.replacementBefore)}</code>`, `<code>${e(item.replacementAfter)}</code>`)}</p>`
+      : `<p>${t('mutation.reportedDescription', `<code>${e(item.description)}</code>`)}</p><p class="meta">${t('mutation.noExactReplacement')}</p>`;
     const location = [
       item.mutatedClass ? t('mutation.productionClass', `<code>${e(item.mutatedClass)}</code>`) : '',
       item.sourceFile ? t('mutation.sourceFile', `<code>${e(item.sourceFile)}</code>`) : '',
@@ -400,7 +400,7 @@
     const source = item.originalSourceLine
       ? `<h6>${t('mutation.originalLine')}</h6>${code('java', item.originalSourceLine)}`
       : '';
-    return `<article class="undetected-mutation" data-mutation-ordinal="${e(item.ordinal)}"><h5>${t('mutation.cardTitle', e(item.ordinal))}</h5><h6>${t('mutation.whatChanged')}</h6><p>${changed}</p><h6>${t('mutation.whereChanged')}</h6>${location ? `<ul class="mutation-location">${location}</ul>` : `<p class="meta">${t('mutation.noLocation')}</p>`}${source}<h6>${t('mutation.whatHappened')}</h6><p>${t('mutation.acPassed')}</p></article>`;
+    return `<article class="undetected-mutation" data-mutation-ordinal="${e(item.ordinal)}"><h5>${t('mutation.cardTitle', e(item.ordinal))}</h5><h6>${t('mutation.whatChanged')}</h6>${changed}<h6>${t('mutation.whereChanged')}</h6>${location ? `<ul class="mutation-location">${location}</ul>` : `<p class="meta">${t('mutation.noLocation')}</p>`}${source}<h6>${t('mutation.whatHappened')}</h6><p>${t('mutation.acPassed')}</p></article>`;
   };
   const mutationBody = ac => {
     const safeguard = safeguardFor(ac, 'MUTATION_TESTING');
