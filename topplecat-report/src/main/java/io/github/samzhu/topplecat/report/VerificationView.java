@@ -16,7 +16,7 @@ public record VerificationView(
     DeliveryScope deliveryScope,
     PitMutationAttribution mutationAttribution,
     VerificationRunSummary run) {
-  public static final String SCHEMA_VERSION = "topplecat.verification-view.v9";
+  public static final String SCHEMA_VERSION = "topplecat.verification-view.v10";
 
   public VerificationView {
     if (!SCHEMA_VERSION.equals(schemaVersion)) {

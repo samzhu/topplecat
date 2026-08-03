@@ -132,7 +132,7 @@ fail during command configuration, before a formal Verify run starts.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.20 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.21 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
@@ -204,11 +204,20 @@ on a mismatch or missing integrity proof, it says downstream AC work did not
 run. Each AC card keeps that global result out of per-AC failure presentation
 and presents Public Acceptance, Hidden Tests, Expected Result Check,
 Property-Based Testing, and Mutation Testing in that order.
+The Java report projection assigns each safeguard both its canonical Gate
+verdict and a stable reader outcome and reason. The offline renderer localizes
+those reader fields; it does not derive their meaning from a verdict or parse a
+producer reason. Canonical reasons remain available in collapsed technical
+evidence.
 The AC workspace uses the available main report column on wider screens while
 Spec Review keeps its prose-oriented measure; narrow screens remain one column.
 When a `ToppleCase.verify(...)` comparison differs, the active compiler Step
 receives reviewer-only structured expected/actual field differences; that data
 never enters evidence feedback for the implementation agent.
+The failed case presents input and those structured differences before its
+collapsed complete expected value, Scenario execution details, Step values,
+and raw failure. Authored JSON paths and values are preserved rather than
+translated into inferred business meaning.
 
 Within Mutation Testing, the primary reading order is AC-first. For each
 selected AC, a mutation that still passes its unchanged public Acceptance Method

@@ -72,16 +72,16 @@ agent feedback。
 
 ## 快速開始
 
-ToppleCat 0.0.20 需要 Java 25 與相容的 Gradle。
+ToppleCat 0.0.21 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.20"
+    id("io.github.samzhu.topplecat") version "0.0.21"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.20")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.21")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -150,6 +150,9 @@ Typed Case Rows 提供輸入與預期結果：
 兩份 Reviewer HTML 都支援同一次執行選擇 `--language en` 或
 `--language zh-TW`。這會改變標題、無障礙文字、控制項、說明與 HTML 語言中繼資料，
 但不會改變報告 JSON、evidence、安全 agent feedback、Mechanical Seal 或契約本身。
+Verification Report 會先顯示白話的閱讀結果，再提供 canonical 技術證據。案例失敗時，
+會先列出輸入以及預期值與實際值的差異；Scenario Steps、原始失敗、Gate 判定與 PIT
+細節仍可展開深入查閱。
 
 整體 verdict 有三種：
 
@@ -181,7 +184,7 @@ ToppleCat 從可執行驗收邊界開始：
 - [架構](docs/architecture.md)
 - [共同語言](CONTEXT.md)
 - [文件索引](docs/README.md)
-- [0.0.20 release notes](docs/releases/0.0.20.zh-TW.md)
+- [0.0.21 release notes](docs/releases/0.0.21.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

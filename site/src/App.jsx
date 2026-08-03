@@ -20,7 +20,7 @@ import stageFloorLayer from "./assets/scene/tabletop.svg";
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.20"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.21"';
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(
@@ -142,7 +142,7 @@ const copyByLocale = {
         {
           title: "Verification Report",
           detail:
-            "After Verify, the reviewer sees the delivery conclusion first, then separate public, hidden, Property, mutation, and integrity findings. Safe agent feedback reveals the failing gate, never the hidden answer.",
+            "After Verify, the reviewer sees plain outcomes first. Failed cases put input, expected, and actual differences before execution details, while canonical Gate and PIT evidence stays available for audit.",
           className: "evidence",
         },
       ],
@@ -314,7 +314,7 @@ const copyByLocale = {
         {
           title: "Verification Report",
           detail:
-            "Verify 後先顯示交付結論，再分開呈現公開驗收、隱藏測試、Property、Mutation 與 Integrity 問題；安全的 agent 回饋只顯示失敗 gate，絕不揭露隱藏答案。",
+            "Verify 後會先顯示白話結果。案例失敗時，先列出輸入、預期與實際差異，再提供執行細節；Canonical Gate 與 PIT 證據仍可展開稽核。",
           className: "evidence",
         },
       ],

@@ -56,6 +56,14 @@ Both HTML reports are human, reviewer-only reading surfaces. Java/JUnit
 Acceptance Methods and Typed Case Rows remain the Executable Contract;
 generated JSON and HTML are projections.
 
+Verification Report serves Reviewers with different technical backgrounds. Its
+first layer uses reader outcomes such as `Passed`, `Problem found`, `Comparison
+completed`, and `Unable to assess`; canonical Gate verdicts and producer terms
+remain unchanged in collapsed technical evidence. A completed expected-result
+comparison means that the comparison ran, not that expected and actual values
+matched. Failed cases therefore lead with their authored input and structured
+expected/actual differences before Scenario Steps and raw failures.
+
 For either reading moment, the Reviewer may select `--language en` or
 `--language zh-TW` on that command. English is the default. This changes only
 ToppleCat-owned HTML presentation; it does not translate authored or
@@ -111,6 +119,9 @@ When a public example already finds a problem, ToppleCat records Mutation
 Testing as `INCOMPLETE`: it cannot truthfully say how the unchanged Acceptance
 Method reacted to a temporary production change. Any producer output remains
 reviewer technical context, not a Mutation verdict for that AC.
+Verification Report presents that state as `Unable to assess` and explains that
+the original Public Acceptance did not supply a passing baseline; it does not
+present the state as a test-strength finding.
 
 In Verification Report, Mutation Testing starts with the Reviewer question for
 each selected AC: did its unchanged public Acceptance Method detect every

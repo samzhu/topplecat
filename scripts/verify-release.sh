@@ -53,7 +53,7 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 "$gradle" clean check
 "$gradle" publishToMavenLocal
-published_junit_jar="$root/topplecat-junit/build/libs/topplecat-junit-0.0.20.jar"
+published_junit_jar="$root/topplecat-junit/build/libs/topplecat-junit-0.0.21.jar"
 if [[ ! -f "$published_junit_jar" ]]; then
   echo "Release gate failed: expected JUnit artifact was not built: $published_junit_jar" >&2
   exit 1
@@ -96,9 +96,9 @@ TOPPLECAT_STATE_ROOT="$junit_state_root" bash "$root/samples/junit-cart-orders/d
 TOPPLECAT_STATE_ROOT="$spring_state_root" bash "$root/samples/spring-boot-cart-orders/demo.sh"
 TOPPLECAT_STATE_ROOT="$release_state_root/mutation-gate" bash "$root/integration-tests/mutation-gate/verify.sh"
 
-assert_artifact_version "$junit_sample/build.gradle.kts" "0.0.20"
-assert_artifact_version "$spring_sample/build.gradle.kts" "0.0.20"
-assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.0.20"
+assert_artifact_version "$junit_sample/build.gradle.kts" "0.0.21"
+assert_artifact_version "$spring_sample/build.gradle.kts" "0.0.21"
+assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.0.21"
 
 JUNIT_SAMPLE="$junit_sample" SPRING_SAMPLE="$spring_sample" python3 - <<'PY'
 import json
@@ -168,7 +168,7 @@ for verification_report in \
   verification_data="${verification_report%/index.html}/data.json"
   if [[ ! -f "$verification_report" ]] \
     || [[ ! -f "$verification_data" ]] \
-    || ! grep -Fq 'topplecat.verification-view.v9' "$verification_data"; then
+    || ! grep -Fq 'topplecat.verification-view.v10' "$verification_data"; then
     echo "Reviewer Verification Report was not generated: $verification_report" >&2
     exit 1
   fi

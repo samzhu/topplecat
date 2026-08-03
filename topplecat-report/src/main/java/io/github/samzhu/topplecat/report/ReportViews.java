@@ -327,7 +327,7 @@ public final class ReportViews {
                 gates),
             expectedSafeguard(ac, gates),
             propertySafeguard(ac, gates),
-            mutationSafeguard(mutation, gate(gates, "MUTATION")));
+            mutationSafeguard(mutation, gate(gates, "MUTATION"), gate(gates, "JUNIT")));
     CaseResultStatus status =
         safeguards.stream().anyMatch(item -> item.verdict() == EvidenceVerdict.FAIL)
             ? CaseResultStatus.FAIL
@@ -352,14 +352,29 @@ public final class ReportViews {
     EvidenceGate gate = gate(gates, gateName);
     if (cases.stream().anyMatch(item -> item.status() == CaseResultStatus.FAIL)) {
       return safeguard(
-          name, EvidenceVerdict.FAIL, "A case in this acceptance run failed.", gateName);
+          name,
+          EvidenceVerdict.FAIL,
+          VerificationSafeguardOutcome.PROBLEM_FOUND,
+          VerificationSafeguardReason.CASE_FAILED,
+          "A case in this acceptance run failed.",
+          gateName);
     }
     if (!cases.isEmpty()
         && cases.stream().allMatch(item -> item.status() == CaseResultStatus.PASS)) {
-      return safeguard(name, EvidenceVerdict.PASS, "All recorded cases passed.", gateName);
+      return safeguard(
+          name,
+          EvidenceVerdict.PASS,
+          VerificationSafeguardOutcome.PASSED,
+          VerificationSafeguardReason.ALL_CASES_PASSED,
+          "All recorded cases passed.",
+          gateName);
     }
     return absentSafeguard(
-        name, gate, gateName, "No current case evidence was recorded for this AC.");
+        name,
+        gate,
+        gateName,
+        VerificationSafeguardReason.NO_CASE_EVIDENCE,
+        "No current case evidence was recorded for this AC.");
   }
 
   private static VerificationSafeguard expectedSafeguard(
@@ -378,6 +393,8 @@ public final class ReportViews {
       return safeguard(
           "EXPECTED_RESULT_CHECK",
           EvidenceVerdict.INCOMPLETE,
+          VerificationSafeguardOutcome.UNABLE_TO_ASSESS,
+          VerificationSafeguardReason.EXPECTED_COMPARISON_MISSING,
           "The current run did not record an expected-result comparison for this AC.",
           "EXPECTED_CONSUMPTION");
     }
@@ -385,6 +402,8 @@ public final class ReportViews {
       return safeguard(
           "EXPECTED_RESULT_CHECK",
           EvidenceVerdict.FAIL,
+          VerificationSafeguardOutcome.PROBLEM_FOUND,
+          VerificationSafeguardReason.EXPECTED_NOT_COMPARED,
           "An authored expected result was read or declared but not compared with the actual"
               + " result.",
           "EXPECTED_CONSUMPTION");
@@ -393,6 +412,8 @@ public final class ReportViews {
       return safeguard(
           "EXPECTED_RESULT_CHECK",
           EvidenceVerdict.PASS,
+          VerificationSafeguardOutcome.COMPARISON_COMPLETED,
+          VerificationSafeguardReason.EXPECTED_COMPARISON_COMPLETED,
           "Every authored expected result was compared with the program's actual result.",
           "EXPECTED_CONSUMPTION");
     }
@@ -400,6 +421,7 @@ public final class ReportViews {
         "EXPECTED_RESULT_CHECK",
         gate,
         "EXPECTED_CONSUMPTION",
+        VerificationSafeguardReason.NO_EXPECTED_RESULT,
         "This AC has no authored expected result to check.");
   }
 
@@ -410,6 +432,8 @@ public final class ReportViews {
       return safeguard(
           "PROPERTY_BASED_TESTING",
           EvidenceVerdict.FAIL,
+          VerificationSafeguardOutcome.PROBLEM_FOUND,
+          VerificationSafeguardReason.PROPERTY_COUNTEREXAMPLE,
           "A generated input violated the authored Property rule.",
           "PROPERTY");
     }
@@ -417,6 +441,8 @@ public final class ReportViews {
       return safeguard(
           "PROPERTY_BASED_TESTING",
           EvidenceVerdict.INCOMPLETE,
+          VerificationSafeguardOutcome.UNABLE_TO_ASSESS,
+          VerificationSafeguardReason.PROPERTY_EVIDENCE_INCOMPLETE,
           "Property-Based Testing did not produce complete current-run evidence.",
           "PROPERTY");
     }
@@ -424,6 +450,8 @@ public final class ReportViews {
       return safeguard(
           "PROPERTY_BASED_TESTING",
           EvidenceVerdict.PASS,
+          VerificationSafeguardOutcome.PASSED,
+          VerificationSafeguardReason.PROPERTY_COMPLETED,
           "All completed generated inputs satisfied the authored Property rule.",
           "PROPERTY");
     }
@@ -431,18 +459,25 @@ public final class ReportViews {
         "PROPERTY_BASED_TESTING",
         gate,
         "PROPERTY",
+        VerificationSafeguardReason.NO_PROPERTY,
         "This AC has no Property declaration in the current scope.");
   }
 
   private static VerificationSafeguard mutationSafeguard(
-      PitMutationAssessment assessment, EvidenceGate gate) {
+      PitMutationAssessment assessment, EvidenceGate gate, EvidenceGate publicAcceptanceGate) {
     if (gate.verdict() == EvidenceVerdict.DISABLED
         || gate.verdict() == EvidenceVerdict.INCOMPLETE
         || gate.verdict() == EvidenceVerdict.NOT_APPLICABLE) {
+      VerificationSafeguardReason unavailableReason =
+          gate.verdict() == EvidenceVerdict.INCOMPLETE
+                  && publicAcceptanceGate.verdict() == EvidenceVerdict.FAIL
+              ? VerificationSafeguardReason.MUTATION_BASELINE_FAILED
+              : VerificationSafeguardReason.MUTATION_EVIDENCE_UNAVAILABLE;
       return absentSafeguard(
           "MUTATION_TESTING",
           gate,
           "MUTATION",
+          unavailableReason,
           "Mutation Testing has no applicable current-run evidence for this AC.");
     }
     if (assessment == null) {
@@ -450,12 +485,15 @@ public final class ReportViews {
           "MUTATION_TESTING",
           gate,
           "MUTATION",
+          VerificationSafeguardReason.NO_MUTATION_ATTRIBUTED,
           "No mutation was exactly attributed to this AC in the current run.");
     }
     if (assessment.attributionGap()) {
       return safeguard(
           "MUTATION_TESTING",
           EvidenceVerdict.NOT_APPLICABLE,
+          VerificationSafeguardOutcome.NOT_APPLICABLE,
+          VerificationSafeguardReason.MUTATION_ATTRIBUTION_GAP,
           "No mutation was exactly attributed to this Acceptance Method in the current run.",
           "MUTATION");
     }
@@ -463,6 +501,8 @@ public final class ReportViews {
       return safeguard(
           "MUTATION_TESTING",
           EvidenceVerdict.FAIL,
+          VerificationSafeguardOutcome.PROBLEM_FOUND,
+          VerificationSafeguardReason.MUTATION_SURVIVED,
           "An altered program still passed this AC's public acceptance, so the current acceptance"
               + " may not reveal a problem in this function.",
           "MUTATION");
@@ -470,6 +510,8 @@ public final class ReportViews {
     return safeguard(
         "MUTATION_TESTING",
         EvidenceVerdict.PASS,
+        VerificationSafeguardOutcome.PASSED,
+        VerificationSafeguardReason.MUTATION_DETECTED,
         "Every attributed altered program made this AC's public acceptance fail as expected.",
         "MUTATION");
   }
@@ -556,18 +598,45 @@ public final class ReportViews {
   }
 
   private static VerificationSafeguard safeguard(
-      String name, EvidenceVerdict verdict, String explanation, String technicalGate) {
-    return new VerificationSafeguard(name, verdict, explanation, technicalGate);
+      String name,
+      EvidenceVerdict verdict,
+      VerificationSafeguardOutcome outcome,
+      VerificationSafeguardReason reason,
+      String explanation,
+      String technicalGate) {
+    return new VerificationSafeguard(name, verdict, outcome, reason, explanation, technicalGate);
   }
 
   private static VerificationSafeguard absentSafeguard(
-      String name, EvidenceGate gate, String technicalGate, String availableExplanation) {
+      String name,
+      EvidenceGate gate,
+      String technicalGate,
+      VerificationSafeguardReason absentReason,
+      String availableExplanation) {
     if (gate.verdict() == EvidenceVerdict.DISABLED
         || gate.verdict() == EvidenceVerdict.INCOMPLETE
         || gate.verdict() == EvidenceVerdict.NOT_APPLICABLE) {
-      return safeguard(name, gate.verdict(), reason(gate), technicalGate);
+      VerificationSafeguardOutcome outcome =
+          gate.verdict() == EvidenceVerdict.DISABLED
+              ? VerificationSafeguardOutcome.DISABLED
+              : gate.verdict() == EvidenceVerdict.NOT_APPLICABLE
+                  ? VerificationSafeguardOutcome.NOT_APPLICABLE
+                  : VerificationSafeguardOutcome.UNABLE_TO_ASSESS;
+      VerificationSafeguardReason presentationReason =
+          absentReason == VerificationSafeguardReason.MUTATION_BASELINE_FAILED
+                  || absentReason == VerificationSafeguardReason.MUTATION_EVIDENCE_UNAVAILABLE
+              ? absentReason
+              : VerificationSafeguardReason.GATE_RECORDED;
+      return safeguard(
+          name, gate.verdict(), outcome, presentationReason, reason(gate), technicalGate);
     }
-    return safeguard(name, EvidenceVerdict.NOT_APPLICABLE, availableExplanation, technicalGate);
+    return safeguard(
+        name,
+        EvidenceVerdict.NOT_APPLICABLE,
+        VerificationSafeguardOutcome.NOT_APPLICABLE,
+        absentReason,
+        availableExplanation,
+        technicalGate);
   }
 
   private static EvidenceGate gate(List<EvidenceGate> gates, String name) {

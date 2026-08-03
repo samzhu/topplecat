@@ -131,7 +131,7 @@ class ReportBundleDomTest {
       client.waitForBackgroundJavaScript(250);
 
       assertEquals("Spec Review", page.getTitleText());
-      assertTrue(page.asNormalizedText().contains("Specification prepared — not executed"));
+      assertTrue(page.asNormalizedText().contains("Specification prepared, not executed"));
       assertTrue(page.asNormalizedText().contains("choose a coupon"));
       assertTrue(page.querySelectorAll(".mermaid-diagram svg").getLength() == 1);
       assertNotNull(page.querySelector("a.skip-link"));
@@ -240,7 +240,7 @@ class ReportBundleDomTest {
       client.waitForBackgroundJavaScript(250);
 
       assertEquals("Verification Report", page.getTitleText());
-      assertTrue(page.asNormalizedText().contains("Verification failed"));
+      assertTrue(page.asNormalizedText().contains("Verification found a problem"));
       assertTrue(
           ((HtmlElement) page.querySelector("#summary"))
               .getTextContent()
@@ -253,10 +253,14 @@ class ReportBundleDomTest {
       assertNotNull(page.querySelector("#hidden-tests"));
       assertNotNull(page.querySelector("#property-testing"));
       assertNotNull(page.querySelector("#mutation-testing"));
-      assertTrue(page.asNormalizedText().contains("Sealed policy disabled mutation."));
-      assertTrue(page.asNormalizedText().contains("Field-level expected and actual comparison"));
-      assertTrue(page.asNormalizedText().contains("Step data"));
+      HtmlDetails technicalEvidence = (HtmlDetails) page.querySelector("#technical-evidence");
+      assertTrue(technicalEvidence.getTextContent().contains("Sealed policy disabled mutation."));
+      assertTrue(page.asNormalizedText().contains("Expected compared with actual"));
+      assertTrue(
+          page.asNormalizedText()
+              .contains("Only fields actually compared by the acceptance code appear here."));
       HtmlDetails stepData = (HtmlDetails) page.querySelector(".step-data details");
+      assertTrue(stepData.getParentNode().getTextContent().contains("Values passed to Steps"));
       assertFalse(stepData.isOpen(), "Step data stays collapsed by default");
       assertTrue(stepData.getTextContent().contains("visible-value"));
       HtmlDetails failedCase = (HtmlDetails) page.querySelector("#case-case-fail");
@@ -277,7 +281,7 @@ class ReportBundleDomTest {
 
       assertEquals("zh-TW", ((HtmlElement) page.querySelector("html")).getAttribute("lang"));
       assertEquals("驗證報告", page.getTitleText());
-      assertTrue(page.asNormalizedText().contains("驗證失敗"));
+      assertTrue(page.asNormalizedText().contains("驗證發現問題"));
       assertTrue(
           ((HtmlElement) page.querySelector("#summary"))
               .getTextContent()
@@ -286,6 +290,7 @@ class ReportBundleDomTest {
           "驗證報告篩選器",
           ((HtmlElement) page.querySelector(".filter-controls")).getAttribute("aria-label"));
       assertTrue(page.asNormalizedText().contains("公開驗收"));
+      assertTrue(page.asNormalizedText().contains("未出現在比對中的規則"));
       assertTrue(page.asNormalizedText().contains("FAIL"));
       assertFalse(page.asNormalizedText().contains("交付遭拒"));
     }
@@ -480,8 +485,8 @@ class ReportBundleDomTest {
       String text = page.asNormalizedText();
       assertTrue(
           text.contains(
-              "ToppleCat deliberately changed production logic and reran this AC's unchanged public"
-                  + " acceptance."));
+              "Mutation Testing evaluates whether the public acceptance can detect simulated faults"
+                  + " in production code."));
       assertTrue(
           text.contains(
               "This AC was assessed against 10 attributed changes: 8 detected, 2 undetected."));
@@ -540,7 +545,7 @@ class ReportBundleDomTest {
       client.waitForBackgroundJavaScript(250);
 
       String text = page.asNormalizedText();
-      assertTrue(text.contains("驗證時，ToppleCat 暫時改變正式程式的行為，再用這個 AC 未改變的公開驗收檢查。"));
+      assertTrue(text.contains("突變測試用於評估公開驗收能否辨識正式程式中的模擬錯誤。"));
       assertTrue(text.contains("這個 AC 共評估 10 個已歸因改動：偵測到 8 個，未偵測到 2 個。"));
       HtmlElement below = (HtmlElement) page.querySelector("#verification-AC-BELOW");
       assertTrue(below.getTextContent().contains("這個 AC 共評估 1 個已歸因改動：偵測到 1 個，未偵測到 0 個。"));
@@ -828,6 +833,12 @@ class ReportBundleDomTest {
       client.waitForBackgroundJavaScript(250);
 
       HtmlElement card = (HtmlElement) page.querySelector("#verification-AC-BASELINE");
+      assertTrue(card.getTextContent().contains("Unable to assess"));
+      assertTrue(
+          card.getTextContent()
+              .contains(
+                  "Public Acceptance already found a problem in the original program. Without a"
+                      + " passing baseline"));
       assertTrue(
           card.getTextContent()
               .contains(

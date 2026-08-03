@@ -125,17 +125,19 @@ class ReportViewsTest {
             Path.of("public.json"));
     VerificationView view =
         ReportViews.withRun(
-            ReportViews.verification(
-                Map.of("AC-CHECKOUT", "Calculate checkout"),
-                List.of(row),
-                Map.of(
-                    row.caseId(),
-                    new ReportViews.CaseExecution(
-                        CaseResultStatus.FAIL,
-                        "expected receipt total did not match",
-                        List.of(failedStep),
-                        Map.of("receipt", "ASSERTED"))),
-                NOW),
+            ReportViews.withMutationAttribution(
+                ReportViews.verification(
+                    Map.of("AC-CHECKOUT", "Calculate checkout"),
+                    List.of(row),
+                    Map.of(
+                        row.caseId(),
+                        new ReportViews.CaseExecution(
+                            CaseResultStatus.FAIL,
+                            "expected receipt total did not match",
+                            List.of(failedStep),
+                            Map.of("receipt", "ASSERTED"))),
+                    NOW),
+                null),
             "run-123",
             NOW.minusSeconds(5),
             NOW);
@@ -145,6 +147,14 @@ class ReportViewsTest {
     String json = java.nio.file.Files.readString(bundle.resolve("data.json"));
 
     assertEquals(CaseResultStatus.FAIL, view.verdict());
+    VerificationSafeguard expectedResult =
+        view.acceptanceConditions().getFirst().safeguards().stream()
+            .filter(item -> item.name().equals("EXPECTED_RESULT_CHECK"))
+            .findFirst()
+            .orElseThrow();
+    assertEquals(VerificationSafeguardOutcome.COMPARISON_COMPLETED, expectedResult.outcome());
+    assertEquals(
+        VerificationSafeguardReason.EXPECTED_COMPARISON_COMPLETED, expectedResult.reason());
     assertEquals(1, view.run().failedCaseCount());
     assertEquals("run-123", view.run().runId());
     assertTrue(json.contains("expected.receipt.lines[1].total"));

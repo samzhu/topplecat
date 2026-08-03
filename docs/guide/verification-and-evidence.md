@@ -55,7 +55,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.20 custody and approval schemas are current-only. A prior schema is not
+The 0.0.21 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -216,6 +216,28 @@ non-blocking expected-output quality advisories. There is no public HTML report;
 paths, Property trial material, tokens, attachments, raw private failures, or
 quality-advisory output.
 
+### Reading one AC
+
+Each AC first shows a five-part summary: Public Acceptance, Hidden Tests,
+Expected Result Check, Property-Based Testing, and Mutation Testing. The
+reader-facing labels mean:
+
+- **Passed:** the available result satisfied this safeguard.
+- **Problem found:** a completed check found a mismatch or weakness.
+- **Comparison completed:** authored expected values were compared with actual
+  values. This does not say they matched; Public Acceptance and the difference
+  table answer that question.
+- **Unable to assess:** trustworthy current-run evidence was not sufficient for
+  this safeguard. The explanation states why.
+- **Disabled / Not applicable:** sealed policy disabled the safeguard, or no
+  declaration/evidence applied to this AC.
+
+For a failed case, read `Input` first and then `Expected compared with actual`.
+The table preserves the authored field path and shows expected and actual side
+by side. Complete expected data, Scenario execution Steps, values passed to
+Steps, raw failures, canonical Gate verdicts, and producer details remain
+available in collapsed sections.
+
 ### Reading Mutation results
 
 For each AC, Verification Report first answers a plain question: while
@@ -232,9 +254,10 @@ baseline failed. It does not show attributed counts or call PIT output a
 detected or undetected change for that AC.
 
 Public Acceptance, Hidden Tests, and Mutation Testing appear separately for the
-same AC. A missing Mutation result says “No data”; it is never a pass. If the
-current evidence says `DISABLED`, `NOT_APPLICABLE`, or `INCOMPLETE`, the report
-keeps the actual reason. Readers who need producer detail can expand the
+same AC. A Mutation result without trustworthy evidence says `Unable to
+assess`; it is never a pass. If the current evidence says `DISABLED`,
+`NOT_APPLICABLE`, or `INCOMPLETE`, the report keeps the actual reason. Readers
+who need producer detail can expand the
 collapsed technical details, which preserve PIT's official outcomes, managed
 profile, operator IDs, attribution counts, selectors, and descriptions exactly
 as recorded. The English and Traditional Chinese reports use the same reading
@@ -265,13 +288,15 @@ inspection, never inputs to a later verdict.
 
 Spec Review reads the complete selected SDD before executable material. It says
 that the specification is prepared but not executed. Verification Report starts
-with pass, fail, or missing evidence, then lists the selected ACs needing
+with pass, fail, or unavailable evidence, then lists the selected ACs needing
 attention before the complete AC list. Each AC keeps the fixed order Contract
 rule and result, Public Acceptance, Hidden Tests, Expected Result Check,
 Property-Based Testing, and Mutation Testing. A collapsed technical section
 preserves the canonical Gate names and evidence. A field-level expected/actual
-comparison is reviewer-only diagnostic context for the failed compiler Step; it
-does not alter the JUnit assertion or Expected Consumption result.
+comparison is the first diagnostic content inside a failed case, before
+collapsed execution details. It is reviewer-only context for the failed
+compiler Step and does not alter the JUnit assertion or Expected Consumption
+result.
 On a wide display, the AC list uses the available report workspace so a Reviewer
 can compare its five sections without horizontal page overflow; the same view
 collapses to one column on narrow screens. Spec Review keeps its separate,
