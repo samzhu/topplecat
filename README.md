@@ -83,20 +83,24 @@ report section shows the detected and undetected counts followed by cards for
 only the undetected changes. The cards explain the change, source location, and
 that the acceptance still passed; exact replacements are shown only when the
 PIT description and unambiguous source line support them. These reviewer-only
-details stay out of safe agent feedback.
+details stay out of safe agent feedback. A compact `ⓘ` control beside Mutation
+Testing and its unfamiliar card terms gives a short explanation in the selected
+report language. Hover or focus reveals it; clicking or tapping keeps it open
+until the Reviewer dismisses it. The visible result and the existing technical
+disclosures remain readable without opening help.
 
 ## Quick start
 
-ToppleCat 0.0.21 requires Java 25 and a compatible Gradle version.
+ToppleCat 0.0.22 requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.21"
+    id("io.github.samzhu.topplecat") version "0.0.22"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.21")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.22")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -172,7 +176,10 @@ JSON, evidence, safe feedback, the Mechanical Seal, or the contract itself.
 Verification Report uses plain reader outcomes before canonical technical
 evidence. Failed cases show input and expected/actual differences first;
 Scenario Steps, raw failures, Gate verdicts, and PIT details remain available
-for deeper inspection.
+for deeper inspection. Every AC begins with its key result visible; use its
+reading control for one AC or the report-wide control for incremental all-AC
+reading. Technical evidence remains independently collapsed, and linked AC or
+safeguard targets are revealed before the report moves to them.
 
 The aggregate verdict is:
 
@@ -209,7 +216,7 @@ before proposing a new ToppleCat responsibility.
 - [Architecture](docs/architecture.md)
 - [Context glossary](CONTEXT.md)
 - [Documentation index](docs/README.md)
-- [0.0.21 release notes](docs/releases/0.0.21.md)
+- [0.0.22 release notes](docs/releases/0.0.22.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 

@@ -5,7 +5,7 @@
     en: {
       'property.discarded': 'Discarded generator inputs', 'property.discardedReason': "This input did not meet this run's generated-input range.", 'property.previous': 'Previous page', 'property.next': 'Next page', 'property.page': 'Page {0} of {1}',
       'mutation.detectedAll': 'Every attributed altered program made the public acceptance fail as expected.', 'mutation.survived': '{0} altered programs failed as expected, but {1} still passed. The public acceptance did not find those simulated errors, so this function may have a problem that the current acceptance does not reveal.', 'mutation.noAttributed': 'No mutation was exactly attributed to this AC in the current run.',
-      'technical.heading': 'Technical evidence', 'technical.description': 'Canonical Gate names, run metadata, and producer details remain here for audit. They do not replace the AC explanations above.', 'verification.needsAttention': 'Needs attention', 'verification.allAcs': 'All ACs', 'verification.acResult': 'Verification result', 'verification.incompleteAc': 'This AC could not be fully assessed.', 'verification.failedAc': 'Verification found a problem for this AC.', 'verification.passedAc': 'Verification passed for this AC.',
+      'technical.heading': 'Technical evidence', 'technical.description': 'Canonical Gate names, run metadata, and producer details remain here for audit. They do not replace the AC explanations above.', 'verification.needsAttention': 'Needs attention', 'verification.allAcs': 'All ACs', 'verification.acResult': 'Verification result', 'verification.incompleteAc': 'This AC could not be fully assessed.', 'verification.failedAc': 'Verification found a problem for this AC.', 'verification.passedAc': 'Verification passed for this AC.', 'verification.readingToolbar': 'AC reading controls', 'verification.expandAll': 'Expand all ACs', 'verification.collapseAll': 'All ACs: key results only', 'verification.expandThis': 'Expand this AC', 'verification.collapseThis': 'This AC: key result only', 'verification.stopBulk': 'Stop and show key results', 'verification.expanding': 'Expanding {0} of {1}', 'verification.expandedAll': 'All AC reader details are open.', 'verification.keyResultsOnly': 'All ACs show key results only.', 'verification.expansionInterrupted': 'Expansion stopped after {0} of {1} ACs.', 'verification.readerDetails': 'Reader details for {0}',
       'phase.GIVEN': 'Given', 'phase.WHEN': 'When', 'phase.THEN': 'Then', 'phase.AND': 'And',
       'scenario.unavailable': 'Scenario source is unavailable.', 'scenario.aria': 'Given When Then scenario',
       'image.openRemote': 'Open remote image', 'image.unavailable': 'Image unavailable.', 'image.noAlt': 'No alternative text was authored.',
@@ -32,7 +32,7 @@
     'zh-TW': {
       'property.discarded': '被捨棄的產生器輸入', 'property.discardedReason': '這個輸入不符合本次執行的產生輸入範圍。', 'property.previous': '上一頁', 'property.next': '下一頁', 'property.page': '第 {0} 頁，共 {1} 頁',
       'mutation.detectedAll': '每個歸因到的改動程式都讓公開驗收如預期失敗。', 'mutation.survived': '{0} 個改動程式如預期失敗，但仍有 {1} 個通過。公開驗收沒有找到那些模擬錯誤，因此這個函式可能存在目前驗收無法揭露的問題。', 'mutation.noAttributed': '本次執行沒有突變被精確歸因到這個 AC。',
-      'technical.heading': '技術證據', 'technical.description': 'Canonical Gate 名稱、執行中繼資料與 producer 細節保留在此供稽核；它們不取代上方的 AC 說明。', 'verification.needsAttention': '需要注意', 'verification.allAcs': '所有 AC', 'verification.acResult': '驗證結果', 'verification.incompleteAc': '這個 AC 無法完成評估。', 'verification.failedAc': '這個 AC 發現問題。', 'verification.passedAc': '這個 AC 驗證通過。',
+      'technical.heading': '技術證據', 'technical.description': 'Canonical Gate 名稱、執行中繼資料與 producer 細節保留在此供稽核；它們不取代上方的 AC 說明。', 'verification.needsAttention': '需要注意', 'verification.allAcs': '所有 AC', 'verification.acResult': '驗證結果', 'verification.incompleteAc': '這個 AC 無法完成評估。', 'verification.failedAc': '這個 AC 發現問題。', 'verification.passedAc': '這個 AC 驗證通過。', 'verification.readingToolbar': 'AC 閱讀控制', 'verification.expandAll': '展開所有 AC', 'verification.collapseAll': '所有 AC：只看關鍵結果', 'verification.expandThis': '展開這個 AC', 'verification.collapseThis': '這個 AC：只看關鍵結果', 'verification.stopBulk': '停止並顯示關鍵結果', 'verification.expanding': '正在展開 {0}／{1}', 'verification.expandedAll': '所有 AC 的閱讀細節都已展開。', 'verification.keyResultsOnly': '所有 AC 都只顯示關鍵結果。', 'verification.expansionInterrupted': '已在 {0}／{1} 個 AC 後停止展開。', 'verification.readerDetails': '{0} 的閱讀細節',
       'verification.pass': '驗證通過', 'verification.fail': '驗證發現問題', 'verification.incomplete': '驗證資料不完整', 'verification.aggregate': '{0} 個選定 AC：{1} 個通過、{2} 個發現問題、{3} 個無法完成評估。',
       'phase.GIVEN': '假設', 'phase.WHEN': '當', 'phase.THEN': '那麼', 'phase.AND': '且',
       'scenario.unavailable': '情境來源無法使用。', 'scenario.aria': '假設、當、那麼情境',
@@ -61,8 +61,23 @@
   };
   const mutationDetailMessages = {
     en: {
-      'mutation.summary': 'This AC was assessed against {0} attributed changes: {1} detected, {2} undetected.',
-      'mutation.cardTitle': 'Undetected mutation {0}',
+      'info.mutationTesting.term': 'Mutation Testing',
+      'info.mutationTesting.aria': 'More about Mutation Testing',
+      'info.mutationTesting.description': "ToppleCat temporarily simulates small changes to production code and reruns this AC's unchanged public acceptance. A missed change does not prove the original production code is wrong.",
+      'info.attributedChanges.term': 'attributed changes',
+      'info.attributedChanges.aria': 'More about attributed changes',
+      'info.attributedChanges.description': 'Only simulated changes exactly associated with this AC\'s public Acceptance Method count here. Another AC detecting a change does not give this AC detection credit.',
+      'info.undetectedMutation.term': 'Undetected mutation',
+      'info.undetectedMutation.aria': 'More about an undetected mutation',
+      'info.undetectedMutation.description': "This simulated change still passed this AC's unchanged public acceptance.",
+      'info.originalSourceLine.term': 'Original source line',
+      'info.originalSourceLine.aria': 'More about the original source line',
+      'info.originalSourceLine.description': 'This is the original production line used to locate the relevant logic, not necessarily the changed program text.',
+      'info.descriptor.term': 'Descriptor',
+      'info.descriptor.aria': 'More about the descriptor',
+      'info.descriptor.description': 'A JVM method signature used for exact technical location. Ordinary reading does not require it.',
+      'mutation.summary': 'This AC was assessed against {0} {1}: {2} detected, {3} undetected.',
+      'mutation.cardTitle': '{0} {1}',
       'mutation.whatChanged': 'What changed?',
       'mutation.exactReplacement': 'The operator changed from {0} to {1}.',
       'mutation.reportedDescription': 'Reported mutation description: {0}.',
@@ -85,8 +100,23 @@
       'mutation.acPassed': "This AC's unchanged public acceptance still passed."
     },
     'zh-TW': {
-      'mutation.summary': '這個 AC 共評估 {0} 個已歸因改動：偵測到 {1} 個，未偵測到 {2} 個。',
-      'mutation.cardTitle': '未偵測到的突變 {0}',
+      'info.mutationTesting.term': '突變測試',
+      'info.mutationTesting.aria': '更多關於突變測試',
+      'info.mutationTesting.description': 'ToppleCat 會暫時模擬正式程式的小幅改動，重新執行這個 AC 未改變的公開驗收。沒有偵測到某個改動，不能因此證明原始正式程式有錯。',
+      'info.attributedChanges.term': '已歸因改動',
+      'info.attributedChanges.aria': '更多關於已歸因改動',
+      'info.attributedChanges.description': '這裡只計入精確關聯到這個 AC 公開驗收方法的模擬改動。其他 AC 偵測到改動，也不會讓這個 AC 取得偵測信用。',
+      'info.undetectedMutation.term': '未偵測到的突變',
+      'info.undetectedMutation.aria': '更多關於未偵測到的突變',
+      'info.undetectedMutation.description': '這個模擬改動仍然通過了這個 AC 未改變的公開驗收。',
+      'info.originalSourceLine.term': '原始碼行',
+      'info.originalSourceLine.aria': '更多關於原始碼行',
+      'info.originalSourceLine.description': '這是用來定位相關邏輯的原始正式程式碼行，不一定是改動後的程式文字。',
+      'info.descriptor.term': '描述子',
+      'info.descriptor.aria': '更多關於描述子',
+      'info.descriptor.description': '用於精確技術定位的 JVM 方法簽名。一般閱讀不需要理解它。',
+      'mutation.summary': '這個 AC 共評估 {0} 個{1}：偵測到 {2} 個，未偵測到 {3} 個。',
+      'mutation.cardTitle': '{0} {1}',
       'mutation.whatChanged': '改變了什麼？',
       'mutation.exactReplacement': '運算子從 {0} 改成 {1}。',
       'mutation.reportedDescription': '回報的突變描述：{0}。',
@@ -129,6 +159,12 @@
   const pretty = value => e(JSON.stringify(value, null, 2));
   const id = value => String(value ?? '').replace(/[^A-Za-z0-9_-]/g, '-');
   const safeHref = raw => /^(https?:|mailto:|#)/i.test(String(raw || '')) ? String(raw) : '';
+  let informationOrdinal = 0;
+  const informationControl = key => {
+    const ordinal = ++informationOrdinal;
+    const popoverId = `topplecat-info-${id(key)}-${ordinal}`;
+    return `<span class="info-term" data-info-wrapper data-info-key="${e(key)}"><span class="info-term-label">${e(t(`info.${key}.term`))}</span><button type="button" class="info-button" data-info-button aria-expanded="false" aria-controls="${popoverId}" aria-describedby="${popoverId}" aria-label="${e(t(`info.${key}.aria`))}">ⓘ</button><span class="info-popover" data-info-popover id="${popoverId}" role="tooltip" hidden>${e(t(`info.${key}.description`))}</span></span>`;
+  };
   const inline = source => {
     const escaped = e(source);
     return escaped
@@ -289,13 +325,12 @@
     return `<section class="step-data"><h4>${t('stepData.heading')}</h4>${recorded.map(step => `<details><summary>${t('stepData.arguments')} <code>${e(step.stepId)}</code></summary>${values(step.actualArguments)}</details>`).join('')}</section>`;
   };
   const lazyCases = new Map();
-  const verificationCaseContent = (ac, item) => `<p class="case-contract"><strong>${t('case.publicRule')}:</strong> <a href="#verification-${id(ac.acId)}">${e(ac.acId)}: ${e(ac.title)}</a></p><section class="case-input"><h4>${t('inputs')}</h4>${values(item.inputs)}</section>${comparison(item)}<details class="complete-expected"><summary>${t('case.completeExpected')}</summary>${values(item.expected)}</details><details class="execution-details"><summary>${t('case.executionDetails')}</summary><h4>${t('case.scenario')}</h4>${scenario(item.steps?.length ? item.steps.map(step => ({ ...step, phase: ac.stepPhases?.[step.stepId] || 'AND' })) : ac.scenario, Boolean(item.steps?.length))}<h4>${t('case.failedStep')}</h4>${(() => { const last = failedSteps(item)[0] || (item.steps || []).filter(step => step.status !== 'SKIPPED').at(-1); return last ? `<p><code>${e(last.stepId)}</code> ${e(last.sentence)}</p>` : `<p class="meta">${t('case.noStep')}</p>`; })()}${stepData(item)}</details><details class="raw-failure"><summary>${t('case.rawFailure')}</summary>${item.failure ? `<pre>${e(item.failure)}</pre>` : `<p class="meta">${t('case.noRawFailure')}</p>`}<h5>${t('case.expectedConsumption')}</h5>${values(item.expectedConsumption || {})}</details>`;
-  const verificationCase = (ac, item, open) => {
+  const verificationCaseContent = (ac, item) => `<p class="case-contract"><strong>${t('case.publicRule')}:</strong> <a href="#verification-${id(ac.acId)}">${e(ac.acId)}: ${e(ac.title)}</a></p><section class="case-input"><h4>${t('inputs')}</h4>${values(item.inputs)}</section>${comparison(item)}<details class="complete-expected" id="complete-expected-${id(item.caseId)}"><summary>${t('case.completeExpected')}</summary>${values(item.expected)}</details><details class="execution-details" id="execution-${id(item.caseId)}"><summary>${t('case.executionDetails')}</summary><h4>${t('case.scenario')}</h4>${scenario(item.steps?.length ? item.steps.map(step => ({ ...step, phase: ac.stepPhases?.[step.stepId] || 'AND' })) : ac.scenario, Boolean(item.steps?.length))}<h4>${t('case.failedStep')}</h4>${(() => { const last = failedSteps(item)[0] || (item.steps || []).filter(step => step.status !== 'SKIPPED').at(-1); return last ? `<p><code>${e(last.stepId)}</code> ${e(last.sentence)}</p>` : `<p class="meta">${t('case.noStep')}</p>`; })()}${stepData(item)}</details><details class="raw-failure" id="raw-failure-${id(item.caseId)}"><summary>${t('case.rawFailure')}</summary>${item.failure ? `<pre>${e(item.failure)}</pre>` : `<p class="meta">${t('case.noRawFailure')}</p>`}<h5>${t('case.expectedConsumption')}</h5>${values(item.expectedConsumption || {})}</details>`;
+  const verificationCase = (ac, item) => {
     const key = JSON.stringify([ac.acId, item.caseId]);
     lazyCases.set(key, { ac, item });
-    return `<details class="case-card" data-case-id="${e(item.caseId)}" data-case-status="${e(item.status)}" data-search="${e(`${ac.acId} ${ac.title} ${item.caseId}`.toLowerCase())}" data-lazy-case="${e(key)}"${open ? ' open' : ''} id="case-${id(item.caseId)}"><summary>${visibility(item.visibility)} <strong>${e(item.caseId)}</strong> ${badge(item.status)}</summary><div class="lazy-case-content">${open ? verificationCaseContent(ac, item) : ''}</div></details>`;
+    return `<details class="case-card" data-case-id="${e(item.caseId)}" data-case-status="${e(item.status)}" data-search="${e(`${ac.acId} ${ac.title} ${item.caseId}`.toLowerCase())}" data-lazy-case="${e(key)}" id="case-${id(item.caseId)}"><summary>${visibility(item.visibility)} <strong>${e(item.caseId)}</strong> ${badge(item.status)}</summary><div class="lazy-case-content"></div></details>`;
   };
-  const acCases = (visibilityName, openFailure) => (data.acceptanceConditions || []).flatMap(ac => (ac.cases || []).filter(item => item.visibility === visibilityName).map(item => ({ ac, item }))).map(({ ac, item }, index) => verificationCase(ac, item, openFailure && index === 0 && item.status === 'FAIL')).join('') || `<p class="meta">${t('case.noCurrentRows')}</p>`;
   const integrityFailed = () => gate('CONTRACT_INTEGRITY').verdict !== 'PASS';
   const contractIntegritySummary = () => {
     const verdict = gate('CONTRACT_INTEGRITY').verdict;
@@ -361,12 +396,13 @@
   const safeguardExplanation = safeguard => `<p class="safeguard-explanation">${e(safeguardReason(safeguard))}</p>${safeguard.reason === 'GATE_RECORDED' && safeguard.explanation ? `<p class="meta">${t('acResults.recordedReason', `<code>${e(safeguard.explanation)}</code>`)}</p>` : ''}`;
   const safeguardCard = (ac, name, title, body = '') => {
     const safeguard = safeguardFor(ac, name);
-    return `<section class="ac-safeguard ${e(safeguard.verdict)} outcome-${e(safeguard.outcome)}" id="ac-${id(ac.acId)}-${id(name.toLowerCase())}"><div class="safeguard-heading"><h4>${e(title)}</h4>${statusBadge(safeguard.verdict, safeguardLabel(safeguard))}</div>${safeguardExplanation(safeguard)}${body}</section>`;
+    const heading = name === 'MUTATION_TESTING' ? informationControl('mutationTesting') : e(title);
+    return `<section class="ac-safeguard ${e(safeguard.verdict)} outcome-${e(safeguard.outcome)}" id="ac-${id(ac.acId)}-${id(name.toLowerCase())}"><div class="safeguard-heading"><h4>${heading}</h4>${statusBadge(safeguard.verdict, safeguardLabel(safeguard))}</div>${safeguardExplanation(safeguard)}${body}</section>`;
   };
   const casesFor = (ac, visibilityName) => (ac.cases || []).filter(item => item.visibility === visibilityName);
   const casesMarkup = (ac, visibilityName) => {
     const rows = casesFor(ac, visibilityName);
-    return rows.length ? rows.map(item => verificationCase(ac, item, item.status === 'FAIL')).join('') : `<p class="meta">${t('case.noCurrentRows')}</p>`;
+    return rows.length ? rows.map(item => verificationCase(ac, item)).join('') : `<p class="meta">${t('case.noCurrentRows')}</p>`;
   };
   const discardedInputs = property => {
     const inputs = property.discardedInputs || [];
@@ -400,13 +436,13 @@
       item.mutatedClass ? t('mutation.productionClass', `<code>${e(item.mutatedClass)}</code>`) : '',
       item.sourceFile ? t('mutation.sourceFile', `<code>${e(item.sourceFile)}</code>`) : '',
       item.mutatedMethod ? t('mutation.method', `<code>${e(item.mutatedMethod)}</code>`) : '',
-      item.methodDescription ? t('mutation.descriptor', `<code>${e(item.methodDescription)}</code>`) : '',
+      item.methodDescription ? `${informationControl('descriptor')}: <code>${e(item.methodDescription)}</code>` : '',
       item.lineNumber != null ? t('mutation.line', `<code>${e(item.lineNumber)}</code>`) : ''
     ].filter(Boolean).map(line => `<li>${line}</li>`).join('');
     const source = item.originalSourceLine
-      ? `<h6>${t('mutation.originalLine')}</h6>${code('java', item.originalSourceLine)}`
+      ? `<h6>${informationControl('originalSourceLine')}</h6>${code('java', item.originalSourceLine)}`
       : '';
-    return `<article class="undetected-mutation" data-mutation-ordinal="${e(item.ordinal)}"><h5>${t('mutation.cardTitle', e(item.ordinal))}</h5><h6>${t('mutation.whatChanged')}</h6>${changed}<h6>${t('mutation.whereChanged')}</h6>${location ? `<ul class="mutation-location">${location}</ul>` : `<p class="meta">${t('mutation.noLocation')}</p>`}${source}<h6>${t('mutation.whatHappened')}</h6><p>${t('mutation.acPassed')}</p></article>`;
+    return `<article class="undetected-mutation" data-mutation-ordinal="${e(item.ordinal)}"><h5>${t('mutation.cardTitle', informationControl('undetectedMutation'), e(item.ordinal))}</h5><h6>${t('mutation.whatChanged')}</h6>${changed}<h6>${t('mutation.whereChanged')}</h6>${location ? `<ul class="mutation-location">${location}</ul>` : `<p class="meta">${t('mutation.noLocation')}</p>`}${source}<h6>${t('mutation.whatHappened')}</h6><p>${t('mutation.acPassed')}</p></article>`;
   };
   const mutationBody = ac => {
     const safeguard = safeguardFor(ac, 'MUTATION_TESTING');
@@ -417,14 +453,17 @@
     }
     if (assessment.attributionGap) return `<p>${t('mutation.noAttributed')}</p>`;
     const undetected = ac.undetectedMutations || [];
-    return `<p>${t('mutation.summary', e(assessment.coveredMutantCount), e(assessment.killedByAcceptanceMethodMutantCount), e(undetected.length))}</p>${undetected.map(mutationDetail).join('')}`;
+    return `<p>${t('mutation.summary', e(assessment.coveredMutantCount), informationControl('attributedChanges'), e(assessment.killedByAcceptanceMethodMutantCount), e(undetected.length))}</p>${undetected.map(mutationDetail).join('')}`;
   };
   const acCard = ac => {
-    const open = ac.status !== 'PASS';
     const statusText = ac.status === 'FAIL' ? t('verification.failedAc') : ac.status === 'NOT_REPORTED' ? t('verification.incompleteAc') : t('verification.passedAc');
     const overview = (ac.safeguards || []).map(item => `<a class="safeguard-chip ${e(item.verdict)}" href="#ac-${id(ac.acId)}-${id(item.name.toLowerCase())}"><span>${e(t(`acResults.${item.name === 'PUBLIC_ACCEPTANCE' ? 'publicAcceptance' : item.name === 'HIDDEN_TESTS' ? 'hiddenTests' : item.name === 'EXPECTED_RESULT_CHECK' ? 'expectedResult' : item.name === 'PROPERTY_BASED_TESTING' ? 'propertyTesting' : 'mutationTesting'}`))}</span><strong>${e(safeguardLabel(item))}</strong></a>`).join('');
     const acStatusLabel = ac.status === 'NOT_REPORTED' ? t('acResults.incomplete') : ac.status === 'FAIL' ? t('acResults.failed') : t('acResults.passed');
-    return `<details class="ac-card ${e(ac.status)}" id="verification-${id(ac.acId)}"${open ? ' open' : ''}><summary><span class="ac-id">${e(ac.acId)}</span><strong>${e(ac.title)}</strong> ${statusBadge(ac.status, acStatusLabel)}</summary><div class="ac-card-body"><p class="ac-result ${e(ac.status)}"><strong>${t('verification.acResult')}:</strong> ${e(statusText)}</p><nav class="safeguard-overview" aria-label="${e(t('verification.acResult'))}">${overview}</nav>${safeguardCard(ac, 'PUBLIC_ACCEPTANCE', t('acResults.publicAcceptance'), `<h5>${t('acResults.publicCases')}</h5>${casesMarkup(ac, 'PUBLIC')}`)}${safeguardCard(ac, 'HIDDEN_TESTS', t('acResults.hiddenTests'), `<h5>${t('acResults.hiddenCases')}</h5>${casesMarkup(ac, 'HIDDEN')}`)}${safeguardCard(ac, 'EXPECTED_RESULT_CHECK', t('acResults.expectedResult'))}${safeguardCard(ac, 'PROPERTY_BASED_TESTING', t('acResults.propertyTesting'), propertyResultsFor(ac))}${safeguardCard(ac, 'MUTATION_TESTING', t('acResults.mutationTesting'), `<p class="mutation-intro">${t('mutation.intro')}</p>${mutationBody(ac)}`)}<details class="ac-technical"><summary>${t('technical.heading')}</summary><p class="meta">${t('technical.description')}</p>${(ac.safeguards || []).map(item => `<p><code>${e(item.technicalGate)}</code>: ${e(item.explanation)}</p>`).join('')}</details></div></details>`;
+    const identityId = `ac-identity-${id(ac.acId)}`;
+    const readerId = `ac-reader-${id(ac.acId)}`;
+    const readerLabel = t('verification.readerDetails', `${ac.acId}: ${ac.title}`);
+    const readerDetails = `<div class="ac-reader" id="${readerId}" role="region" aria-labelledby="${identityId}" aria-label="${e(readerLabel)}" hidden><div class="ac-card-body">${safeguardCard(ac, 'PUBLIC_ACCEPTANCE', t('acResults.publicAcceptance'), `<h5>${t('acResults.publicCases')}</h5>${casesMarkup(ac, 'PUBLIC')}`)}${safeguardCard(ac, 'HIDDEN_TESTS', t('acResults.hiddenTests'), `<h5>${t('acResults.hiddenCases')}</h5>${casesMarkup(ac, 'HIDDEN')}`)}${safeguardCard(ac, 'EXPECTED_RESULT_CHECK', t('acResults.expectedResult'))}${safeguardCard(ac, 'PROPERTY_BASED_TESTING', t('acResults.propertyTesting'), propertyResultsFor(ac))}${safeguardCard(ac, 'MUTATION_TESTING', t('acResults.mutationTesting'), `<p class="mutation-intro">${t('mutation.intro')}</p>${mutationBody(ac)}`)}<details class="ac-technical" id="ac-technical-${id(ac.acId)}"><summary>${t('technical.heading')}</summary><p class="meta">${t('technical.description')}</p>${(ac.safeguards || []).map(item => `<p><code>${e(item.technicalGate)}</code>: ${e(item.explanation)}</p>`).join('')}</details></div></div>`;
+    return `<article class="ac-card ${e(ac.status)}" id="verification-${id(ac.acId)}" data-ac-id="${e(ac.acId)}" data-expanded="false"><div class="ac-identity-row" data-ac-identity><div class="ac-identity" id="${identityId}"><span class="ac-id">${e(ac.acId)}</span><h3>${e(ac.title)}</h3>${statusBadge(ac.status, acStatusLabel)}</div><button class="ac-reading-control" type="button" data-ac-toggle="${e(ac.acId)}" aria-controls="${readerId}" aria-expanded="false" aria-label="${e(t('verification.expandThis'))} ${e(ac.acId)}">${t('verification.expandThis')}</button></div><div class="ac-key-result"><p class="ac-result ${e(ac.status)}"><strong>${t('verification.acResult')}:</strong> ${e(statusText)}</p><nav class="safeguard-overview" aria-label="${e(t('verification.acResult'))}">${overview}</nav></div>${readerDetails}</article>`;
   };
   const needsAttention = acs => {
     const items = acs.filter(ac => ac.status !== 'PASS');
@@ -471,8 +510,313 @@
     const incomplete = run.incompleteAcceptanceConditionCount ?? acs.filter(ac => ac.status === 'NOT_REPORTED').length;
     document.getElementById('summary').innerHTML = `<section class="report-intro verification ${e(data.verdict)}"><h2>${e(conclusion)}</h2><p>${t('verification.aggregate', e(acs.length), e(passed), e(failed), e(incomplete))}</p><p class="contract-integrity-summary">${contractIntegritySummary()}</p><p class="meta">${t('verification.run', `<code>${e(run.runId || t('verification.unavailable'))}</code>`, e(run.startedAt || t('verification.unavailable')), e(run.finishedAt || data.generatedAt || t('verification.unavailable')))}</p><p class="meta">${t('verification.scope', e(selected), e(scope.executedHiddenRows ?? 0), e(scope.executedPublicProperties ?? 0))}</p></section><section class="filter-controls" aria-label="${t('verification.filters')}"><label>${t('verification.find')} <input id="case-query" type="search" autocomplete="off"></label>${['FAIL','PASS','NOT_REPORTED'].map(status => `<button type="button" data-status-filter="${status}" aria-pressed="false">${status}</button>`).join('')}</section>${needsAttention(acs)}`;
     const blocked = `<p class="suppressed">${contractIntegritySummary()}</p>`;
-    document.getElementById('report').innerHTML = `<section class="report-section verification-workspace" id="all-acs"><h2>${t('verification.allAcs')}</h2>${integrityFailed() ? blocked : acs.map(acCard).join('')}</section>${technicalEvidence()}`;
+    const readingToolbar = `<div class="ac-reading-toolbar" data-ac-toolbar role="toolbar" aria-label="${e(t('verification.readingToolbar'))}" aria-controls="ac-list" aria-busy="false"><button type="button" class="global-reading-control" data-global-reading aria-expanded="false">${t('verification.expandAll')}</button><span class="bulk-reading-status" data-bulk-status data-completed="0" data-total="0" role="status" aria-live="polite"></span></div>`;
+    document.getElementById('report').innerHTML = `<section class="report-section verification-workspace" id="all-acs"><h2>${t('verification.allAcs')}</h2>${integrityFailed() ? blocked : `${readingToolbar}<div id="ac-list" class="ac-list">${acs.map(acCard).join('')}</div>`}</section>${technicalEvidence()}`;
     document.getElementById('outline').innerHTML = `<h2>${t('verification.outline')}</h2><a href="#problems">${t('verification.needsAttention')}</a><a href="#all-acs">${t('verification.allAcs')}</a><a href="#technical-evidence">${t('technical.heading')}</a>`;
+  };
+  const acCards = () => [...document.querySelectorAll('#ac-list > .ac-card')];
+  const cardForAcId = acId => acCards().find(card => card.dataset.acId === acId);
+  let activeAcId = null;
+  let bulkOperation = null;
+  let fragmentScrollToken = 0;
+  const setActiveAc = card => {
+    if (card?.dataset.acId) {
+      activeAcId = card.dataset.acId;
+      updateStickyOffset();
+    }
+  };
+  const activeAcCard = () => cardForAcId(activeAcId) || acCards()[0] || null;
+  const captureAnchor = card => card ? { card, top: card.getBoundingClientRect().top } : null;
+  const restoreAnchor = anchor => {
+    if (!anchor?.card || typeof window.scrollBy !== 'function') return;
+    const delta = anchor.card.getBoundingClientRect().top - anchor.top;
+    if (Math.abs(delta) > 0.5) window.scrollBy(0, delta);
+  };
+  const focusWithoutScroll = element => {
+    if (!element || typeof element.focus !== 'function') return;
+    try { element.focus({ preventScroll: true }); } catch (_error) { element.focus(); }
+  };
+  const materializeCase = details => {
+    if (!details || details.dataset.loaded === 'true') return;
+    const record = lazyCases.get(details.dataset.lazyCase);
+    if (!record) return;
+    details.querySelector('.lazy-case-content').innerHTML = verificationCaseContent(record.ac, record.item);
+    details.dataset.loaded = 'true';
+  };
+  const setCaseExpanded = (details, expanded) => {
+    if (expanded) materializeCase(details);
+    details.open = expanded;
+  };
+  const setAcExpanded = (card, expanded) => {
+    if (!card) return;
+    const reader = card.querySelector('.ac-reader');
+    const control = card.querySelector('[data-ac-toggle]');
+    if (!reader || !control) return;
+    reader.hidden = !expanded;
+    card.dataset.expanded = String(expanded);
+    control.setAttribute('aria-expanded', String(expanded));
+    const label = expanded ? t('verification.collapseThis') : t('verification.expandThis');
+    control.textContent = label;
+    control.setAttribute('aria-label', `${label} ${card.dataset.acId}`);
+    reader.querySelectorAll('details[data-lazy-case]').forEach(details => setCaseExpanded(details, expanded));
+  };
+  const globalReadingControl = () => document.querySelector('[data-global-reading]');
+  const setGlobalState = (state, status = '', completed = 0) => {
+    const toolbar = document.querySelector('[data-ac-toolbar]');
+    const control = globalReadingControl();
+    const live = document.querySelector('[data-bulk-status]');
+    const total = acCards().length;
+    if (!toolbar || !control || !live) return;
+    toolbar.setAttribute('aria-busy', String(state === 'busy'));
+    control.disabled = total === 0;
+    live.dataset.completed = String(completed);
+    live.dataset.total = String(total);
+    control.setAttribute('aria-expanded', String(state === 'expanded'));
+    control.textContent = state === 'busy'
+      ? t('verification.stopBulk')
+      : state === 'expanded' ? t('verification.collapseAll') : t('verification.expandAll');
+    live.textContent = status;
+  };
+  const collapseAllAcReaders = (status = t('verification.keyResultsOnly'), completed = 0) => {
+    const anchor = captureAnchor(activeAcCard());
+    acCards().forEach(card => setAcExpanded(card, false));
+    setGlobalState('key', status, completed);
+    restoreAnchor(anchor);
+    focusWithoutScroll(globalReadingControl());
+  };
+  const scheduleBulkBatch = (token, callback) => {
+    token.timer = window.setTimeout(callback, 16);
+  };
+  const stopBulkExpansion = () => {
+    if (!bulkOperation) return false;
+    const token = bulkOperation;
+    token.cancelled = true;
+    if (token.timer != null) window.clearTimeout(token.timer);
+    bulkOperation = null;
+    collapseAllAcReaders(t('verification.expansionInterrupted', token.completed, token.total), token.completed);
+    return true;
+  };
+  const expandAllAcReaders = () => {
+    if (bulkOperation) return stopBulkExpansion();
+    const cards = acCards();
+    if (!cards.length) return false;
+    const anchor = captureAnchor(activeAcCard());
+    const token = { cancelled: false, completed: 0, total: cards.length, timer: null, anchor, anchorIndex: anchor ? cards.indexOf(anchor.card) : -1 };
+    bulkOperation = token;
+    cards.forEach(card => setAcExpanded(card, false));
+    if (token.anchorIndex > 0) restoreAnchor(token.anchor);
+    setGlobalState('busy', t('verification.expanding', 0, token.total), 0);
+    const batchSize = 4;
+    const runBatch = () => {
+      if (bulkOperation !== token || token.cancelled) return;
+      try {
+        const end = Math.min(token.completed + batchSize, token.total);
+        for (; token.completed < end; token.completed += 1) setAcExpanded(cards[token.completed], true);
+        if (token.anchorIndex > 0) restoreAnchor(token.anchor);
+        if (token.completed >= token.total) {
+          bulkOperation = null;
+          setGlobalState('expanded', t('verification.expandedAll'), token.total);
+          if (token.anchorIndex > 0) restoreAnchor(token.anchor);
+          focusWithoutScroll(globalReadingControl());
+          return;
+        }
+        setGlobalState('busy', t('verification.expanding', token.completed, token.total), token.completed);
+        scheduleBulkBatch(token, runBatch);
+      } catch (_error) {
+        bulkOperation = null;
+        setGlobalState('key', t('verification.expansionInterrupted', token.completed, token.total), token.completed);
+        if (token.anchorIndex > 0) restoreAnchor(token.anchor);
+        focusWithoutScroll(globalReadingControl());
+      }
+    };
+    scheduleBulkBatch(token, runBatch);
+    return true;
+  };
+  const revealDisclosurePath = target => {
+    let disclosure = target?.closest?.('details') || null;
+    while (disclosure) {
+      if (disclosure.dataset.lazyCase) materializeCase(disclosure);
+      disclosure.open = true;
+      disclosure = disclosure.parentElement?.closest?.('details') || null;
+    }
+  };
+  const resolveHashTarget = hash => {
+    const raw = String(hash || '').replace(/^#/, '');
+    if (!raw) return null;
+    let target = document.getElementById(raw);
+    if (target) return target;
+    try { target = document.getElementById(decodeURIComponent(raw)); } catch (_error) { target = null; }
+    if (target) return target;
+    for (const record of lazyCases.values()) {
+      if (![`complete-expected-${id(record.item.caseId)}`, `execution-${id(record.item.caseId)}`, `raw-failure-${id(record.item.caseId)}`].includes(raw)) continue;
+      const details = document.getElementById(`case-${id(record.item.caseId)}`);
+      if (details) materializeCase(details);
+      target = document.getElementById(raw);
+      if (target) return target;
+    }
+    return null;
+  };
+  const stickyTargetGap = () => {
+    const value = typeof window.getComputedStyle === 'function'
+      ? window.getComputedStyle(document.documentElement).getPropertyValue('--ac-reading-target-gap')
+      : '';
+    const match = String(value).trim().match(/^([0-9.]+)(px|rem|em)$/);
+    if (!match) return 0;
+    const amount = Number.parseFloat(match[1]);
+    if (!Number.isFinite(amount)) return 0;
+    if (match[2] === 'px') return amount;
+    const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize);
+    return Number.isFinite(rootFontSize) ? amount * rootFontSize : 0;
+  };
+  const scrollTargetIntoView = target => {
+    if (!target || typeof target.scrollIntoView !== 'function') return;
+    const token = ++fragmentScrollToken;
+    let frameCount = 0;
+    let stableFrames = 0;
+    let previousStickyBottom = null;
+    const schedule = callback => {
+      if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(callback);
+      else window.setTimeout(callback, 0);
+    };
+    const align = initial => {
+      if (token !== fragmentScrollToken) return;
+      updateStickyOffset();
+      const runInstantScroll = callback => {
+        const previousBehavior = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = 'auto';
+        try { callback(); } finally { document.documentElement.style.scrollBehavior = previousBehavior; }
+      };
+      if (initial) runInstantScroll(() => target.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' }));
+      const toolbarBottom = document.querySelector('[data-ac-toolbar]')?.getBoundingClientRect().bottom || 0;
+      const identityBottom = target.closest?.('.ac-card')?.querySelector('[data-ac-identity]')?.getBoundingClientRect().bottom || 0;
+      const stickyBottom = Math.max(toolbarBottom, identityBottom);
+      const desiredTop = stickyBottom + stickyTargetGap();
+      const targetTop = target.getBoundingClientRect().top;
+      const delta = targetTop - desiredTop;
+      if (Math.abs(delta) > 0.5) {
+        runInstantScroll(() => {
+          if (typeof window.scrollBy === 'function') window.scrollBy(0, delta);
+          else if (typeof window.scrollTo === 'function') window.scrollTo(window.scrollX, window.scrollY + delta);
+        });
+      }
+      stableFrames = previousStickyBottom != null && Math.abs(stickyBottom - previousStickyBottom) < 0.5
+        ? stableFrames + 1 : 0;
+      previousStickyBottom = stickyBottom;
+      frameCount += 1;
+      if (frameCount < 16 && (stableFrames < 3 || targetTop < desiredTop - 0.5)) schedule(() => align(false));
+    };
+    schedule(() => align(true));
+  };
+  const revealHash = (hash, scroll = true) => {
+    const target = resolveHashTarget(hash);
+    if (!target) return false;
+    const card = target.closest?.('.ac-card');
+    if (card) {
+      setActiveAc(card);
+      if (card.dataset.expanded !== 'true') setAcExpanded(card, true);
+    }
+    revealDisclosurePath(target);
+    updateStickyOffset();
+    if (scroll) scrollTargetIntoView(target);
+    return true;
+  };
+  const handleHashLink = event => {
+    const link = event.target?.closest?.('a[href^="#"]');
+    if (!link) return;
+    const hash = link.getAttribute('href');
+    if (!hash || hash === '#' || !resolveHashTarget(hash)) return;
+    event.preventDefault();
+    revealHash(hash, false);
+    if (window.history?.pushState) window.history.pushState(null, '', hash); else window.location.hash = hash;
+    const target = resolveHashTarget(hash);
+    if (target) scrollTargetIntoView(target);
+  };
+  const updateStickyOffset = () => {
+    const toolbar = document.querySelector('[data-ac-toolbar]');
+    const rootStyle = document.documentElement.style;
+    rootStyle.setProperty('--global-ac-toolbar-height', `${toolbar?.getBoundingClientRect().height || 0}px`);
+    const identity = activeAcCard()?.querySelector('[data-ac-identity]');
+    rootStyle.setProperty('--active-ac-identity-height', `${identity?.getBoundingClientRect().height || 0}px`);
+  };
+  let activeInformation = null;
+  const informationParts = wrapper => ({
+    button: wrapper?.querySelector('[data-info-button]'),
+    popover: wrapper?.querySelector('[data-info-popover]')
+  });
+  const positionInformation = wrapper => {
+    const { popover } = informationParts(wrapper);
+    if (!popover || popover.hidden) return;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1024;
+    const gap = 12;
+    const popoverWidth = popover.getBoundingClientRect().width || Math.min(480, viewportWidth - gap * 2);
+    const rightSafeOffset = viewportWidth - gap - wrapperRect.left - popoverWidth;
+    const leftSafeOffset = gap - wrapperRect.left;
+    const left = Math.min(Math.max(0, leftSafeOffset), rightSafeOffset);
+    popover.style.left = `${left}px`;
+  };
+  const closeInformation = wrapper => {
+    const { button, popover } = informationParts(wrapper);
+    if (!button || !popover) return;
+    popover.hidden = true;
+    popover.style.left = '';
+    button.setAttribute('aria-expanded', 'false');
+    delete wrapper.dataset.infoOpen;
+    delete wrapper.dataset.infoPinned;
+    if (activeInformation === wrapper) activeInformation = null;
+  };
+  const openInformation = (button, pinned = false) => {
+    const wrapper = button?.closest?.('[data-info-wrapper]');
+    if (!wrapper) return;
+    if (activeInformation && activeInformation !== wrapper) closeInformation(activeInformation);
+    const { popover } = informationParts(wrapper);
+    if (!popover) return;
+    popover.hidden = false;
+    wrapper.dataset.infoOpen = 'true';
+    if (pinned) wrapper.dataset.infoPinned = 'true';
+    button.setAttribute('aria-expanded', 'true');
+    activeInformation = wrapper;
+    positionInformation(wrapper);
+  };
+  const installInformationControls = () => {
+    document.querySelectorAll('[data-info-wrapper]').forEach(wrapper => {
+      const { button } = informationParts(wrapper);
+      if (!button) return;
+      const enter = () => {
+        wrapper.dataset.infoHovered = 'true';
+        openInformation(button);
+      };
+      const leave = () => {
+        wrapper.dataset.infoHovered = 'false';
+        if (wrapper.dataset.infoPinned !== 'true' && document.activeElement !== button) {
+          closeInformation(wrapper);
+        }
+      };
+      ['mouseenter', 'pointerenter'].forEach(type => wrapper.addEventListener(type, enter));
+      ['mouseleave', 'pointerleave'].forEach(type => wrapper.addEventListener(type, leave));
+      button.addEventListener('focus', () => openInformation(button));
+      button.addEventListener('blur', () => {
+        if (wrapper.dataset.infoPinned !== 'true' && wrapper.dataset.infoHovered !== 'true') {
+          closeInformation(wrapper);
+        }
+      });
+      button.addEventListener('click', event => {
+        event.stopPropagation();
+        if (wrapper.dataset.infoPinned === 'true') closeInformation(wrapper);
+        else openInformation(button, true);
+      });
+    });
+    document.addEventListener('click', event => {
+      if (activeInformation && !activeInformation.contains(event.target)) closeInformation(activeInformation);
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || !activeInformation) return;
+      closeInformation(activeInformation);
+      event.preventDefault();
+    });
+    window.addEventListener('resize', () => {
+      if (activeInformation) positionInformation(activeInformation);
+    });
   };
   document.getElementById('skip-link').textContent = t('shell.skipLink');
   document.getElementById('outline').setAttribute('aria-label', t('shell.outline'));
@@ -493,11 +837,51 @@
     }));
     document.querySelectorAll('details[data-lazy-case]').forEach(details => details.addEventListener('toggle', () => {
       if (!details.open || details.dataset.loaded === 'true') return;
-      const record = lazyCases.get(details.dataset.lazyCase);
-      if (!record) return;
-      details.querySelector('.lazy-case-content').innerHTML = verificationCaseContent(record.ac, record.item);
-      details.dataset.loaded = 'true';
+      materializeCase(details);
     }));
+    document.querySelectorAll('[data-ac-toggle]').forEach(button => button.addEventListener('click', () => {
+      const card = button.closest('.ac-card');
+      if (!card) return;
+      setActiveAc(card);
+      const anchor = captureAnchor(card);
+      setAcExpanded(card, button.getAttribute('aria-expanded') !== 'true');
+      restoreAnchor(anchor);
+      focusWithoutScroll(button);
+    }));
+    const globalControl = globalReadingControl();
+    if (globalControl) globalControl.addEventListener('click', () => {
+      if (bulkOperation) {
+        stopBulkExpansion();
+        return;
+      }
+      if (acCards().length && acCards().every(card => card.dataset.expanded === 'true')) {
+        collapseAllAcReaders();
+      } else {
+        expandAllAcReaders();
+      }
+    });
+    const updateActiveFromViewport = () => {
+      const toolbarHeight = document.querySelector('[data-ac-toolbar]')?.getBoundingClientRect().height || 0;
+      const marker = toolbarHeight + 24;
+      const candidate = acCards().find(card => {
+        const rect = card.getBoundingClientRect();
+        return rect.top <= marker && rect.bottom > marker;
+      });
+      if (candidate) setActiveAc(candidate);
+    };
+    document.addEventListener('click', handleHashLink);
+    window.addEventListener('hashchange', () => revealHash(window.location.hash, true));
+    window.addEventListener('scroll', updateActiveFromViewport, { passive: true });
+    window.addEventListener('resize', updateStickyOffset);
+    updateStickyOffset();
+    if (typeof ResizeObserver === 'function') {
+      const toolbar = document.querySelector('[data-ac-toolbar]');
+      const resizeObserver = new ResizeObserver(updateStickyOffset);
+      if (toolbar) resizeObserver.observe(toolbar);
+      document.querySelectorAll('[data-ac-identity]').forEach(identity => resizeObserver.observe(identity));
+    }
+    setGlobalState('key', '');
+    if (window.location.hash) revealHash(window.location.hash, true);
     document.querySelectorAll('.discarded-inputs').forEach(container => {
       const items = [...container.querySelectorAll('[data-discard-item]')]; const size = 25; let page = 0;
       const pageCount = Math.max(1, Math.ceil(items.length / size)); const label = container.querySelector('[data-discard-page]');
@@ -507,6 +891,7 @@
       render();
     });
   }
+  installInformationControls();
   document.querySelectorAll('.mermaid-diagram').forEach(container => {
     const source = container.querySelector('.mermaid-source')?.textContent || '';
     try { container.innerHTML = window.ToppleCatMermaid.render(source); } catch (_error) { container.innerHTML = `<p class="mermaid-error">${t('mermaid.error')}</p>`; }

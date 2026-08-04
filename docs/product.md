@@ -64,6 +64,15 @@ comparison means that the comparison ran, not that expected and actual values
 matched. Failed cases therefore lead with their authored input and structured
 expected/actual differences before Scenario Steps and raw failures.
 
+Each Verification Report opens every Acceptance Condition at that key-result
+layer: its ID, title, status, plain-language verification result, and the five
+safeguard outcomes. Reader details start closed, including for failed or
+unreported ACs. The Reviewer can expand one AC to read all of its case-level
+reader content, or use the report-wide control to expand and later return the
+complete list to key results; technical evidence remains a separate deliberate
+disclosure. Links to an AC or safeguard reveal the required reader content
+before positioning the page, while the controls preserve the Reviewer’s place.
+
 For either reading moment, the Reviewer may select `--language en` or
 `--language zh-TW` on that command. English is the default. This changes only
 ToppleCat-owned HTML presentation; it does not translate authored or
@@ -141,7 +150,11 @@ shown only when PIT's description and the original source line support it;
 otherwise the report states the limitation. A mutation globally marked
 `KILLED` may still be listed for an AC when another AC supplied the killing
 method. These details remain reviewer-only and do not affect the existing Gate
-policy or safe agent feedback.
+policy or safe agent feedback. A compact `ⓘ` control beside Mutation Testing,
+attributed changes, undetected mutation, original source line, and descriptor
+bridges unfamiliar terms to short ToppleCat-owned explanations. It supplements
+the visible result; it does not replace the result, add evidence, or change the
+meaning of PIT's recorded terms.
 
 ## Product-fit test
 

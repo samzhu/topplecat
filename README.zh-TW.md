@@ -68,20 +68,22 @@ Expected Consumption 另外確認作者寫下的預期值真的有被斷言。
 如果某個 AC 未改變的公開驗收漏掉了歸因到它的突變，報告會先顯示已偵測與未偵測的數量，
 再只列出未偵測的改動卡片。卡片說明改變、正式原始碼位置，以及該驗收仍然通過；只有 PIT
 描述與唯一的原始碼行足以支持時，才會顯示確切替換。這些細節只給審閱者，不會進入安全的
-agent feedback。
+agent feedback。報告也會在 Mutation Testing 與容易陌生的卡片術語旁放置精簡的 `ⓘ` 控制，
+並用所選報告語言提供短說明。滑鼠移入或鍵盤聚焦會顯示說明；點擊或點按會讓說明保持開啟，
+直到審閱者關閉它。即使不打開說明，原本可見的結果與技術揭露仍然可讀。
 
 ## 快速開始
 
-ToppleCat 0.0.21 需要 Java 25 與相容的 Gradle。
+ToppleCat 0.0.22 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.21"
+    id("io.github.samzhu.topplecat") version "0.0.22"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.21")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.22")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -152,7 +154,9 @@ Typed Case Rows 提供輸入與預期結果：
 但不會改變報告 JSON、evidence、安全 agent feedback、Mechanical Seal 或契約本身。
 Verification Report 會先顯示白話的閱讀結果，再提供 canonical 技術證據。案例失敗時，
 會先列出輸入以及預期值與實際值的差異；Scenario Steps、原始失敗、Gate 判定與 PIT
-細節仍可展開深入查閱。
+細節仍可展開深入查閱。每個 AC 一開始都會顯示關鍵結果；可用 AC 閱讀控制深入閱讀
+單一 AC，或用報告範圍的控制逐步展開所有 AC。技術證據仍各自收合，連結到 AC 或防護
+結果時，報告會先顯示所需內容再移動到目標。
 
 整體 verdict 有三種：
 
@@ -184,7 +188,7 @@ ToppleCat 從可執行驗收邊界開始：
 - [架構](docs/architecture.md)
 - [共同語言](CONTEXT.md)
 - [文件索引](docs/README.md)
-- [0.0.21 release notes](docs/releases/0.0.21.zh-TW.md)
+- [0.0.22 release notes](docs/releases/0.0.22.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

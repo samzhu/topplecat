@@ -9,7 +9,7 @@ Current product facts belong in the [Product definition](../product.md),
 
 ## Active designs
 
-No accepted designs are awaiting implementation.
+There are no active designs.
 
 ## Decide by content
 

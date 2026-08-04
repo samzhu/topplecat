@@ -132,7 +132,7 @@ fail during command configuration, before a formal Verify run starts.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.21 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.22 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 
@@ -219,6 +219,25 @@ collapsed complete expected value, Scenario execution details, Step values,
 and raw failure. Authored JSON paths and values are preserved rather than
 translated into inferred business meaning.
 
+The Verification Report renderer keeps disclosure state in memory for the
+current page only. Each AC has an always-visible key-result layer and a
+controlled reader-detail region; the latter reuses the existing lazy case
+materialization boundary and opens every public and hidden case reader layer
+only when the AC is expanded. Complete expected data, execution details, raw
+failures, canonical Gate evidence, producer details, and PIT evidence remain
+independent nested disclosures. A report-wide expansion schedules bounded
+browser batches, reports completed ACs, and can cancel back to key results; it
+does not change the report model or any evidence artifact.
+
+The report’s reading toolbar and active AC identity row use platform sticky
+positioning when available and remain ordinary document-flow controls when it
+is not. Local, global, and fragment-driven actions share the same disclosure
+state so labels, `aria-expanded`, focus, and target visibility stay aligned.
+Ancestor expansion happens before linked navigation, and scroll anchoring
+keeps the operated AC in view. These are presentation behaviors only: they do
+not alter `data.json`, Current-run Evidence, the Mechanical Seal, Gates,
+reviewer custody, or safe Implementation Agent feedback.
+
 Within Mutation Testing, the primary reading order is AC-first. For each
 selected AC, a mutation that still passes its unchanged public Acceptance Method
 is `FAIL`; detecting every attributed mutation is `PASS`; and no exact
@@ -231,6 +250,17 @@ profile, PIT-wide outcomes, operator IDs, attribution counts, selectors, mutator
 descriptions, and raw PIT outcomes stay unchanged inside collapsed reviewer
 technical details. This presentation does not change Current-run Evidence, the
 Mechanical Seal, a Gate, the aggregate verdict, or safe Implementation Agent
+feedback.
+
+The Verification Report bundle uses one static, reusable information-control
+pattern for the initial Mutation Testing explanations. Each native button is
+paired with a localized explanatory region through `aria-expanded`,
+`aria-controls`, and `aria-describedby`; hover and focus show a transient
+explanation, while click or tap pins it until Escape or outside interaction
+closes it. Only one popover is open at once, and placement is constrained to
+the viewport. This is reviewer-only presentation: it does not eagerly
+materialize lazy cases or alter `data.json`, Current-run Evidence, the
+Mechanical Seal, Gates, Reviewer Custody, or safe Implementation Agent
 feedback.
 
 Direct `toppleCatCheck` logs reviewer-only, non-blocking Contract Quality

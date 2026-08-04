@@ -55,7 +55,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.21 custody and approval schemas are current-only. A prior schema is not
+The 0.0.22 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -238,6 +238,31 @@ by side. Complete expected data, Scenario execution Steps, values passed to
 Steps, raw failures, canonical Gate verdicts, and producer details remain
 available in collapsed sections.
 
+Every AC starts in key-result-only state on each report load, including `FAIL`
+and `NOT_REPORTED` ACs. Its ID, title, status, plain-language result, and all
+five safeguard outcomes remain visible. Use **Expand this AC** to open that
+AC’s reader details and every public and hidden case reader layer at once; the
+case reader still leads with input and expected/actual comparison, while
+complete expected data, execution details, raw failures, Gate evidence, and
+producer details remain independently collapsed. **This AC: key result only**
+closes just that AC.
+
+The AC list has a sticky reading toolbar. **Expand all ACs** performs the same
+reader-level expansion in bounded browser-scheduled batches and announces
+completed ACs as `Expanding X of N`. While it runs, **Stop and show key
+results** cancels pending work and returns every AC to key-result-only state.
+After completion, **All ACs: key results only** collapses the complete list.
+Bulk progress counts fully expanded ACs, not scheduled cases; an interrupted
+operation never changes verification evidence or claims that all ACs opened.
+
+Needs Attention links, safeguard links, and URL fragments reveal the AC and
+any required nested disclosure before positioning the target. A fragment that
+targets technical evidence opens only that disclosure path; unrelated
+technical evidence remains closed. The global toolbar and active AC identity
+row preserve the reading context, and the controls are native keyboard
+buttons with localized English and Traditional Chinese labels. Disclosure
+state is not persisted across reloads.
+
 ### Reading Mutation results
 
 For each AC, Verification Report first answers a plain question: while
@@ -280,6 +305,17 @@ line, and covering/killing/succeeding selector relationships. The assessed
 mutation details are built in the Java report model; browser rendering is only
 a projection. None of these reviewer-only diagnostics enters
 `agent-feedback.json` or public implementation handoff material.
+
+The report places a compact `ⓘ` button beside Mutation Testing and the initial
+card terms **attributed changes**, **undetected mutation**, **original source
+line**, and **descriptor**. Hover or keyboard focus shows a short explanation;
+click or touch activation pins it, opening another control replaces the prior
+one, and Escape or outside interaction closes the pinned explanation. These
+controls are localized with the report language, stay within the viewport on a
+narrow screen, and supplement rather than replace the visible result. Opening
+or closing one does not expand cases, open technical evidence, change fragment
+navigation, or change any evidence artifact. If scripting is unavailable, the
+existing result and long-form explanation remain readable.
 
 `build/topplecat/evidence.json` is the machine verdict for the current run.
 Each run starts in `build/topplecat/runs/current/`, receives a fresh UUID when

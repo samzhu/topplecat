@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.samzhu.topplecat.core.AttachmentRef;
 import io.github.samzhu.topplecat.core.CaseVisibility;
+import io.github.samzhu.topplecat.core.EvidenceGate;
+import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.NarrativeStep;
 import io.github.samzhu.topplecat.core.NarrativeStepStatus;
 import io.github.samzhu.topplecat.core.SourceRef;
@@ -21,6 +23,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
+import org.htmlunit.BrowserVersion;
+import org.htmlunit.WebClient;
+import org.htmlunit.html.HtmlElement;
+import org.htmlunit.html.HtmlPage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.json.JsonMapper;
@@ -88,8 +96,9 @@ class ReportBundleScaleTest {
             executions,
             templates,
             true,
-            List.of(),
+            List.of(new EvidenceGate("CONTRACT_INTEGRITY", EvidenceVerdict.PASS, null)),
             Instant.parse("2026-07-24T00:00:00Z"));
+    view = ReportViews.withMutationAttribution(view, null);
     Path bundle = tempDir.resolve("verification");
     HtmlBundleWriter.verification(bundle, view);
     Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
@@ -114,6 +123,111 @@ class ReportBundleScaleTest {
     assertTrue(
         elapsed.compareTo(Duration.ofSeconds(2)) < 0,
         "large report generation took " + elapsed.toMillis() + "ms");
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+      assertEquals(100, page.querySelectorAll(".ac-card").getLength());
+      assertEquals(100, page.querySelectorAll(".ac-reader[hidden]").getLength());
+      assertEquals(1_000, page.querySelectorAll("details[data-lazy-case]").getLength());
+      assertEquals(0, page.querySelectorAll("details[data-lazy-case][open]").getLength());
+      assertEquals(0, page.querySelectorAll("[data-lazy-case][data-loaded='true']").getLength());
+      assertTrue(
+          !page.asNormalizedText().contains("AC-SCALE-000-case-0-long-unbroken-identifier"),
+          "initial key-result rendering must not expose case reader material");
+
+      HtmlElement global = (HtmlElement) page.querySelector("[data-global-reading]");
+      HtmlElement bulkStatus = (HtmlElement) page.querySelector("[data-bulk-status]");
+      global.click();
+      waitForCondition(
+          client,
+          () -> {
+            int completed = Integer.parseInt(bulkStatus.getAttribute("data-completed"));
+            return completed > 0 && completed < 100;
+          },
+          "bulk expansion should expose non-zero progress before completion");
+      int completedBeforeStop = Integer.parseInt(bulkStatus.getAttribute("data-completed"));
+      int loadedBeforeStop =
+          page.querySelectorAll("[data-lazy-case][data-loaded='true']").getLength();
+      assertEquals(completedBeforeStop * 10, loadedBeforeStop);
+
+      global.click();
+      waitForCondition(
+          client,
+          () -> bulkStatus.getTextContent().contains("Expansion stopped after"),
+          "bulk cancellation should report an interrupted count");
+      int completedAfterStop = Integer.parseInt(bulkStatus.getAttribute("data-completed"));
+      assertTrue(completedAfterStop >= completedBeforeStop);
+      assertTrue(completedAfterStop > 0);
+      assertTrue(
+          bulkStatus
+              .getTextContent()
+              .contains("Expansion stopped after " + completedAfterStop + " of 100"));
+      assertEquals(0, page.querySelectorAll(".ac-card[data-expanded='true']").getLength());
+      assertEquals(0, page.querySelectorAll("details[data-lazy-case][open]").getLength());
+      int loadedAfterStop =
+          page.querySelectorAll("[data-lazy-case][data-loaded='true']").getLength();
+      assertEquals(completedAfterStop * 10, loadedAfterStop);
+      client.waitForBackgroundJavaScript(100);
+      assertEquals(
+          loadedAfterStop,
+          page.querySelectorAll("[data-lazy-case][data-loaded='true']").getLength());
+      assertEquals(completedAfterStop, Integer.parseInt(bulkStatus.getAttribute("data-completed")));
+
+      global.click();
+      waitForCondition(
+          client,
+          () -> bulkStatus.getTextContent().contains("All AC reader details are open."),
+          "bulk expansion should report its completed state",
+          () ->
+              "status="
+                  + bulkStatus.getTextContent()
+                  + ", completed="
+                  + bulkStatus.getAttribute("data-completed")
+                  + ", expanded="
+                  + page.querySelectorAll(".ac-card[data-expanded='true']").getLength()
+                  + ", loaded="
+                  + page.querySelectorAll("[data-lazy-case][data-loaded='true']").getLength(),
+          1_000);
+      assertEquals("100", bulkStatus.getAttribute("data-completed"));
+      assertEquals("true", global.getAttribute("aria-expanded"));
+      assertEquals(100, page.querySelectorAll(".ac-card[data-expanded='true']").getLength());
+      assertEquals(1_000, page.querySelectorAll("details[data-lazy-case][open]").getLength());
+      assertEquals(
+          1_000, page.querySelectorAll("[data-lazy-case][data-loaded='true']").getLength());
+      assertEquals(0, page.querySelectorAll(".ac-technical[open]").getLength());
+    }
+  }
+
+  private static void waitForCondition(
+      WebClient client, BooleanSupplier condition, String failureMessage) throws Exception {
+    waitForCondition(client, condition, failureMessage, () -> "", 20);
+  }
+
+  private static void waitForCondition(
+      WebClient client,
+      BooleanSupplier condition,
+      String failureMessage,
+      Supplier<String> failureState)
+      throws Exception {
+    waitForCondition(client, condition, failureMessage, failureState, 20);
+  }
+
+  private static void waitForCondition(
+      WebClient client,
+      BooleanSupplier condition,
+      String failureMessage,
+      Supplier<String> failureState,
+      long pollMillis)
+      throws Exception {
+    long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+    while (!condition.getAsBoolean()) {
+      if (System.nanoTime() >= deadline) {
+        throw new AssertionError(failureMessage + " (" + failureState.get() + ")");
+      }
+      client.waitForBackgroundJavaScript(pollMillis);
+    }
   }
 
   private static List<StepTemplate> steps(String acId) {

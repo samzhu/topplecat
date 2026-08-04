@@ -58,6 +58,24 @@ class ToppleCatPluginFunctionalTest {
   }
 
   @Test
+  void testKitFixturesDisableGradleDaemonForPitSubprocessIsolation() throws Exception {
+    writeProject(
+        """
+        tasks.register('assertTestKitUsesNoDaemon') {
+            doLast {
+                if (!file('gradle.properties').readLines().contains('org.gradle.daemon=false')) {
+                    throw new GradleException('TestKit fixture must disable the Gradle daemon')
+                }
+            }
+        }
+        """);
+
+    var result = runner("assertTestKitUsesNoDaemon").build();
+
+    assertEquals(TaskOutcome.SUCCESS, result.task(":assertTestKitUsesNoDaemon").getOutcome());
+  }
+
+  @Test
   void formalVerificationSealsAndExecutesNewScenarioAuthoring() throws Exception {
     writeProjectWithConsumerPit(
         """
@@ -1143,6 +1161,10 @@ class ToppleCatPluginFunctionalTest {
   private void writeProject(String prelude, String configuration) throws Exception {
     Files.writeString(
         project.resolve("settings.gradle"), "rootProject.name = 'verification-consumer'\n");
+    // Keep each temporary TestKit fixture out of the shared Gradle daemon. A daemon can retain
+    // fixture classpath handles after the managed PIT subprocess tree exits, causing a later
+    // CoverageMinion handshake to fail as an unexplained EOF.
+    Files.writeString(project.resolve("gradle.properties"), "org.gradle.daemon=false\n");
     Path junit = moduleJar("topplecat-junit");
     Path core = moduleJar("topplecat-core");
     Path byteBuddy = libraryJar(ByteBuddy.class);

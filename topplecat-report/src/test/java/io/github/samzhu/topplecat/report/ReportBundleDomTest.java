@@ -14,6 +14,7 @@ import io.github.samzhu.topplecat.core.NarrativeStep;
 import io.github.samzhu.topplecat.core.NarrativeStepStatus;
 import io.github.samzhu.topplecat.core.SelectedSpecDocument;
 import io.github.samzhu.topplecat.core.SelectedSpecScope;
+import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.pitest.PitMutationAssessment;
 import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import io.github.samzhu.topplecat.pitest.PitMutationEvidence;
@@ -22,6 +23,8 @@ import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.htmlunit.BrowserVersion;
@@ -255,16 +258,21 @@ class ReportBundleDomTest {
       assertNotNull(page.querySelector("#mutation-testing"));
       HtmlDetails technicalEvidence = (HtmlDetails) page.querySelector("#technical-evidence");
       assertTrue(technicalEvidence.getTextContent().contains("Sealed policy disabled mutation."));
+      assertNotNull(page.querySelector("#ac-reader-AC-CHECKOUT[hidden]"));
+      HtmlElement localControl =
+          (HtmlElement) page.querySelector("#verification-AC-CHECKOUT [data-ac-toggle]");
+      localControl.click();
+      client.waitForBackgroundJavaScript(50);
+      assertEquals("true", localControl.getAttribute("aria-expanded"));
+      assertNotNull(page.querySelector("#ac-reader-AC-CHECKOUT:not([hidden])"));
       assertTrue(page.asNormalizedText().contains("Expected compared with actual"));
-      assertTrue(
-          page.asNormalizedText()
-              .contains("Only fields actually compared by the acceptance code appear here."));
       HtmlDetails stepData = (HtmlDetails) page.querySelector(".step-data details");
       assertTrue(stepData.getParentNode().getTextContent().contains("Values passed to Steps"));
       assertFalse(stepData.isOpen(), "Step data stays collapsed by default");
       assertTrue(stepData.getTextContent().contains("visible-value"));
       HtmlDetails failedCase = (HtmlDetails) page.querySelector("#case-case-fail");
-      assertTrue(failedCase.isOpen(), "the first real failure is open by default");
+      assertTrue(failedCase.isOpen(), "expanding an AC opens every case reader layer");
+      assertFalse(((HtmlDetails) page.querySelector("#ac-technical-AC-CHECKOUT")).isOpen());
     }
 
     Path traditionalChineseBundle = tempDir.resolve("verification-zh-TW");
@@ -286,6 +294,8 @@ class ReportBundleDomTest {
           ((HtmlElement) page.querySelector("#summary"))
               .getTextContent()
               .contains("契約完整性已通過：已選可執行契約符合其機械封印。"));
+      ((HtmlElement) page.querySelector("#verification-AC-CHECKOUT [data-ac-toggle]")).click();
+      client.waitForBackgroundJavaScript(50);
       assertEquals(
           "驗證報告篩選器",
           ((HtmlElement) page.querySelector(".filter-controls")).getAttribute("aria-label"));
@@ -293,6 +303,127 @@ class ReportBundleDomTest {
       assertTrue(page.asNormalizedText().contains("未出現在比對中的規則"));
       assertTrue(page.asNormalizedText().contains("FAIL"));
       assertFalse(page.asNormalizedText().contains("交付遭拒"));
+    }
+  }
+
+  @Test
+  void verificationReadingControlsKeepEveryStatusScannableAndSupportLocalBulkModes()
+      throws Exception {
+    VerificationView view = readingControlsView();
+    Path bundle = tempDir.resolve("reading-controls");
+    HtmlBundleWriter.verification(bundle, view);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(50);
+
+      assertEquals(6, page.querySelectorAll(".ac-card").getLength());
+      assertEquals(30, page.querySelectorAll(".safeguard-chip").getLength());
+      for (String acId : List.of("AC-READ-FAIL", "AC-READ-INCOMPLETE", "AC-READ-PASS-2")) {
+        assertNotNull(page.querySelector("#ac-reader-" + acId + "[hidden]"));
+        HtmlElement card = (HtmlElement) page.querySelector("#verification-" + acId);
+        assertTrue(card.getTextContent().contains(acId));
+        assertTrue(card.getTextContent().contains("Verification result"));
+        assertEquals(
+            "false",
+            ((HtmlElement) card.querySelector("[data-ac-toggle]")).getAttribute("aria-expanded"));
+      }
+      assertEquals(0, page.querySelectorAll("[data-lazy-case][data-loaded='true']").getLength());
+      assertEquals(0, page.querySelectorAll("[data-lazy-case][open]").getLength());
+
+      HtmlElement failCard = (HtmlElement) page.querySelector("#verification-AC-READ-FAIL");
+      HtmlElement failControl = (HtmlElement) failCard.querySelector("[data-ac-toggle]");
+      failControl.click();
+      client.waitForBackgroundJavaScript(50);
+      assertEquals("true", failControl.getAttribute("aria-expanded"));
+      assertEquals(failControl, page.getFocusedElement());
+      assertNotNull(page.querySelector("#ac-reader-AC-READ-FAIL:not([hidden])"));
+      assertEquals(2, failCard.querySelectorAll("details[data-lazy-case][open]").getLength());
+      assertEquals(
+          2, failCard.querySelectorAll("[data-lazy-case][data-loaded='true']").getLength());
+      assertEquals(0, failCard.querySelectorAll(".ac-technical[open]").getLength());
+
+      failControl.click();
+      client.waitForBackgroundJavaScript(50);
+      assertNotNull(page.querySelector("#ac-reader-AC-READ-FAIL[hidden]"));
+      assertEquals("false", failControl.getAttribute("aria-expanded"));
+      assertNotNull(page.querySelector("#ac-reader-AC-READ-PASS-2[hidden]"));
+
+      HtmlElement global = (HtmlElement) page.querySelector("[data-global-reading]");
+      global.click();
+      assertTrue(
+          ((HtmlElement) page.querySelector("[data-bulk-status]"))
+              .getTextContent()
+              .contains("Expanding 0 of 6"));
+      global.click();
+      client.waitForBackgroundJavaScript(50);
+      assertTrue(
+          ((HtmlElement) page.querySelector("[data-bulk-status]"))
+              .getTextContent()
+              .contains("Expansion stopped after 0 of 6 ACs."));
+      assertEquals(global, page.getFocusedElement());
+      assertEquals(0, page.querySelectorAll(".ac-card[data-expanded='true']").getLength());
+      assertEquals(6, page.querySelectorAll(".ac-reader[hidden]").getLength());
+
+      global.click();
+      client.waitForBackgroundJavaScript(500);
+      assertEquals("All ACs: key results only", global.getTextContent());
+      assertEquals("true", global.getAttribute("aria-expanded"));
+      assertEquals(global, page.getFocusedElement());
+      assertEquals(6, page.querySelectorAll(".ac-card[data-expanded='true']").getLength());
+      assertEquals(12, page.querySelectorAll("details[data-lazy-case][open]").getLength());
+      assertEquals(0, page.querySelectorAll(".ac-technical[open]").getLength());
+
+      global.click();
+      client.waitForBackgroundJavaScript(50);
+      assertEquals(6, page.querySelectorAll(".ac-reader[hidden]").getLength());
+      assertEquals("Expand all ACs", global.getTextContent());
+      assertEquals("false", global.getAttribute("aria-expanded"));
+    }
+  }
+
+  @Test
+  void verificationLinksRevealOnlyTheRequiredAncestorsAndRespectFragments() throws Exception {
+    VerificationView view = readingControlsView();
+    Path bundle = tempDir.resolve("reading-link-controls");
+    HtmlBundleWriter.verification(bundle, view);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page =
+          client.getPage(
+              (bundle.resolve("index.html").toUri().toURL().toString()
+                  + "#raw-failure-AC-READ-FAIL-public"));
+      client.waitForBackgroundJavaScript(100);
+
+      assertNotNull(page.querySelector("#ac-reader-AC-READ-FAIL:not([hidden])"));
+      assertTrue(((HtmlDetails) page.querySelector("#raw-failure-AC-READ-FAIL-public")).isOpen());
+      assertTrue(((HtmlDetails) page.querySelector("#case-AC-READ-FAIL-public")).isOpen());
+      assertFalse(
+          ((HtmlDetails) page.querySelector("#complete-expected-AC-READ-FAIL-public")).isOpen());
+      assertFalse(((HtmlDetails) page.querySelector("#execution-AC-READ-FAIL-public")).isOpen());
+      assertEquals(0, page.querySelectorAll(".ac-technical[open]").getLength());
+      HtmlElement safeguardLink =
+          (HtmlElement) page.querySelector("#verification-AC-READ-INCOMPLETE .safeguard-chip");
+      safeguardLink.click();
+      client.waitForBackgroundJavaScript(100);
+      assertNotNull(page.querySelector("#ac-reader-AC-READ-INCOMPLETE:not([hidden])"));
+      assertEquals(0, page.querySelectorAll(".ac-technical[open]").getLength());
+
+      page.executeJavaScript("window.location.hash = '#execution-AC-READ-FAIL-hidden';");
+      client.waitForBackgroundJavaScript(100);
+      assertTrue(((HtmlDetails) page.querySelector("#execution-AC-READ-FAIL-hidden")).isOpen());
+      assertFalse(
+          ((HtmlDetails) page.querySelector("#complete-expected-AC-READ-FAIL-hidden")).isOpen());
+      assertFalse(((HtmlDetails) page.querySelector("#raw-failure-AC-READ-FAIL-hidden")).isOpen());
+      assertEquals(0, page.querySelectorAll(".ac-technical[open]").getLength());
+
+      page.executeJavaScript("window.location.hash = '#complete-expected-AC-READ-FAIL-hidden';");
+      client.waitForBackgroundJavaScript(100);
+      assertTrue(
+          ((HtmlDetails) page.querySelector("#complete-expected-AC-READ-FAIL-hidden")).isOpen());
+      assertEquals(0, page.querySelectorAll(".ac-technical[open]").getLength());
     }
   }
 
@@ -482,21 +613,101 @@ class ReportBundleDomTest {
       HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
       client.waitForBackgroundJavaScript(250);
 
+      HtmlElement meetsControl =
+          (HtmlElement) page.querySelector("#verification-AC-MEETS [data-ac-toggle]");
+      meetsControl.click();
+      client.waitForBackgroundJavaScript(50);
       String text = page.asNormalizedText();
       assertTrue(
           text.contains(
               "Mutation Testing evaluates whether the public acceptance can detect simulated faults"
                   + " in production code."));
+      assertTrue(text.contains("This AC was assessed against 10"));
+      assertTrue(text.contains("8 detected, 2 undetected."));
+      HtmlElement meets = (HtmlElement) page.querySelector("#verification-AC-MEETS");
+      Map.of(
+              "mutationTesting",
+                  "A missed change does not prove the original production code is wrong.",
+              "attributedChanges", "Only simulated changes exactly associated",
+              "undetectedMutation",
+                  "This simulated change still passed this AC's unchanged public acceptance.",
+              "originalSourceLine", "not necessarily the changed program text",
+              "descriptor", "A JVM method signature used for exact technical location.")
+          .forEach(
+              (key, description) -> {
+                HtmlElement wrapper =
+                    (HtmlElement) meets.querySelector("[data-info-key='" + key + "']");
+                assertNotNull(wrapper, "missing information control for " + key);
+                assertNotNull(wrapper.querySelector("[data-info-button]"));
+                assertTrue(
+                    ((HtmlElement) wrapper.querySelector("[data-info-popover]"))
+                        .getTextContent()
+                        .contains(description));
+              });
+      HtmlElement mutationInfo =
+          (HtmlElement) meets.querySelector("[data-info-key='mutationTesting']");
+      HtmlElement mutationInfoButton =
+          (HtmlElement) mutationInfo.querySelector("[data-info-button]");
+      HtmlElement mutationInfoPopover =
+          (HtmlElement) mutationInfo.querySelector("[data-info-popover]");
+      assertEquals("More about Mutation Testing", mutationInfoButton.getAttribute("aria-label"));
+      assertEquals(
+          mutationInfoPopover.getAttribute("id"), mutationInfoButton.getAttribute("aria-controls"));
+      assertEquals(
+          mutationInfoPopover.getAttribute("id"),
+          mutationInfoButton.getAttribute("aria-describedby"));
+      assertEquals("tooltip", mutationInfoPopover.getAttribute("role"));
+      assertEquals("false", mutationInfoButton.getAttribute("aria-expanded"));
+      assertNotNull(meets.querySelector(".ac-result"), "the key result remains visible");
+
+      HtmlElement attributedInfoButton =
+          (HtmlElement)
+              meets.querySelector("[data-info-key='attributedChanges'] [data-info-button]");
+      attributedInfoButton.click();
+      client.waitForBackgroundJavaScript(25);
+      assertEquals("true", attributedInfoButton.getAttribute("aria-expanded"));
       assertTrue(
-          text.contains(
-              "This AC was assessed against 10 attributed changes: 8 detected, 2 undetected."));
-      HtmlDetails noData = (HtmlDetails) page.querySelector("#verification-AC-NO-DATA");
-      noData.setOpen(true);
+          ((HtmlElement)
+                  meets.querySelector("[data-info-key='attributedChanges'] [data-info-popover]"))
+              .getTextContent()
+              .contains("Only simulated changes exactly associated"));
+      HtmlElement undetectedInfoButton =
+          (HtmlElement)
+              meets.querySelector("[data-info-key='undetectedMutation'] [data-info-button]");
+      undetectedInfoButton.click();
+      client.waitForBackgroundJavaScript(25);
+      assertEquals("false", attributedInfoButton.getAttribute("aria-expanded"));
+      assertEquals("true", undetectedInfoButton.getAttribute("aria-expanded"));
+      assertEquals(1, meets.querySelectorAll("[data-info-popover]:not([hidden])").getLength());
+      page.executeJavaScript(
+          "document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));");
+      client.waitForBackgroundJavaScript(25);
+      assertEquals("false", undetectedInfoButton.getAttribute("aria-expanded"));
+      attributedInfoButton.click();
+      page.executeJavaScript("document.body.click();");
+      client.waitForBackgroundJavaScript(25);
+      assertEquals("false", attributedInfoButton.getAttribute("aria-expanded"));
+      page.executeJavaScript(
+          "document.querySelector(\"#verification-AC-MEETS [data-info-key='mutationTesting']"
+              + " [data-info-button]\").focus();");
+      client.waitForBackgroundJavaScript(25);
+      assertEquals("true", mutationInfoButton.getAttribute("aria-expanded"));
+      page.executeJavaScript(
+          "document.querySelector(\"#verification-AC-MEETS"
+              + " [data-info-key='mutationTesting']\").dispatchEvent(new Event('mouseenter',"
+              + " {bubbles: true}));");
+      assertEquals("true", mutationInfoButton.getAttribute("aria-expanded"));
+      assertEquals(
+          0,
+          page.querySelectorAll("#verification-AC-BELOW [data-lazy-case][data-loaded='true']")
+              .getLength());
+      assertFalse(((HtmlDetails) page.querySelector("#mutation-technical-details")).isOpen());
+      HtmlElement noData = (HtmlElement) page.querySelector("#verification-AC-NO-DATA");
+      ((HtmlElement) noData.querySelector("[data-ac-toggle]")).click();
       assertTrue(
           noData
               .getTextContent()
               .contains("No mutation was exactly attributed to this AC in the current run."));
-      HtmlElement meets = (HtmlElement) page.querySelector("#verification-AC-MEETS");
       assertTrue(meets.getTextContent().contains("Public Acceptance"));
       assertTrue(meets.getTextContent().contains("Hidden Tests"));
       assertTrue(meets.getTextContent().contains("Mutation Testing"));
@@ -512,11 +723,8 @@ class ReportBundleDomTest {
           meets.getTextContent().contains("This AC's unchanged public acceptance still passed."));
       assertFalse(meets.getTextContent().contains("PIT"));
       HtmlElement below = (HtmlElement) page.querySelector("#verification-AC-BELOW");
-      assertTrue(
-          below
-              .getTextContent()
-              .contains(
-                  "This AC was assessed against 1 attributed changes: 1 detected, 0 undetected."));
+      assertTrue(below.getTextContent().contains("This AC was assessed against 1"));
+      assertTrue(below.getTextContent().contains("1 detected, 0 undetected."));
       assertEquals(0, below.querySelectorAll(".undetected-mutation").getLength());
       HtmlDetails technicalDetails =
           (HtmlDetails) page.querySelector("#mutation-technical-details");
@@ -525,6 +733,37 @@ class ReportBundleDomTest {
       assertTrue(technicalDetails.getTextContent().contains("SURVIVED"));
       assertTrue(
           technicalDetails.getTextContent().contains("Replaced integer addition with subtraction"));
+    }
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      client.getOptions().setScreenWidth(360);
+      client.getOptions().setScreenHeight(800);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+      ((HtmlElement) page.querySelector("#verification-AC-MEETS [data-ac-toggle]")).click();
+      HtmlElement infoButton =
+          (HtmlElement)
+              page.querySelector(
+                  "#verification-AC-MEETS [data-info-key='mutationTesting'] [data-info-button]");
+      infoButton.click();
+      client.waitForBackgroundJavaScript(50);
+      assertTrue(
+          ((HtmlElement)
+                  page.querySelector(
+                      "#verification-AC-MEETS [data-info-key='mutationTesting']"
+                          + " [data-info-popover]"))
+              .getTextContent()
+              .contains("ToppleCat temporarily simulates"));
+      assertFalse(
+          (Boolean)
+              page.executeJavaScript("document.documentElement.scrollWidth > window.innerWidth")
+                  .getJavaScriptResult(),
+          "the pinned explanation must not create horizontal overflow on a narrow viewport");
+      String reportCss = Files.readString(bundle.resolve("assets/report.css"));
+      assertTrue(
+          reportCss.contains("width: 30rem; max-width: calc(100vw - 2rem);"),
+          "the generated report must use a readable desktop width with narrow-viewport margins");
     }
 
     String englishData = Files.readString(bundle.resolve("data.json"));
@@ -544,14 +783,48 @@ class ReportBundleDomTest {
           client.getPage(traditionalChineseBundle.resolve("index.html").toUri().toURL());
       client.waitForBackgroundJavaScript(250);
 
+      ((HtmlElement) page.querySelector("#verification-AC-MEETS [data-ac-toggle]")).click();
+      client.waitForBackgroundJavaScript(50);
       String text = page.asNormalizedText();
       assertTrue(text.contains("突變測試用於評估公開驗收能否辨識正式程式中的模擬錯誤。"));
-      assertTrue(text.contains("這個 AC 共評估 10 個已歸因改動：偵測到 8 個，未偵測到 2 個。"));
+      assertTrue(text.contains("這個 AC 共評估 10 個"));
+      assertTrue(text.contains("偵測到 8 個，未偵測到 2 個。"));
+      HtmlElement traditionalInfoButton =
+          (HtmlElement)
+              page.querySelector(
+                  "#verification-AC-MEETS [data-info-key='mutationTesting'] [data-info-button]");
+      assertEquals("更多關於突變測試", traditionalInfoButton.getAttribute("aria-label"));
+      traditionalInfoButton.click();
+      client.waitForBackgroundJavaScript(25);
+      assertTrue(
+          ((HtmlElement)
+                  page.querySelector(
+                      "#verification-AC-MEETS [data-info-key='mutationTesting']"
+                          + " [data-info-popover]"))
+              .getTextContent()
+              .contains("ToppleCat 會暫時模擬正式程式的小幅改動"));
+      assertTrue(page.asNormalizedText().contains("描述子"));
+      Map.of(
+              "attributedChanges", "這裡只計入精確關聯到這個 AC 公開驗收方法的模擬改動。",
+              "undetectedMutation", "這個模擬改動仍然通過了這個 AC 未改變的公開驗收。",
+              "originalSourceLine", "不一定是改動後的程式文字。",
+              "descriptor", "用於精確技術定位的 JVM 方法簽名。")
+          .forEach(
+              (key, description) ->
+                  assertTrue(
+                      ((HtmlElement)
+                              page.querySelector(
+                                  "#verification-AC-MEETS [data-info-key='"
+                                      + key
+                                      + "'] [data-info-popover]"))
+                          .getTextContent()
+                          .contains(description)));
       HtmlElement below = (HtmlElement) page.querySelector("#verification-AC-BELOW");
-      assertTrue(below.getTextContent().contains("這個 AC 共評估 1 個已歸因改動：偵測到 1 個，未偵測到 0 個。"));
+      assertTrue(below.getTextContent().contains("這個 AC 共評估 1 個"));
+      assertTrue(below.getTextContent().contains("偵測到 1 個，未偵測到 0 個。"));
       assertEquals(0, below.querySelectorAll(".undetected-mutation").getLength());
-      HtmlDetails noData = (HtmlDetails) page.querySelector("#verification-AC-NO-DATA");
-      noData.setOpen(true);
+      HtmlElement noData = (HtmlElement) page.querySelector("#verification-AC-NO-DATA");
+      ((HtmlElement) noData.querySelector("[data-ac-toggle]")).click();
       assertTrue(noData.getTextContent().contains("本次執行沒有突變被精確歸因到這個 AC。"));
       HtmlDetails technicalDetails =
           (HtmlDetails) page.querySelector("#mutation-technical-details");
@@ -851,6 +1124,54 @@ class ReportBundleDomTest {
       assertTrue(technical.getTextContent().contains("SURVIVED"));
       assertTrue(technical.getTextContent().contains("Replaced integer addition with subtraction"));
     }
+  }
+
+  private VerificationView readingControlsView() throws Exception {
+    Map<String, String> titles = new LinkedHashMap<>();
+    List<ToppleCaseData> cases = new ArrayList<>();
+    Map<String, ReportViews.CaseExecution> executions = new LinkedHashMap<>();
+    for (int index = 0; index < 6; index++) {
+      String acId =
+          index == 0 ? "AC-READ-FAIL" : index == 1 ? "AC-READ-INCOMPLETE" : "AC-READ-PASS-" + index;
+      titles.put(acId, "Read " + acId);
+      for (CaseVisibility visibility : List.of(CaseVisibility.PUBLIC, CaseVisibility.HIDDEN)) {
+        String caseId = acId + (visibility == CaseVisibility.PUBLIC ? "-public" : "-hidden");
+        CaseResultStatus status =
+            index == 0 && visibility == CaseVisibility.PUBLIC
+                ? CaseResultStatus.FAIL
+                : index == 1 ? CaseResultStatus.NOT_REPORTED : CaseResultStatus.PASS;
+        cases.add(
+            new ToppleCaseData(
+                caseId,
+                acId,
+                visibility,
+                JSON.readTree("{\"input\":\"" + caseId + "\"}"),
+                JSON.readTree("{\"result\":true}"),
+                Path.of("reading-controls.json")));
+        executions.put(
+            caseId,
+            new ReportViews.CaseExecution(
+                status,
+                status == CaseResultStatus.FAIL ? "The public example found a problem." : null,
+                List.of(),
+                status == CaseResultStatus.NOT_REPORTED ? Map.of() : Map.of("result", "ASSERTED")));
+      }
+    }
+    VerificationView view =
+        ReportViews.verification(
+            titles,
+            cases,
+            executions,
+            true,
+            List.of(
+                new EvidenceGate("CONTRACT_INTEGRITY", EvidenceVerdict.PASS, null),
+                new EvidenceGate("JUNIT", EvidenceVerdict.PASS, null),
+                new EvidenceGate("REVIEWER_JUNIT", EvidenceVerdict.PASS, null),
+                new EvidenceGate("EXPECTED_CONSUMPTION", EvidenceVerdict.PASS, null),
+                new EvidenceGate("PROPERTY", EvidenceVerdict.NOT_APPLICABLE, null),
+                new EvidenceGate("MUTATION", EvidenceVerdict.NOT_APPLICABLE, null)),
+            NOW);
+    return ReportViews.withMutationAttribution(view, null);
   }
 
   private VerificationAcceptanceCondition multiFailureAc(
