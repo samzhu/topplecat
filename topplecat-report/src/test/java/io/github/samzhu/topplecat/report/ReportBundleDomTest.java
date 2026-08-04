@@ -322,6 +322,23 @@ class ReportBundleDomTest {
       assertEquals(30, page.querySelectorAll(".safeguard-chip").getLength());
       assertTrue(page.querySelectorAll(".safeguard-chip.requires-attention").getLength() > 0);
       assertTrue(page.querySelectorAll(".safeguard-chip-reason").getLength() > 0);
+      assertEquals(1, page.querySelectorAll(".contract-integrity-summary").getLength());
+      HtmlElement overview =
+          (HtmlElement)
+              page.querySelector("#verification-AC-READ-FAIL .safeguard-overview");
+      assertOrder(
+          overview.getTextContent(),
+          "Public Acceptance",
+          "Hidden Tests",
+          "Expected Result Check",
+          "Property-Based Testing",
+          "Mutation Testing");
+      assertTrue(
+          ((HtmlElement)
+                  page.querySelector(
+                      "#verification-AC-READ-FAIL .safeguard-chip.requires-attention"))
+              .getTextContent()
+              .contains("At least one recorded case produced a result different"));
       for (String acId : List.of("AC-READ-FAIL", "AC-READ-INCOMPLETE", "AC-READ-PASS-2")) {
         assertNotNull(page.querySelector("#ac-reader-" + acId + "[hidden]"));
         HtmlElement card = (HtmlElement) page.querySelector("#verification-" + acId);

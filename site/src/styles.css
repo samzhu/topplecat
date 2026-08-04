@@ -222,7 +222,7 @@ button { font: inherit; }
 .demonstration-entry:nth-child(2) { background: #e9a34b; color: #143330; }
 .demonstration-entry:nth-child(2) .demonstration-entry-topline, .demonstration-entry:nth-child(2) .demonstration-entry-summary { color: rgba(20, 51, 48, 0.68); }
 .demonstration-entry-evidence { display: block; width: 100%; margin-top: 16px; border: 1px solid rgba(244, 240, 232, 0.18); background: #102c2b; overflow: hidden; }
-.demonstration-entry-evidence .demonstration-report-image { max-height: 112px; object-fit: cover; object-position: top; }
+.demonstration-entry-evidence .demonstration-report-image { height: auto; object-fit: contain; object-position: top; }
 .demonstration-entry:nth-child(2) .demonstration-entry-evidence { border-color: rgba(20, 51, 48, 0.24); }
 .demonstration-entry:nth-child(3) { background: #174c48; background-image: radial-gradient(circle at 80% 15%, rgba(232, 161, 74, 0.3), transparent 34%); }
 .demonstration-entry:nth-child(4) { background: #f0ede5; color: #133331; }
