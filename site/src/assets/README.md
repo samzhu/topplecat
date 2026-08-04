@@ -24,6 +24,7 @@ rather than carrying manual version suffixes.
 | `props/cup-upright-{320,640,960}.avif` / `.webp` | Upright cup used by the PASS frames |
 | `props/cup-tipped-{320,640,960}.avif` / `.webp` | Side-tipped cup and spill used by the FAKE frame |
 | `scene/tabletop.svg` | Full-width wooden tabletop layer |
+| `demonstrations/*-{640,1280}.jpg` | Public-safe, responsive excerpts from the six synthetic Verification Report demonstrations |
 
 The preserved sources are intentionally versioned below `original/`:
 
@@ -52,3 +53,8 @@ contract.
 Discarded iterations and editor metadata should not be added below
 `src/assets`. The original visual reference remains
 `docs/images/topplecat-readme-hero.png`.
+
+The demonstration excerpts are intentionally cropped assets, not report
+exports. When replacing one, retain only the public-safe evidence named by the
+story and produce both 640px and 1280px variants; do not add the complete
+Reviewer-only report or private diagnostics.

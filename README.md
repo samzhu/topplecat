@@ -178,8 +178,10 @@ evidence. Failed cases show input and expected/actual differences first;
 Scenario Steps, raw failures, Gate verdicts, and PIT details remain available
 for deeper inspection. Every AC begins with its key result visible; use its
 reading control for one AC or the report-wide control for incremental all-AC
-reading. Technical evidence remains independently collapsed, and linked AC or
-safeguard targets are revealed before the report moves to them.
+reading. A failed or incomplete safeguard is emphasized with its recorded
+plain-language reason; the fixed safeguard order and technical evidence remain
+unchanged. Technical evidence remains independently collapsed, and linked AC
+or safeguard targets are revealed before the report moves to them.
 
 The aggregate verdict is:
 

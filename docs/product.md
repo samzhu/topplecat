@@ -66,12 +66,15 @@ expected/actual differences before Scenario Steps and raw failures.
 
 Each Verification Report opens every Acceptance Condition at that key-result
 layer: its ID, title, status, plain-language verification result, and the five
-safeguard outcomes. Reader details start closed, including for failed or
-unreported ACs. The Reviewer can expand one AC to read all of its case-level
-reader content, or use the report-wide control to expand and later return the
-complete list to key results; technical evidence remains a separate deliberate
-disclosure. Links to an AC or safeguard reveal the required reader content
-before positioning the page, while the controls preserve the Reviewer’s place.
+safeguard outcomes. A safeguard that found a problem or could not be assessed
+is visually emphasized and keeps its recorded reader-safe reason beside the
+outcome; passing and neutral safeguards remain compact for scanning. Reader
+details start closed, including for failed or unreported ACs. The Reviewer can
+expand one AC to read all of its case-level reader content, or use the
+report-wide control to expand and later return the complete list to key
+results; technical evidence remains a separate deliberate disclosure. Links to
+an AC or safeguard reveal the required reader content before positioning the
+page, while the controls preserve the Reviewer’s place.
 
 For either reading moment, the Reviewer may select `--language en` or
 `--language zh-TW` on that command. English is the default. This changes only
@@ -87,8 +90,15 @@ same product boundary: an agent's done claim earns `PASS` only when every
 required Gate passes in a current run. It explains the independent checks and
 the Reviewer’s final responsibility in English and Traditional Chinese, then
 points developers to the Java/JUnit installation path and source repository.
-It is a public introduction, not another report, contract input, verification
-surface, or source of organizational approval.
+It now shows six image-backed, public-safe synthetic checkout demonstrations:
+Public Acceptance, Hidden Tests, Expected Consumption, Property-Based Testing,
+Mutation Testing, and Contract Integrity. Each card is labelled as a
+reproducible demonstration and opens an excerpt from its matching synthetic
+Verification Report alongside bounded explanations of what changed, what was
+observed, what the Gate verdict supports, and what it cannot prove. These are
+curated explanations, not another report, contract input, Verification Report,
+Current-run Evidence, safe Implementation Agent feedback, or source of
+organizational approval.
 
 ## Responsibility boundary
 

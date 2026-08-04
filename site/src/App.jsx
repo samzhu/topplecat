@@ -16,6 +16,18 @@ import uprightCup320Webp from "./assets/props/cup-upright-320.webp";
 import uprightCup640Webp from "./assets/props/cup-upright-640.webp";
 import uprightCup960Webp from "./assets/props/cup-upright-960.webp";
 import stageFloorLayer from "./assets/scene/tabletop.svg";
+import contractIntegrity640 from "./assets/demonstrations/contract-integrity-640.jpg";
+import contractIntegrity1280 from "./assets/demonstrations/contract-integrity-1280.jpg";
+import expectedConsumption640 from "./assets/demonstrations/expected-consumption-640.jpg";
+import expectedConsumption1280 from "./assets/demonstrations/expected-consumption-1280.jpg";
+import hiddenTests640 from "./assets/demonstrations/hidden-tests-640.jpg";
+import hiddenTests1280 from "./assets/demonstrations/hidden-tests-1280.jpg";
+import mutationTesting640 from "./assets/demonstrations/mutation-testing-640.jpg";
+import mutationTesting1280 from "./assets/demonstrations/mutation-testing-1280.jpg";
+import propertyTesting640 from "./assets/demonstrations/property-based-testing-640.jpg";
+import propertyTesting1280 from "./assets/demonstrations/property-based-testing-1280.jpg";
+import publicAcceptance640 from "./assets/demonstrations/public-acceptance-640.jpg";
+import publicAcceptance1280 from "./assets/demonstrations/public-acceptance-1280.jpg";
 
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
@@ -116,6 +128,111 @@ const copyByLocale = {
           title: "The agent cannot move the goalposts.",
           body: "The public contract and verification policy must still match the reviewer’s seal before any other result can count.",
           className: "integrity",
+        },
+      ],
+    },
+    demonstrations: {
+      kicker: "A public-safe proof in miniature",
+      heading: "See what each safeguard can challenge",
+      summary:
+        "Six independent, reproducible demonstrations show the different ways a delivery can look done before the accepted contract has really been tested.",
+      sectionLabel: "Safeguard demonstrations",
+      syntheticLabel: "Reproducible demonstration",
+      open: "Open demonstration",
+      close: "Close demonstration",
+      modalLabel: "Demonstration details",
+      layers: {
+        changed: "What changed",
+        observed: "What ToppleCat observed",
+        verdict: "Gate verdict",
+        supports: "What the result supports",
+        cannotProve: "What it cannot prove",
+      },
+      excerptLabel: "Verification Report excerpt · synthetic run",
+      stories: [
+        {
+          id: "hidden-tests",
+          label: "Hidden Tests",
+          detailLabel: "Reviewer-chosen cases",
+          title: "The public answer passed. A different legal checkout did not.",
+          summary:
+            "One public checkout example received its discount. Another legal example exposed an implementation that only handled the answer it had seen.",
+          gate: "REVIEWER_JUNIT",
+          verdict: "FAIL",
+          changed:
+            "The clean baseline was changed so it handled the visible checkout example but did not apply the same discount rule to another legal checkout.",
+          observed:
+            "The public example passed, but another legal example produced a different result. Hidden Tests attributed the mismatch to the same public Acceptance Method.",
+          supports:
+            "This supports that the implementation does not satisfy the public rule as a general rule.",
+          cannotProve:
+            "One extra example cannot find every shortcut. It does not reveal whether the Implementation Agent was lazy, deceptive, or acting with any other intent, and it does not prove every rule is complete.",
+        },
+        {
+          id: "public-acceptance",
+          label: "Public Acceptance",
+          detailLabel: "The public rule",
+          title: "The written public rule fails immediately.",
+          summary: "The basic public example does not meet the rule written into the Executable Contract.",
+          gate: "JUNIT",
+          verdict: "FAIL",
+          changed: "The delivery was evaluated against the public checkout rule.",
+          observed: "The public Acceptance Method returned a result that did not meet its authored rule.",
+          supports: "This supports that the delivery does not meet the public rule in the contract.",
+          cannotProve: "It does not reveal intent or prove behavior for every other input.",
+        },
+        {
+          id: "expected-consumption",
+          label: "Expected Consumption",
+          detailLabel: "The assertion obligation",
+          title: "The test read the answer but never checked it.",
+          summary: "A declared result was available, but the acceptance work never compared actual and expected receipts.",
+          gate: "EXPECTED_CONSUMPTION",
+          verdict: "FAIL",
+          changed: "The acceptance flow read an expected receipt and then skipped the comparison.",
+          observed:
+            "ToppleCat saw that the expected result was consumed as data but the acceptance contract did not assert the actual receipt against it. A related public JUnit failure is the same missing-comparison root cause.",
+          supports: "This supports that the acceptance contract did not prove actual and expected receipts match.",
+          cannotProve: "It does not show that the production calculator is incorrect, and it is not a second production defect.",
+        },
+        {
+          id: "property-based-testing",
+          label: "Property-Based Testing",
+          detailLabel: "The approved invariant",
+          title: "A generated legal input finds a counterexample.",
+          summary: "Examples missed a legal range that violated the approved invariant.",
+          gate: "PROPERTY",
+          verdict: "FAIL",
+          changed: "The delivery was checked against a human-approved invariant across bounded generated inputs.",
+          observed: "Property-Based Testing encountered a legal generated input that violated the invariant.",
+          supports: "This supports that the visible examples missed a legal range of behavior.",
+          cannotProve: "One counterexample is evidence, not proof of every unstated business rule.",
+        },
+        {
+          id: "mutation-testing",
+          label: "Mutation Testing",
+          detailLabel: "A changed implementation",
+          title: "A temporary code change survives its acceptance method.",
+          summary: "The attributed public Acceptance Method still passed after a temporary production-behavior change.",
+          gate: "MUTATION",
+          verdict: "FAIL",
+          changed: "ToppleCat temporarily changed production behavior using the managed mutation profile for the selected public Acceptance Method.",
+          observed: "That unchanged public Acceptance Method still passed the attributed temporary change.",
+          supports: "This supports that the Acceptance Method did not distinguish that temporary production change.",
+          cannotProve: "It does not mean the unchanged production program already contains that bug, and it does not provide a project-wide score.",
+        },
+        {
+          id: "contract-integrity",
+          label: "Contract Integrity",
+          detailLabel: "The sealed question",
+          title: "The sealed contract changed before Verify.",
+          summary: "The approved question no longer matched the Mechanical Seal, so downstream judgment stopped.",
+          gate: "CONTRACT_INTEGRITY",
+          verdict: "FAIL",
+          changed: "The content checked at Verify no longer matched the previously sealed Executable Contract or verification policy.",
+          observed: "Contract Integrity refused to treat the changed content as the approved question, and downstream safeguards were recorded as INCOMPLETE.",
+          supports: "This supports that ToppleCat refused to make downstream evidence count from a changed contract.",
+          cannotProve: "It does not identify a production defect or Implementation Agent intent, and the unexecuted safeguards are not functional failures.",
         },
       ],
     },
@@ -291,6 +408,105 @@ const copyByLocale = {
         },
       ],
     },
+    demonstrations: {
+      kicker: "用一個公開安全的案例看懂",
+      heading: "成功抓到問題的案例",
+      summary:
+        "六個獨立、可重現的示範，展示一份交付看似完成，卻還沒有真正接受完整契約檢驗的不同方式。",
+      sectionLabel: "防護示範",
+      syntheticLabel: "可重現示範",
+      open: "開啟示範",
+      close: "關閉示範",
+      modalLabel: "示範細節",
+      layers: {
+        changed: "改變了什麼",
+        observed: "ToppleCat 觀察到什麼",
+        verdict: "Gate 判定",
+        supports: "這個結果支持什麼",
+        cannotProve: "它不能證明什麼",
+      },
+      excerptLabel: "Verification Report 摘錄 · 合成執行",
+      stories: [
+        {
+          id: "hidden-tests",
+          label: "隱藏測試",
+          detailLabel: "審查者挑選的案例",
+          title: "公開答案通過了，但另一個合法結帳案例沒有。",
+          summary: "一個公開結帳案例拿到了折扣；另一個合法案例，揭露實作只處理了它看過的答案。",
+          gate: "REVIEWER_JUNIT",
+          verdict: "FAIL",
+          changed: "乾淨的基準實作被改成只處理看得到的結帳案例，沒有對另一個合法結帳案例套用同一條折扣規則。",
+          observed: "公開案例通過了，但另一個合法案例產生不同結果。隱藏測試將這個差異歸因到同一個公開 Acceptance Method。",
+          supports: "這支持實作沒有把公開規則當成一條一般規則來滿足。",
+          cannotProve: "多一個案例也找不出所有捷徑；它不會揭露 Implementation Agent 是偷懶、欺騙或出於任何其他意圖，也不證明所有規則都完整。",
+        },
+        {
+          id: "public-acceptance",
+          label: "公開驗收",
+          detailLabel: "公開規則",
+          title: "寫進契約的公開規則立刻失敗。",
+          summary: "基本公開案例沒有符合寫在可執行契約裡的規則。",
+          gate: "JUNIT",
+          verdict: "FAIL",
+          changed: "這份交付接受了公開結帳規則的檢驗。",
+          observed: "公開 Acceptance Method 回傳的結果沒有符合它所綁定的規則。",
+          supports: "這支持交付沒有符合契約裡的公開規則。",
+          cannotProve: "它不會揭露意圖，也不證明其他所有輸入的行為。",
+        },
+        {
+          id: "expected-consumption",
+          label: "預期值使用",
+          detailLabel: "斷言義務",
+          title: "測試讀到了答案，卻從未檢查它。",
+          summary: "宣告的結果已經可用，但驗收工作沒有比較實際收據與預期收據。",
+          gate: "EXPECTED_CONSUMPTION",
+          verdict: "FAIL",
+          changed: "驗收流程讀取了預期收據，接著跳過了比較。",
+          observed: "ToppleCat 看見預期結果被當成資料讀取，卻沒有在驗收契約中拿實際收據進行斷言。相關的公開 JUnit 失敗是同一個缺少比較的根本原因。",
+          supports: "這支持驗收契約沒有證明實際收據與預期收據相符。",
+          cannotProve: "它不表示 production calculator 算錯，也不是第二個 production defect。",
+        },
+        {
+          id: "property-based-testing",
+          label: "性質導向測試",
+          detailLabel: "核准的不變量",
+          title: "產生的合法輸入找到反例。",
+          summary: "一般案例漏掉了一段違反核准不變量的合法範圍。",
+          gate: "PROPERTY",
+          verdict: "FAIL",
+          changed: "這份交付接受一條由人核准的不變量，以及有界限的產生輸入檢驗。",
+          observed: "Property-Based Testing 遇到了一個違反不變量的合法產生輸入。",
+          supports: "這支持一般案例漏掉了一段合法行為範圍。",
+          cannotProve: "一個反例是證據，不是所有未明說的業務規則都完整的證明。",
+        },
+        {
+          id: "mutation-testing",
+          label: "變異測試",
+          detailLabel: "變更後的實作",
+          title: "暫時的程式變更通過了它的驗收方法。",
+          summary: "歸因到該方法的公開 Acceptance Method，在暫時改變 production 行為後仍然通過。",
+          gate: "MUTATION",
+          verdict: "FAIL",
+          changed: "ToppleCat 使用託管的 mutation profile，為選定的公開 Acceptance Method 暫時改變 production 行為。",
+          observed: "那個未變更的公開 Acceptance Method 仍然通過了這個被歸因的暫時變更。",
+          supports: "這支持 Acceptance Method 沒有辨識出這個暫時的 production 變更。",
+          cannotProve: "它不表示未變更的 production program 原本就有這個 bug，也不提供全專案分數。",
+        },
+        {
+          id: "contract-integrity",
+          label: "契約完整性",
+          detailLabel: "封存的問題",
+          title: "封存的契約在 Verify 前改變了。",
+          summary: "核准的問題不再符合 Mechanical Seal，因此下游判定停止。",
+          gate: "CONTRACT_INTEGRITY",
+          verdict: "FAIL",
+          changed: "Verify 檢查的內容，不再符合先前封存的可執行契約或驗證政策。",
+          observed: "Contract Integrity 拒絕把改變後的內容當成核准的問題，下游防護被記錄為 INCOMPLETE。",
+          supports: "這支持 ToppleCat 拒絕讓來自變更契約的下游證據計入結果。",
+          cannotProve: "它不指出 production defect 或 Implementation Agent 意圖；未執行的防護也不是功能失敗。",
+        },
+      ],
+    },
     scenario: {
       heading: "審查讀到的內容，就是測試實際執行的內容。",
       body:
@@ -422,13 +638,117 @@ const cupSources = {
   },
 };
 
+const demonstrationReportImages = {
+  "public-acceptance": { preview: publicAcceptance640, detail: publicAcceptance1280 },
+  "hidden-tests": { preview: hiddenTests640, detail: hiddenTests1280 },
+  "expected-consumption": { preview: expectedConsumption640, detail: expectedConsumption1280 },
+  "property-based-testing": { preview: propertyTesting640, detail: propertyTesting1280 },
+  "mutation-testing": { preview: mutationTesting640, detail: mutationTesting1280 },
+  "contract-integrity": { preview: contractIntegrity640, detail: contractIntegrity1280 },
+};
+
+function DemonstrationReportImage({ demonstration, copy, detail = false, className = "" }) {
+  const image = demonstrationReportImages[demonstration.id];
+  const sizes = detail
+    ? "(max-width: 700px) calc(100vw - 64px), 900px"
+    : "(max-width: 700px) calc(100vw - 76px), 360px";
+
+  return (
+    <img
+      className={`demonstration-report-image ${className}`}
+      src={detail ? image.detail : image.preview}
+      srcSet={`${image.preview} 640w, ${image.detail} 1280w`}
+      sizes={sizes}
+      width={detail ? "1280" : "640"}
+      alt={`${copy.excerptLabel}: ${demonstration.title}`}
+      loading={detail ? "eager" : "lazy"}
+      decoding="async"
+    />
+  );
+}
+
+function DemonstrationModal({ demonstration, copy, dialogRef, onClose }) {
+  if (!demonstration) return null;
+
+  const titleId = `demonstration-title-${demonstration.id}`;
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="demonstration-dialog"
+      aria-labelledby={titleId}
+      aria-describedby={`${titleId}-summary`}
+      aria-modal="true"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="demonstration-dialog-panel">
+        <div className="demonstration-dialog-header">
+          <div>
+            <p className="dialog-kicker">{copy.modalLabel}</p>
+            <p className="dialog-story-label">{demonstration.label} · {copy.syntheticLabel}</p>
+            <h2 id={titleId}>{demonstration.title}</h2>
+            <p id={`${titleId}-summary`} className="dialog-summary">{demonstration.summary}</p>
+          </div>
+          <button className="dialog-close" type="button" onClick={onClose} data-demo-close>
+            {copy.close} <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <figure className="demonstration-dialog-evidence">
+          <DemonstrationReportImage demonstration={demonstration} copy={copy} detail />
+          <figcaption>{copy.excerptLabel}</figcaption>
+        </figure>
+        <div className="demonstration-dialog-layers">
+          <section>
+            <h3>{copy.layers.changed}</h3>
+            <p>{demonstration.changed}</p>
+          </section>
+          <section>
+            <h3>{copy.layers.observed}</h3>
+            <p>{demonstration.observed}</p>
+          </section>
+          <section className="dialog-verdict-layer">
+            <h3>{copy.layers.verdict}</h3>
+            <p><code>{demonstration.gate}</code><strong>{demonstration.verdict}</strong></p>
+          </section>
+          <section>
+            <h3>{copy.layers.supports}</h3>
+            <p>{demonstration.supports}</p>
+          </section>
+          <section>
+            <h3>{copy.layers.cannotProve}</h3>
+            <p>{demonstration.cannotProve}</p>
+          </section>
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
 function App() {
   const scope = useRef(null);
   const motion = useRef({ gsap: null, Flip: null, gsapPromise: null });
   const [locale, setLocale] = useState(localeFromUrl);
   const [activeAccordion, setActiveAccordion] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [activeDemonstration, setActiveDemonstration] = useState(null);
+  const demonstrationDialogRef = useRef(null);
+  const demonstrationOpenerRef = useRef(null);
   const copy = copyByLocale[locale];
+  const primaryDemonstration = copy.demonstrations.stories.find(
+    (demonstration) => demonstration.id === "public-acceptance",
+  );
 
   const loadGsap = async () => {
     if (motion.current.gsap) return motion.current;
@@ -450,6 +770,18 @@ function App() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (!activeDemonstration || !demonstrationDialogRef.current) return undefined;
+
+    const dialog = demonstrationDialogRef.current;
+    if (!dialog.open) dialog.showModal();
+    dialog.querySelector("[data-demo-close]")?.focus();
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [activeDemonstration]);
 
   useEffect(() => {
     document.documentElement.lang = copy.htmlLang;
@@ -586,6 +918,18 @@ function App() {
     } catch {
       setCopied(false);
     }
+  };
+
+  const openDemonstration = (demonstration, event) => {
+    demonstrationOpenerRef.current = event.currentTarget;
+    setActiveDemonstration(demonstration);
+  };
+
+  const closeDemonstration = () => {
+    const dialog = demonstrationDialogRef.current;
+    if (dialog?.open) dialog.close();
+    setActiveDemonstration(null);
+    window.requestAnimationFrame(() => demonstrationOpenerRef.current?.focus());
   };
 
   return (
@@ -728,6 +1072,83 @@ function App() {
           ))}
         </div>
       </section>
+
+      <section className="demonstration-section content-width" id="demonstrations" aria-labelledby="demonstrations-heading">
+        <div className="section-heading demonstration-heading">
+          <p className="kicker">{copy.demonstrations.kicker}</p>
+          <h2 id="demonstrations-heading">{copy.demonstrations.heading}</h2>
+          <p className="section-summary">{copy.demonstrations.summary}</p>
+        </div>
+
+        <div className="demonstration-feature">
+          <div className="demonstration-feature-copy">
+            <div className="card-topline">
+              <span>{copy.demonstrations.syntheticLabel}</span>
+              <span>{copy.demonstrations.sectionLabel}</span>
+            </div>
+            <p className="demonstration-feature-label">{primaryDemonstration.label}</p>
+            <h3>{primaryDemonstration.title}</h3>
+            <p className="demonstration-feature-summary">{primaryDemonstration.summary}</p>
+            <div className="demonstration-attribution">
+              <span>{primaryDemonstration.label}</span>
+              <code>{primaryDemonstration.gate}</code>
+              <strong>{primaryDemonstration.verdict}</strong>
+            </div>
+          </div>
+
+          <figure className="demonstration-feature-evidence">
+            <DemonstrationReportImage demonstration={primaryDemonstration} copy={copy.demonstrations} />
+            <figcaption>{copy.demonstrations.excerptLabel}</figcaption>
+          </figure>
+
+          <div className="demonstration-feature-footer">
+            <p>{primaryDemonstration.supports}</p>
+            <button
+              className="button button-amber"
+              type="button"
+              aria-haspopup="dialog"
+              data-demo-entry={primaryDemonstration.id}
+              onClick={(event) => openDemonstration(primaryDemonstration, event)}
+            >
+              {copy.demonstrations.open} <Arrow />
+            </button>
+          </div>
+        </div>
+
+        <div className="demonstration-secondary-list" aria-label={copy.demonstrations.sectionLabel}>
+          {copy.demonstrations.stories.filter((demonstration) => demonstration.id !== primaryDemonstration.id).map((demonstration) => (
+            <button
+              className="demonstration-entry"
+              type="button"
+              aria-haspopup="dialog"
+              data-demo-entry={demonstration.id}
+              key={demonstration.id}
+              onClick={(event) => openDemonstration(demonstration, event)}
+            >
+              <span className="demonstration-entry-topline">
+                <span>{copy.demonstrations.syntheticLabel}</span>
+                <span>{demonstration.label}</span>
+              </span>
+              <span className="demonstration-entry-evidence">
+                <DemonstrationReportImage demonstration={demonstration} copy={copy.demonstrations} />
+              </span>
+              <span className="demonstration-entry-title">{demonstration.title}</span>
+              <span className="demonstration-entry-summary">{demonstration.summary}</span>
+              <span className="demonstration-entry-footer">
+                <span><code>{demonstration.gate}</code> · {demonstration.verdict}</span>
+                <Arrow />
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <DemonstrationModal
+        demonstration={activeDemonstration}
+        copy={copy.demonstrations}
+        dialogRef={demonstrationDialogRef}
+        onClose={closeDemonstration}
+      />
 
       <section className="scenario-section content-width" id="contract">
         <div className="scenario-copy">

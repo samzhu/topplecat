@@ -240,12 +240,14 @@ available in collapsed sections.
 
 Every AC starts in key-result-only state on each report load, including `FAIL`
 and `NOT_REPORTED` ACs. Its ID, title, status, plain-language result, and all
-five safeguard outcomes remain visible. Use **Expand this AC** to open that
-AC’s reader details and every public and hidden case reader layer at once; the
-case reader still leads with input and expected/actual comparison, while
-complete expected data, execution details, raw failures, Gate evidence, and
-producer details remain independently collapsed. **This AC: key result only**
-closes just that AC.
+five safeguard outcomes remain visible. A safeguard that found a problem or
+could not be fully assessed is larger and states its recorded reader-safe reason
+in the key-result layer; this is a reading aid, not a second Gate result. Use
+**Expand this AC** to open that AC’s reader details and every public and hidden
+case reader layer at once; the case reader still leads with input and
+expected/actual comparison, while complete expected data, execution details,
+raw failures, Gate evidence, and producer details remain independently
+collapsed. **This AC: key result only** closes just that AC.
 
 The AC list has a sticky reading toolbar. **Expand all ACs** performs the same
 reader-level expansion in bounded browser-scheduled batches and announces

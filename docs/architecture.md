@@ -207,8 +207,10 @@ Property-Based Testing, and Mutation Testing in that order.
 The Java report projection assigns each safeguard both its canonical Gate
 verdict and a stable reader outcome and reason. The offline renderer localizes
 those reader fields; it does not derive their meaning from a verdict or parse a
-producer reason. Canonical reasons remain available in collapsed technical
-evidence.
+producer reason. In the key-result grid, a failed or incomplete safeguard spans
+the visual focus and repeats that reader-safe reason, while the fixed five-item
+order and all evidence values remain unchanged. Canonical reasons remain
+available in collapsed technical evidence.
 The AC workspace uses the available main report column on wider screens while
 Spec Review keeps its prose-oriented measure; narrow screens remain one column.
 When a `ToppleCase.verify(...)` comparison differs, the active compiler Step

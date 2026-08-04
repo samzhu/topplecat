@@ -129,6 +129,10 @@ table appear to float.
 
 These visual relationships must remain true:
 
+- The cat is centered by its own visible sprite body, not by the combined
+  cat-and-cup composition. Recalibrate the cat, cup, coaster, and PASS/FAKE
+  coordinates together when the composition changes; never patch one layer in
+  isolation.
 - In Rest, the cup sits centered on the coaster.
 - In Contact, the paw just touches the cup rim; the cup and coaster do not move.
 - In Verdict, the cup moves slightly away from the cat and tips sideways. It

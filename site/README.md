@@ -12,6 +12,20 @@ npm run build
 The deployment workflow uploads `site/dist` as a GitHub Pages artifact. It does
 not create or maintain a `gh-pages` branch.
 
+## Public safeguard demonstrations
+
+The page includes six public-safe, synthetic checkout demonstrations. Each
+card uses a responsive image excerpt from its matching synthetic Verification
+Report and opens the same evidence in a native dialog with bounded explanation
+layers. Maintain the public-information boundary: crop or recapture the source
+excerpt rather than exposing reviewer-only inputs, expected or actual values,
+counterexamples, replay material, raw failures, paths, or producer diagnostics.
+Keep every story separate from Reviewer HTML, Current-run Evidence, safe agent
+feedback, private diagnostics, and organizational approval. Verify the
+rendered production page after content, interaction, responsive, accessibility,
+or language changes; the demonstrations are a curated explanation surface, not
+a second Verification Report.
+
 ## Hero animation
 
 Read [`ANIMATION.md`](ANIMATION.md) before changing the hero artwork, sprite,

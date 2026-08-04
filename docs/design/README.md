@@ -9,7 +9,7 @@ Current product facts belong in the [Product definition](../product.md),
 
 ## Active designs
 
-There are no active designs.
+None.
 
 ## Decide by content
 

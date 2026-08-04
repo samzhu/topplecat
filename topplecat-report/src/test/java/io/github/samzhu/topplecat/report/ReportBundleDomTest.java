@@ -320,6 +320,8 @@ class ReportBundleDomTest {
 
       assertEquals(6, page.querySelectorAll(".ac-card").getLength());
       assertEquals(30, page.querySelectorAll(".safeguard-chip").getLength());
+      assertTrue(page.querySelectorAll(".safeguard-chip.requires-attention").getLength() > 0);
+      assertTrue(page.querySelectorAll(".safeguard-chip-reason").getLength() > 0);
       for (String acId : List.of("AC-READ-FAIL", "AC-READ-INCOMPLETE", "AC-READ-PASS-2")) {
         assertNotNull(page.querySelector("#ac-reader-" + acId + "[hidden]"));
         HtmlElement card = (HtmlElement) page.querySelector("#verification-" + acId);

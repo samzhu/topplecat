@@ -455,9 +455,18 @@
     const undetected = ac.undetectedMutations || [];
     return `<p>${t('mutation.summary', e(assessment.coveredMutantCount), informationControl('attributedChanges'), e(assessment.killedByAcceptanceMethodMutantCount), e(undetected.length))}</p>${undetected.map(mutationDetail).join('')}`;
   };
+  const safeguardOverviewItem = (ac, item) => {
+    const label = t(`acResults.${item.name === 'PUBLIC_ACCEPTANCE' ? 'publicAcceptance' : item.name === 'HIDDEN_TESTS' ? 'hiddenTests' : item.name === 'EXPECTED_RESULT_CHECK' ? 'expectedResult' : item.name === 'PROPERTY_BASED_TESTING' ? 'propertyTesting' : 'mutationTesting'}`);
+    const outcome = safeguardLabel(item);
+    const reason = safeguardReason(item);
+    const needsAttention = item.verdict === 'FAIL' || item.verdict === 'INCOMPLETE';
+    const attentionClass = needsAttention ? ' requires-attention' : '';
+    const reasonMarkup = needsAttention ? `<span class="safeguard-chip-reason">${e(reason)}</span>` : '';
+    return `<a class="safeguard-chip ${e(item.verdict)} outcome-${e(item.outcome)}${attentionClass}" href="#ac-${id(ac.acId)}-${id(item.name.toLowerCase())}" aria-label="${e(`${label}: ${outcome}. ${reason}`)}"><span class="safeguard-chip-label">${e(label)}</span><strong>${e(outcome)}</strong>${reasonMarkup}</a>`;
+  };
   const acCard = ac => {
     const statusText = ac.status === 'FAIL' ? t('verification.failedAc') : ac.status === 'NOT_REPORTED' ? t('verification.incompleteAc') : t('verification.passedAc');
-    const overview = (ac.safeguards || []).map(item => `<a class="safeguard-chip ${e(item.verdict)}" href="#ac-${id(ac.acId)}-${id(item.name.toLowerCase())}"><span>${e(t(`acResults.${item.name === 'PUBLIC_ACCEPTANCE' ? 'publicAcceptance' : item.name === 'HIDDEN_TESTS' ? 'hiddenTests' : item.name === 'EXPECTED_RESULT_CHECK' ? 'expectedResult' : item.name === 'PROPERTY_BASED_TESTING' ? 'propertyTesting' : 'mutationTesting'}`))}</span><strong>${e(safeguardLabel(item))}</strong></a>`).join('');
+    const overview = (ac.safeguards || []).map(item => safeguardOverviewItem(ac, item)).join('');
     const acStatusLabel = ac.status === 'NOT_REPORTED' ? t('acResults.incomplete') : ac.status === 'FAIL' ? t('acResults.failed') : t('acResults.passed');
     const identityId = `ac-identity-${id(ac.acId)}`;
     const readerId = `ac-reader-${id(ac.acId)}`;
@@ -508,7 +517,8 @@
     const passed = run.passedAcceptanceConditionCount ?? acs.filter(ac => ac.status === 'PASS').length;
     const failed = run.failedAcceptanceConditionCount ?? acs.filter(ac => ac.status === 'FAIL').length;
     const incomplete = run.incompleteAcceptanceConditionCount ?? acs.filter(ac => ac.status === 'NOT_REPORTED').length;
-    document.getElementById('summary').innerHTML = `<section class="report-intro verification ${e(data.verdict)}"><h2>${e(conclusion)}</h2><p>${t('verification.aggregate', e(acs.length), e(passed), e(failed), e(incomplete))}</p><p class="contract-integrity-summary">${contractIntegritySummary()}</p><p class="meta">${t('verification.run', `<code>${e(run.runId || t('verification.unavailable'))}</code>`, e(run.startedAt || t('verification.unavailable')), e(run.finishedAt || data.generatedAt || t('verification.unavailable')))}</p><p class="meta">${t('verification.scope', e(selected), e(scope.executedHiddenRows ?? 0), e(scope.executedPublicProperties ?? 0))}</p></section><section class="filter-controls" aria-label="${t('verification.filters')}"><label>${t('verification.find')} <input id="case-query" type="search" autocomplete="off"></label>${['FAIL','PASS','NOT_REPORTED'].map(status => `<button type="button" data-status-filter="${status}" aria-pressed="false">${status}</button>`).join('')}</section>${needsAttention(acs)}`;
+    const integrityVerdict = gate('CONTRACT_INTEGRITY').verdict;
+    document.getElementById('summary').innerHTML = `<section class="report-intro verification ${e(data.verdict)}"><h2>${e(conclusion)}</h2><p>${t('verification.aggregate', e(acs.length), e(passed), e(failed), e(incomplete))}</p><section class="contract-integrity-summary ${e(integrityVerdict)}" data-integrity-verdict="${e(integrityVerdict)}" aria-label="${e(t('verification.contractIntegrity'))}"><span>${e(t('verification.contractIntegrity'))}</span><strong>${e(contractIntegritySummary())}</strong></section><p class="meta">${t('verification.run', `<code>${e(run.runId || t('verification.unavailable'))}</code>`, e(run.startedAt || t('verification.unavailable')), e(run.finishedAt || data.generatedAt || t('verification.unavailable')))}</p><p class="meta">${t('verification.scope', e(selected), e(scope.executedHiddenRows ?? 0), e(scope.executedPublicProperties ?? 0))}</p></section><section class="filter-controls" aria-label="${t('verification.filters')}"><label>${t('verification.find')} <input id="case-query" type="search" autocomplete="off"></label>${['FAIL','PASS','NOT_REPORTED'].map(status => `<button type="button" data-status-filter="${status}" aria-pressed="false">${status}</button>`).join('')}</section>${needsAttention(acs)}`;
     const blocked = `<p class="suppressed">${contractIntegritySummary()}</p>`;
     const readingToolbar = `<div class="ac-reading-toolbar" data-ac-toolbar role="toolbar" aria-label="${e(t('verification.readingToolbar'))}" aria-controls="ac-list" aria-busy="false"><button type="button" class="global-reading-control" data-global-reading aria-expanded="false">${t('verification.expandAll')}</button><span class="bulk-reading-status" data-bulk-status data-completed="0" data-total="0" role="status" aria-live="polite"></span></div>`;
     document.getElementById('report').innerHTML = `<section class="report-section verification-workspace" id="all-acs"><h2>${t('verification.allAcs')}</h2>${integrityFailed() ? blocked : `${readingToolbar}<div id="ac-list" class="ac-list">${acs.map(acCard).join('')}</div>`}</section>${technicalEvidence()}`;
