@@ -12,19 +12,29 @@ npm run build
 The deployment workflow uploads `site/dist` as a GitHub Pages artifact. It does
 not create or maintain a `gh-pages` branch.
 
+## Get started content
+
+The Get started section introduces ToppleCat as a verification step inside an
+existing agent workflow, not a plugin that decides what to test. It may link to
+external Spec or skill projects as optional references, but must state that the
+external workflow owns the Spec, plan, and task state. The project-local
+`topplecat-acceptance` skill binds human-selected ACs to Java/JUnit acceptance
+work; ToppleCat's Reviewer sequence happens after that contract is prepared.
+
 ## Public safeguard demonstrations
 
-The page includes six public-safe, synthetic checkout demonstrations. Each
-card uses a responsive image excerpt from its matching synthetic Verification
-Report and opens the same evidence in a native dialog with bounded explanation
-layers. Maintain the public-information boundary: crop or recapture the source
-excerpt rather than exposing reviewer-only inputs, expected or actual values,
-counterexamples, replay material, raw failures, paths, or producer diagnostics.
-Keep every story separate from Reviewer HTML, Current-run Evidence, safe agent
-feedback, private diagnostics, and organizational approval. Verify the
-rendered production page after content, interaction, responsive, accessibility,
-or language changes; the demonstrations are a curated explanation surface, not
-a second Verification Report.
+The page includes six clearly labelled, synthetic checkout demonstrations for
+human visitors. Each card uses a responsive image excerpt from its matching
+synthetic Verification Report and opens the same evidence in a native dialog
+with bounded explanation layers. A fully synthetic story may show the complete
+report details needed to demonstrate how ToppleCat found the problem, including
+synthetic reviewer cases, values, counterexamples, replay material, paths, and
+producer diagnostics. Never use material from an actual delivery. Keep every
+story separate from Reviewer HTML, Current-run Evidence, safe agent feedback,
+private diagnostics, and organizational approval. Verify the rendered
+production page after content, interaction, responsive, accessibility, or
+language changes; the demonstrations are a curated explanation surface, not a
+second Verification Report or an Implementation Agent handoff.
 
 ## Hero animation
 

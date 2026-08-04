@@ -56,6 +56,11 @@ Both HTML reports are for the human Reviewer. The Implementation Agent receives
 the public contract and safe Gate-level feedback, never reviewer-owned cases or
 either HTML report.
 
+The public project page is for human visitors, not an Implementation Agent
+handoff. Its clearly labelled red-team demonstrations may show fully synthetic
+report details to explain a safeguard; they are never evidence, feedback, or an
+approval for an actual delivery.
+
 ToppleCat supplies commands, evidence, and reports. The team decides who runs
 them and whether they run locally, in CI, or in another workflow.
 
@@ -91,16 +96,16 @@ disclosures remain readable without opening help.
 
 ## Quick start
 
-ToppleCat 0.0.23 requires Java 25 and a compatible Gradle version.
+ToppleCat 0.0.24 requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.23"
+    id("io.github.samzhu.topplecat") version "0.0.24"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.23")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.24")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -218,7 +223,7 @@ before proposing a new ToppleCat responsibility.
 - [Architecture](docs/architecture.md)
 - [Context glossary](CONTEXT.md)
 - [Documentation index](docs/README.md)
-- [0.0.23 release notes](docs/releases/0.0.23.md)
+- [0.0.24 release notes](docs/releases/0.0.24.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 

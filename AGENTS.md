@@ -70,7 +70,11 @@ Before changing supported behavior, read:
 - Do not introduce a second authoring language, a command-line interface, or a
   new compatibility surface.
 - Never put reviewer-only values, identifiers, paths, source names, or raw
-  failures in public handoff material or `agent-feedback.json`.
+  failures from an actual delivery in public implementation-handoff material or
+  `agent-feedback.json`. The public project page is a separate human-facing
+  explanation surface: it may show a clearly labelled, fully synthetic red-team
+  demonstration, including synthetic report details, but must never present
+  material from an actual delivery as a demonstration.
 
 ## Verification
 

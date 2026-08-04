@@ -19,8 +19,11 @@ the implemented modules preserve them.
 
 The Reviewer owns the delivery decision. The Implementation Agent receives the
 public contract and safe Gate-level feedback, while both HTML reports and
-private diagnostics remain reviewer-only. External Workflow chooses the Spec
-and execution placement. No module owns CI, PR operations, Spec lifecycle, or
+private diagnostics from an actual delivery remain reviewer-only. The separate
+public project page is a human-facing explanation surface and may show clearly
+labelled, fully synthetic red-team report details; it is not an agent handoff
+or a projection of an actual delivery. External Workflow chooses the Spec and
+execution placement. No module owns CI, PR operations, Spec lifecycle, or
 organizational approval.
 
 ## Execution boundary
@@ -132,7 +135,7 @@ fail during command configuration, before a formal Verify run starts.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.23 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.0.24 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 

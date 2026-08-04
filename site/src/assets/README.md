@@ -24,7 +24,7 @@ rather than carrying manual version suffixes.
 | `props/cup-upright-{320,640,960}.avif` / `.webp` | Upright cup used by the PASS frames |
 | `props/cup-tipped-{320,640,960}.avif` / `.webp` | Side-tipped cup and spill used by the FAKE frame |
 | `scene/tabletop.svg` | Full-width wooden tabletop layer |
-| `demonstrations/*-{640,1280}.jpg` | Public-safe, responsive excerpts from the six synthetic Verification Report demonstrations |
+| `demonstrations/*-{640,1280}.jpg` | Responsive excerpts from the six clearly labelled, synthetic Verification Report demonstrations for human visitors |
 
 The preserved sources are intentionally versioned below `original/`:
 
@@ -54,7 +54,9 @@ Discarded iterations and editor metadata should not be added below
 `src/assets`. The original visual reference remains
 `docs/images/topplecat-readme-hero.png`.
 
-The demonstration excerpts are intentionally cropped assets, not report
-exports. When replacing one, retain only the public-safe evidence named by the
-story and produce both 640px and 1280px variants; do not add the complete
-Reviewer-only report or private diagnostics.
+The demonstration excerpts are curated synthetic assets, not exports from an
+actual delivery. When replacing one, use a story whose synthetic report details
+help a human understand the safeguard, produce both 640px and 1280px variants,
+and keep the `Reproducible demonstration` label and bounded explanation. Do
+not add actual Reviewer HTML, Current-run Evidence, or private diagnostics from
+an actual delivery.

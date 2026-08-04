@@ -90,15 +90,26 @@ same product boundary: an agent's done claim earns `PASS` only when every
 required Gate passes in a current run. It explains the independent checks and
 the Reviewer’s final responsibility in English and Traditional Chinese, then
 points developers to the Java/JUnit installation path and source repository.
-It now shows six image-backed, public-safe synthetic checkout demonstrations:
+It now shows six image-backed, clearly labelled synthetic checkout
+demonstrations:
 Public Acceptance, Hidden Tests, Expected Consumption, Property-Based Testing,
 Mutation Testing, and Contract Integrity. Each card is labelled as a
 reproducible demonstration and opens an excerpt from its matching synthetic
 Verification Report alongside bounded explanations of what changed, what was
-observed, what the Gate verdict supports, and what it cannot prove. These are
-curated explanations, not another report, contract input, Verification Report,
-Current-run Evidence, safe Implementation Agent feedback, or source of
-organizational approval.
+observed, what the Gate verdict supports, and what it cannot prove. A fully
+synthetic demonstration may show the report details needed for a human visitor
+to understand how ToppleCat caught the synthetic delivery. It is not an
+Implementation Agent handoff, another report for an actual delivery, contract
+input, Verification Report, Current-run Evidence, safe Implementation Agent
+feedback, or source of organizational approval.
+
+The page's Get started section also explains adoption in an existing agent
+workflow. A Spec-driven tool or project-local skills choose and shape the work;
+the repository-local `topplecat-acceptance` skill binds its selected ACs to the
+public Java/JUnit contract; then the Reviewer uses ToppleCat's formal sequence.
+It links to Spec Kit, Superpowers, and Matt Pocock's skills as optional external
+references without treating any of them as a ToppleCat integration or changing
+their ownership of the Spec, plan, or task state.
 
 ## Responsibility boundary
 

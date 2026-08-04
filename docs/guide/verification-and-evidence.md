@@ -55,7 +55,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.0.23 custody and approval schemas are current-only. A prior schema is not
+The 0.0.24 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
@@ -211,7 +211,9 @@ build/topplecat/reports/verification/index.html
 Verification Report can show Property classifications, generator choices,
 shrunk counterexamples, replay tokens, and the reviewer-only PIT attribution
 matrix. It also shows disabled safeguards as `DISABLED`. Spec Review may show
-non-blocking expected-output quality advisories. There is no public HTML report;
+non-blocking expected-output quality advisories. There is no public HTML report
+for an actual delivery; the separate project page may instead use clearly
+labelled, fully synthetic red-team demonstrations for human product education.
 `agent-feedback.json` never exposes reviewer case IDs, values, source names or
 paths, Property trial material, tokens, attachments, raw private failures, or
 quality-advisory output.

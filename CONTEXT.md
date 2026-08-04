@@ -164,6 +164,14 @@ safe Gate-level feedback. It does not receive reviewer-owned contract material
 or either reviewer-only HTML report.
 _Avoid_: Reviewer, approval authority
 
+**Public Product Demonstration／公開產品示範**:
+A clearly labelled, fully synthetic red-team example for human visitors to the
+project page. It explains what ToppleCat can observe and which Gate rejects the
+synthetic delivery; it is neither an Implementation Agent handoff nor a
+Verification Report, Current-run Evidence, or approval for an actual delivery.
+Synthetic report details may be shown only for that explanatory purpose.
+_Avoid_: public export of a real delivery, safe agent feedback
+
 **External Workflow／外部工作流程**:
 The human or automation that chooses the current Spec, decides when and where
 ToppleCat runs, manages delivery history, and applies organizational policy.

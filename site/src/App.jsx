@@ -32,7 +32,32 @@ import publicAcceptance1280 from "./assets/demonstrations/public-acceptance-1280
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.23"';
+const acceptanceSkillUrl =
+  `${repositoryUrl}/tree/main/.agents/skills/topplecat-acceptance`;
+const specKitUrl = "https://github.com/github/spec-kit";
+const superpowersUrl = "https://github.com/obra/superpowers";
+const engineeringSkillsUrl = "https://github.com/mattpocock/skills/tree/main";
+const gettingStartedUrl =
+  `${repositoryUrl}/blob/main/docs/guide/getting-started.md`;
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.24"';
+const gradleSetup = `plugins {
+    java
+    ${pluginLine}
+}
+
+dependencies {
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.24")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
+}
+
+tasks.test { useJUnitPlatform() }`;
+const reviewerSequence = `./gradlew toppleCatCheck --spec specs/checkout/spec.md
+./gradlew toppleCatReview --spec specs/checkout/spec.md
+./gradlew toppleCatSeal --spec specs/checkout/spec.md
+
+./gradlew test
+./gradlew toppleCatVerify --spec specs/checkout/spec.md`;
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(
@@ -132,15 +157,17 @@ const copyByLocale = {
       ],
     },
     demonstrations: {
-      kicker: "A public-safe proof in miniature",
-      heading: "See what each safeguard can challenge",
+      kicker: "A small simulated example",
+      heading: "Problems ToppleCat can catch",
       summary:
-        "Six independent, reproducible demonstrations show the different ways a delivery can look done before the accepted contract has really been tested.",
-      sectionLabel: "Safeguard demonstrations",
-      syntheticLabel: "Reproducible demonstration",
+        "Each example starts with a feature that looks done, then shows the issue a check finds.",
+      sectionLabel: "Six checks",
+      syntheticLabel: "Simulated example",
       open: "Open demonstration",
       close: "Close demonstration",
       modalLabel: "Demonstration details",
+      resultLabel: "Check result",
+      problemFound: "Problem found",
       layers: {
         changed: "What changed",
         observed: "What ToppleCat observed",
@@ -148,7 +175,7 @@ const copyByLocale = {
         supports: "What the result supports",
         cannotProve: "What it cannot prove",
       },
-      excerptLabel: "Verification Report excerpt · synthetic run",
+      excerptLabel: "Verification report · simulated run",
       stories: [
         {
           id: "hidden-tests",
@@ -307,15 +334,23 @@ const copyByLocale = {
         "Only when every required gate passes in the current run does ToppleCat record PASS. The reviewer makes the final decision.",
     },
     install: {
-      heading: "Try the sample before changing your project.",
+      heading: "Know when a Java feature is actually finished.",
       summary:
-        "Watch a deliberately wrong implementation fail, then see the corrected version produce current evidence.",
-      note: "Requires Java 25 and a Gradle version that supports it.",
-      copy: "Copy plugin line",
+        "Install the plugin and add the acceptance skill to your agent. When the feature is ready, you get a verification result you can inspect. Start with the sample if you want to see the whole loop.",
+      workflowKicker: "2. Keep your usual workflow",
+      workflowHeading: "Carry on with the tools you already use.",
+      workflowBody:
+        "Keep using Spec Kit, Superpowers, Matt Pocock skills, or your own project skills. Add the ToppleCat acceptance skill alongside them. Once you choose acceptance conditions, it helps turn them into Java/JUnit checks that can run.",
+      workflowLinksLabel: "Workflow and skill references",
+      setupKicker: "1. Install ToppleCat and the acceptance skill",
+      setupBody: "Put this setup in build.gradle.kts, then add the project-local ToppleCat acceptance skill to the skills your agent can use. You need Java 25 and a Gradle version that supports it.",
+      copy: "Copy build.gradle.kts",
       copied: "Copied",
+      verifyKicker: "3. Verify the finished work",
+      verifyBody: "After the acceptance contract is ready and the agent has implemented the feature, run formal verification against that same selected Spec.",
       sample: "Run the sample",
-      install: "Install ToppleCat",
-      skill: "Using an SDD agent? Add the project-local acceptance skill",
+      install: "Read the full quick start",
+      skill: "Read the acceptance skill",
     },
     footer: {
       tagline: "Executable acceptance for agent-written Java.",
@@ -409,101 +444,103 @@ const copyByLocale = {
       ],
     },
     demonstrations: {
-      kicker: "用一個公開安全的案例看懂",
-      heading: "成功抓到問題的案例",
+      kicker: "用一個模擬案例看懂",
+      heading: "ToppleCat 抓得到哪些問題",
       summary:
-        "六個獨立、可重現的示範，展示一份交付看似完成，卻還沒有真正接受完整契約檢驗的不同方式。",
-      sectionLabel: "防護示範",
-      syntheticLabel: "可重現示範",
+        "每個案例都從一個看起來做完的功能開始，再看看檢查怎麼找出問題。",
+      sectionLabel: "六種檢查",
+      syntheticLabel: "模擬案例",
       open: "開啟示範",
       close: "關閉示範",
       modalLabel: "示範細節",
+      resultLabel: "檢查結果",
+      problemFound: "發現問題",
       layers: {
-        changed: "改變了什麼",
-        observed: "ToppleCat 觀察到什麼",
-        verdict: "Gate 判定",
-        supports: "這個結果支持什麼",
-        cannotProve: "它不能證明什麼",
+        changed: "這次怎麼測",
+        observed: "抓到什麼",
+        verdict: "檢查結果",
+        supports: "代表什麼",
+        cannotProve: "還不能確定什麼",
       },
-      excerptLabel: "Verification Report 摘錄 · 合成執行",
+      excerptLabel: "驗證報告畫面 · 模擬執行",
       stories: [
         {
           id: "hidden-tests",
-          label: "隱藏測試",
-          detailLabel: "審查者挑選的案例",
-          title: "公開答案通過了，但另一個合法結帳案例沒有。",
-          summary: "一個公開結帳案例拿到了折扣；另一個合法案例，揭露實作只處理了它看過的答案。",
+          label: "換一個例子再試",
+          detailLabel: "換一個合法情境",
+          title: "公開案例過了，換個合法金額就失敗。",
+          summary: "公開案例有折扣，但另一筆合法訂單沒有。程式只記住了它看過的例子。",
           gate: "REVIEWER_JUNIT",
           verdict: "FAIL",
-          changed: "乾淨的基準實作被改成只處理看得到的結帳案例，沒有對另一個合法結帳案例套用同一條折扣規則。",
-          observed: "公開案例通過了，但另一個合法案例產生不同結果。隱藏測試將這個差異歸因到同一個公開 Acceptance Method。",
-          supports: "這支持實作沒有把公開規則當成一條一般規則來滿足。",
-          cannotProve: "多一個案例也找不出所有捷徑；它不會揭露 Implementation Agent 是偷懶、欺騙或出於任何其他意圖，也不證明所有規則都完整。",
+          changed: "程式只對公開範例給折扣；另一筆同樣符合條件的訂單沒有。",
+          observed: "公開範例通過，但 1,300 元的訂單沒有折扣。",
+          supports: "折扣規則只在公開範例成立。",
+          cannotProve: "這不代表所有漏網情況都已經找到了。",
         },
         {
           id: "public-acceptance",
-          label: "公開驗收",
-          detailLabel: "公開規則",
-          title: "寫進契約的公開規則立刻失敗。",
-          summary: "基本公開案例沒有符合寫在可執行契約裡的規則。",
+          label: "規格條件檢查",
+          detailLabel: "規格裡寫的驗收條件",
+          title: "規格裡的條件，馬上就抓到錯。",
+          summary: "滿 1,000 元該有折扣，實際上卻沒有。",
           gate: "JUNIT",
           verdict: "FAIL",
-          changed: "這份交付接受了公開結帳規則的檢驗。",
-          observed: "公開 Acceptance Method 回傳的結果沒有符合它所綁定的規則。",
-          supports: "這支持交付沒有符合契約裡的公開規則。",
-          cannotProve: "它不會揭露意圖，也不證明其他所有輸入的行為。",
+          changed: "用一筆滿 1,000 元的訂單跑公開驗收。",
+          observed: "應折 100 元，實際折 0 元。",
+          supports: "規格裡的驗收條件沒有被滿足。",
+          cannotProve: "這不代表每一筆訂單都會出錯。",
         },
         {
           id: "expected-consumption",
-          label: "預期值使用",
-          detailLabel: "斷言義務",
-          title: "測試讀到了答案，卻從未檢查它。",
-          summary: "宣告的結果已經可用，但驗收工作沒有比較實際收據與預期收據。",
+          label: "有沒有真的比對",
+          detailLabel: "有讀取，沒比對",
+          title: "測試讀了預期結果，卻沒拿來比對。",
+          summary: "它知道正確收據長什麼樣，卻沒有檢查實際收據。",
           gate: "EXPECTED_CONSUMPTION",
           verdict: "FAIL",
-          changed: "驗收流程讀取了預期收據，接著跳過了比較。",
-          observed: "ToppleCat 看見預期結果被當成資料讀取，卻沒有在驗收契約中拿實際收據進行斷言。相關的公開 JUnit 失敗是同一個缺少比較的根本原因。",
-          supports: "這支持驗收契約沒有證明實際收據與預期收據相符。",
-          cannotProve: "它不表示 production calculator 算錯，也不是第二個 production defect。",
+          changed: "測試讀了預期收據，卻跳過比對。",
+          observed: "預期值有被讀到，實際收據沒有拿來比較。",
+          supports: "這個測試沒有證明結果正確。",
+          cannotProve: "這不代表計算程式本身算錯。",
         },
         {
           id: "property-based-testing",
-          label: "性質導向測試",
-          detailLabel: "核准的不變量",
-          title: "產生的合法輸入找到反例。",
-          summary: "一般案例漏掉了一段違反核准不變量的合法範圍。",
+          label: "多試幾種情況",
+          detailLabel: "自動找邊界",
+          title: "自動產生的測試，找到一筆出錯訂單。",
+          summary: "一般案例沒碰到這個範圍，付款金額卻在這裡變成負數。",
           gate: "PROPERTY",
           verdict: "FAIL",
-          changed: "這份交付接受一條由人核准的不變量，以及有界限的產生輸入檢驗。",
-          observed: "Property-Based Testing 遇到了一個違反不變量的合法產生輸入。",
-          supports: "這支持一般案例漏掉了一段合法行為範圍。",
-          cannotProve: "一個反例是證據，不是所有未明說的業務規則都完整的證明。",
+          changed: "讓測試自動產生 0 到 99 的訂單金額。",
+          observed: "金額為 0 時，付款金額變成負數。",
+          supports: "一般案例漏掉了這個邊界。",
+          cannotProve: "這不代表所有業務規則都已經測完。",
         },
         {
           id: "mutation-testing",
-          label: "變異測試",
-          detailLabel: "變更後的實作",
-          title: "暫時的程式變更通過了它的驗收方法。",
-          summary: "歸因到該方法的公開 Acceptance Method，在暫時改變 production 行為後仍然通過。",
+          label: "測試有沒有漏掉",
+          detailLabel: "改壞程式再重跑",
+          title: "程式被改壞了，測試還是過。",
+          summary: "折扣門檻被悄悄改掉，原本的驗收測試沒有發現。",
           gate: "MUTATION",
           verdict: "FAIL",
-          changed: "ToppleCat 使用託管的 mutation profile，為選定的公開 Acceptance Method 暫時改變 production 行為。",
-          observed: "那個未變更的公開 Acceptance Method 仍然通過了這個被歸因的暫時變更。",
-          supports: "這支持 Acceptance Method 沒有辨識出這個暫時的 production 變更。",
-          cannotProve: "它不表示未變更的 production program 原本就有這個 bug，也不提供全專案分數。",
+          changed: "暫時改掉折扣門檻，再重跑同一個驗收測試。",
+          observed: "門檻改壞了，測試還是通過。",
+          supports: "這個測試沒有抓到門檻的變化。",
+          cannotProve: "這不代表原本的程式就有這個錯。",
         },
         {
           id: "contract-integrity",
-          label: "契約完整性",
-          detailLabel: "封存的問題",
-          title: "封存的契約在 Verify 前改變了。",
-          summary: "核准的問題不再符合 Mechanical Seal，因此下游判定停止。",
+          label: "資料有沒有被換掉",
+          detailLabel: "封存後被改動",
+          title: "封存後被改過，這次驗證不算。",
+          summary: "契約和封存版本不同，後面的檢查不再可信。",
           gate: "CONTRACT_INTEGRITY",
           verdict: "FAIL",
-          changed: "Verify 檢查的內容，不再符合先前封存的可執行契約或驗證政策。",
-          observed: "Contract Integrity 拒絕把改變後的內容當成核准的問題，下游防護被記錄為 INCOMPLETE。",
-          supports: "這支持 ToppleCat 拒絕讓來自變更契約的下游證據計入結果。",
-          cannotProve: "它不指出 production defect 或 Implementation Agent 意圖；未執行的防護也不是功能失敗。",
+          changed: "封存後，驗收契約被改過。",
+          observed: "版本對不上，後面的檢查停止。",
+          supports: "改過的契約不能拿來做這次判定。",
+          cannotProve: "這不代表產品程式有錯。",
         },
       ],
     },
@@ -578,14 +615,22 @@ const copyByLocale = {
         "只有本次執行中每個必要 gate 都通過，ToppleCat 才會記錄 PASS；最後仍由審閱者決定。",
     },
     install: {
-      heading: "先執行範例，再改動自己的專案。",
-      summary: "先看刻意錯誤的實作失敗，再看修正後的版本產生本次證據。",
-      note: "需要 Java 25 與支援它的 Gradle 版本。",
-      copy: "複製 plugin 設定",
+      heading: "在 Java 專案裡，確認功能真的做完了。",
+      summary: "裝上 plugin，再把 acceptance skill 加進 agent 可用的 skills。功能完成後，你會拿到一份能直接看的驗證結果。想先看完整過程，從範例開始就好。",
+      workflowKicker: "2. 照你原本的流程開發",
+      workflowHeading: "原本怎麼做，現在就怎麼做。",
+      workflowBody:
+        "Spec Kit、Superpowers、Matt Pocock skills，或你自己專案裡的 skills 都照常用。把 ToppleCat acceptance skill 一起放進來；選定驗收條件後，它會幫你把條件變成可以執行的 Java/JUnit 檢查。",
+      workflowLinksLabel: "工作流與 skill 參考",
+      setupKicker: "1. 安裝 ToppleCat 與 acceptance skill",
+      setupBody: "把這份設定放進 build.gradle.kts，再把專案內的 ToppleCat acceptance skill 加進 agent 可用的 skills。需要 Java 25 與支援它的 Gradle 版本。",
+      copy: "複製 build.gradle.kts",
       copied: "已複製",
+      verifyKicker: "3. 驗證這次完成的功能",
+      verifyBody: "驗收契約準備好、agent 完成功能後，就用同一份選定的 Spec 跑正式驗證。",
       sample: "執行範例",
-      install: "安裝 ToppleCat",
-      skill: "正在使用 SDD agent？加入專案內的 acceptance skill",
+      install: "閱讀完整快速開始",
+      skill: "閱讀 acceptance skill",
     },
     footer: {
       tagline: "為 agent 撰寫的 Java 提供可執行驗收。",
@@ -720,7 +765,7 @@ function DemonstrationModal({ demonstration, copy, dialogRef, onClose }) {
           </section>
           <section className="dialog-verdict-layer">
             <h3>{copy.layers.verdict}</h3>
-            <p><code>{demonstration.gate}</code><strong>{demonstration.verdict}</strong></p>
+            <p><strong>{copy.problemFound}</strong></p>
           </section>
           <section>
             <h3>{copy.layers.supports}</h3>
@@ -912,7 +957,7 @@ function App() {
 
   const copyInstall = async () => {
     try {
-      await navigator.clipboard.writeText(pluginLine);
+      await navigator.clipboard.writeText(gradleSetup);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -1090,9 +1135,8 @@ function App() {
             <h3>{primaryDemonstration.title}</h3>
             <p className="demonstration-feature-summary">{primaryDemonstration.summary}</p>
             <div className="demonstration-attribution">
-              <span>{primaryDemonstration.label}</span>
-              <code>{primaryDemonstration.gate}</code>
-              <strong>{primaryDemonstration.verdict}</strong>
+              <span>{copy.demonstrations.resultLabel}</span>
+              <strong>{copy.demonstrations.problemFound}</strong>
             </div>
           </div>
 
@@ -1135,7 +1179,7 @@ function App() {
               <span className="demonstration-entry-title">{demonstration.title}</span>
               <span className="demonstration-entry-summary">{demonstration.summary}</span>
               <span className="demonstration-entry-footer">
-                <span><code>{demonstration.gate}</code> · {demonstration.verdict}</span>
+                <span>{copy.demonstrations.problemFound}</span>
                 <Arrow />
               </span>
             </button>
@@ -1222,17 +1266,38 @@ function App() {
         </div>
         <div className="install-panel">
           <div>
-            <p className="install-note">{copy.install.note}</p>
-            <code>{pluginLine}</code>
+            <p className="install-note">{copy.install.setupKicker}</p>
+            <p className="install-panel-body">{copy.install.setupBody}</p>
+            <pre><code>{gradleSetup}</code></pre>
           </div>
           <button className="copy-button" onClick={copyInstall}>
             {copied ? copy.install.copied : copy.install.copy} <Arrow />
           </button>
         </div>
+        <div className="workflow-bridge">
+          <div className="workflow-bridge-intro">
+            <p className="kicker">{copy.install.workflowKicker}</p>
+            <h3>{copy.install.workflowHeading}</h3>
+            <p>{copy.install.workflowBody}</p>
+          </div>
+          <div className="workflow-links" aria-label={copy.install.workflowLinksLabel}>
+            <a href={acceptanceSkillUrl} target="_blank" rel="noreferrer">ToppleCat acceptance <Arrow /></a>
+            <a href={specKitUrl} target="_blank" rel="noreferrer">Spec Kit <Arrow /></a>
+            <a href={superpowersUrl} target="_blank" rel="noreferrer">Superpowers <Arrow /></a>
+            <a href={engineeringSkillsUrl} target="_blank" rel="noreferrer">Matt Pocock skills <Arrow /></a>
+          </div>
+        </div>
+        <div className="verify-panel">
+          <div>
+            <p className="install-note">{copy.install.verifyKicker}</p>
+            <p className="install-panel-body">{copy.install.verifyBody}</p>
+          </div>
+          <pre><code>{reviewerSequence}</code></pre>
+        </div>
         <div className="install-actions">
           <a className="button button-amber" href={`${repositoryUrl}/tree/main/samples/junit-cart-orders`} target="_blank" rel="noreferrer">{copy.install.sample} <Arrow /></a>
-          <a className="button button-dark" href={`${repositoryUrl}#install-0012`} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
-          <a className="acceptance-skill-link" href={`${repositoryUrl}/tree/main/.agents/skills/topplecat-acceptance`} target="_blank" rel="noreferrer">
+          <a className="button button-dark" href={gettingStartedUrl} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
+          <a className="acceptance-skill-link" href={acceptanceSkillUrl} target="_blank" rel="noreferrer">
             {copy.install.skill} <Arrow />
           </a>
         </div>

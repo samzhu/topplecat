@@ -46,6 +46,10 @@ ToppleCat 也不會自行猜出這條規則。
 兩份 HTML 都是給人類 Reviewer 閱讀。Implementation Agent 取得公開契約與安全的
 Gate 層級回饋，不會取得 reviewer-owned 案例或任何一份 HTML。
 
+公開專案頁是給人類訪客看的產品說明，不是 Implementation Agent handoff。頁面上清楚標示的
+red-team 示範可為了解釋某項 safeguard 而呈現完整的合成報告細節；它們不是實際交付的
+evidence、feedback 或核准。
+
 ToppleCat 提供命令、證據與報告；團隊自行決定由誰執行，以及放在本機、CI 或
 其他 workflow。
 
@@ -74,16 +78,16 @@ agent feedback。報告也會在 Mutation Testing 與容易陌生的卡片術語
 
 ## 快速開始
 
-ToppleCat 0.0.23 需要 Java 25 與相容的 Gradle。
+ToppleCat 0.0.24 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.23"
+    id("io.github.samzhu.topplecat") version "0.0.24"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.23")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.24")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -188,7 +192,7 @@ ToppleCat 從可執行驗收邊界開始：
 - [架構](docs/architecture.md)
 - [共同語言](CONTEXT.md)
 - [文件索引](docs/README.md)
-- [0.0.23 release notes](docs/releases/0.0.23.zh-TW.md)
+- [0.0.24 release notes](docs/releases/0.0.24.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 
