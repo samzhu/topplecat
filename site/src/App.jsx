@@ -32,7 +32,7 @@ import publicAcceptance1280 from "./assets/demonstrations/public-acceptance-1280
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.22"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.23"';
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(

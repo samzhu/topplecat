@@ -324,8 +324,7 @@ class ReportBundleDomTest {
       assertTrue(page.querySelectorAll(".safeguard-chip-reason").getLength() > 0);
       assertEquals(1, page.querySelectorAll(".contract-integrity-summary").getLength());
       HtmlElement overview =
-          (HtmlElement)
-              page.querySelector("#verification-AC-READ-FAIL .safeguard-overview");
+          (HtmlElement) page.querySelector("#verification-AC-READ-FAIL .safeguard-overview");
       assertOrder(
           overview.getTextContent(),
           "Public Acceptance",
