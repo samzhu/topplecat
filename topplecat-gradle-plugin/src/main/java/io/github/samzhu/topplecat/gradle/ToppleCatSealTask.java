@@ -14,8 +14,7 @@ import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.options.Option;
 
 /** Seals reviewer-only source into local custody before implementation work. */
-public abstract class ToppleCatSealTask extends DefaultTask
-    implements ToppleCatApprovalInputs {
+public abstract class ToppleCatSealTask extends DefaultTask implements ToppleCatApprovalInputs {
   @Internal
   public abstract DirectoryProperty getProjectRoot();
 

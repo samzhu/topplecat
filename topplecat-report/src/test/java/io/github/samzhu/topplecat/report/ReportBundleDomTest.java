@@ -352,8 +352,7 @@ class ReportBundleDomTest {
 
     VerificationView fullContract =
         verificationPassView(
-            DeliveryScope.from(
-                SelectedSpecScope.empty(), "ALL", "ALL", "FULL_CONTRACT", 1, 0));
+            DeliveryScope.from(SelectedSpecScope.empty(), "ALL", "ALL", "FULL_CONTRACT", 1, 0));
     Path fullContractBundle = tempDir.resolve("full-contract-verification");
     HtmlBundleWriter.verification(fullContractBundle, fullContract);
     try (WebClient client = new WebClient(BrowserVersion.CHROME)) {

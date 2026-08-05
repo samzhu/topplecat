@@ -39,8 +39,8 @@ conflict. Do not silently copy one version into more files.
 
 ## Releases and maintainers
 
-- Latest release: [0.0.24](releases/0.0.24.md) ·
-  [繁體中文](releases/0.0.24.zh-TW.md)
+- Latest release: [0.0.25](releases/0.0.25.md) ·
+  [繁體中文](releases/0.0.25.zh-TW.md)
 - Contributor workflow: [CONTRIBUTING](../CONTRIBUTING.md)
 - Repository task map: [DEVELOPMENT](../DEVELOPMENT.md)
 - Release validation: [validation checklist](validation/README.md)

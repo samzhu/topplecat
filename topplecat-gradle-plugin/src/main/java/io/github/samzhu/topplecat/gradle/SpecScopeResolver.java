@@ -17,12 +17,7 @@ final class SpecScopeResolver {
 
   static ResolvedSpecScope resolve(
       Path projectRoot, List<String> commandLineSpecPaths, boolean commandLineSpecProvided) {
-    return resolve(
-        projectRoot,
-        commandLineSpecPaths,
-        commandLineSpecProvided,
-        List.of(),
-        false);
+    return resolve(projectRoot, commandLineSpecPaths, commandLineSpecProvided, List.of(), false);
   }
 
   static ResolvedSpecScope resolve(
@@ -38,7 +33,8 @@ final class SpecScopeResolver {
     }
     if (commandLineAcceptanceConditionsProvided) {
       return new ResolvedSpecScope(
-          SelectedSpecScope.create(List.of(), selectedAcceptanceConditions(commandLineAcceptanceConditionIds)),
+          SelectedSpecScope.create(
+              List.of(), selectedAcceptanceConditions(commandLineAcceptanceConditionIds)),
           ExternalSpecDocumentReader.ParsedSpecs.empty(),
           List.of(),
           true);

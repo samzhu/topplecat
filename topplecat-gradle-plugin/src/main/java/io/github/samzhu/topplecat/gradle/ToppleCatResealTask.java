@@ -9,8 +9,7 @@ import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.options.Option;
 
 /** Explicit reviewer-custody task that replaces a restored escrowed reviewer suite after review. */
-public abstract class ToppleCatResealTask extends DefaultTask
-    implements ToppleCatApprovalInputs {
+public abstract class ToppleCatResealTask extends DefaultTask implements ToppleCatApprovalInputs {
   @Internal
   public abstract DirectoryProperty getProjectRoot();
 
@@ -29,7 +28,9 @@ public abstract class ToppleCatResealTask extends DefaultTask
             manifest.entries().size());
   }
 
-  @Option(option = "spec", description = "Unsupported: Reseal always handles the complete contract.")
+  @Option(
+      option = "spec",
+      description = "Unsupported: Reseal always handles the complete contract.")
   public void rejectSpec(String ignored) {
     throw new org.gradle.api.GradleException(
         "toppleCatReseal always seals the complete contract and accepts no --spec selection.");

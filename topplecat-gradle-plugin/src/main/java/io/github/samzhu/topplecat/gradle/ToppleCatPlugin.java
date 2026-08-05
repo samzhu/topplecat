@@ -199,11 +199,9 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                           validateReviewerSource.flatMap(
                               ToppleCatCompileContractsTask::getDescriptorClassesDirectory));
                   configureScopeTask(task, extension);
-                  task
-                      .getSelectedAcceptanceConditionIds()
+                  task.getSelectedAcceptanceConditionIds()
                       .set(extension.getCommandLineAcceptanceConditionIds());
-                  task
-                      .getAcceptanceConditionsOptionProvided()
+                  task.getAcceptanceConditionsOptionProvided()
                       .set(extension.getCommandLineAcceptanceConditionsProvided());
                   task.getReviewRoot()
                       .set(project.getLayout().getBuildDirectory().dir("topplecat/reports/review"));
@@ -327,7 +325,8 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                 task -> {
                   task.setGroup("verification");
                   task.setDescription(
-                      "Validates and explicitly updates complete reviewer-only local escrow custody.");
+                      "Validates and explicitly updates complete reviewer-only local escrow"
+                          + " custody.");
                   task.dependsOn(check);
                   task.getProjectRoot().set(project.getLayout().getProjectDirectory());
                   task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());

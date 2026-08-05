@@ -923,15 +923,15 @@ class ToppleCatPluginFunctionalTest {
     assertFalse(directScope.contains("specDocuments\" : [ {"));
 
     runner("toppleCatVerify", "--ac", "AC-A").build();
-    String one = Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
+    String one =
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
     assertTrue(one.contains("\"AC-A\""));
     assertFalse(one.contains("onlyBHasAProperty"));
     String report =
         Files.readString(project.resolve("build/topplecat/reports/verification/assets/report.js"));
     assertTrue(report.contains("Selected by explicit AC IDs"));
 
-    var mixed =
-        runner("toppleCatVerify", "--spec", "specs/a.md", "--ac", "AC-B").buildAndFail();
+    var mixed = runner("toppleCatVerify", "--spec", "specs/a.md", "--ac", "AC-B").buildAndFail();
     assertTrue(mixed.getOutput().contains("either ToppleCat --spec or --ac"));
   }
 

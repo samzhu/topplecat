@@ -8,7 +8,9 @@ import org.gradle.api.tasks.options.Option;
 public abstract class ToppleCatVerifyTask extends ToppleCatScopedTask {
   @Option(
       option = "ac",
-      description = "Acceptance Condition to verify; may be supplied more than once. Cannot be combined with --spec.")
+      description =
+          "Acceptance Condition to verify; may be supplied more than once. Cannot be combined with"
+              + " --spec.")
   public void setAcceptanceConditions(List<String> acIds) {
     ToppleCatExtension extension = getProject().getExtensions().getByType(ToppleCatExtension.class);
     extension

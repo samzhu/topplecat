@@ -28,7 +28,8 @@ public record VerificationScope(
   public VerificationScope {
     if (!SCHEMA_VERSION.equals(schemaVersion)
         || selectedSpecScope == null
-        || !(hiddenMode.equals(HIDDEN_SELECTED_ACCEPTANCE_CONDITIONS) || hiddenMode.equals(HIDDEN_ALL))
+        || !(hiddenMode.equals(HIDDEN_SELECTED_ACCEPTANCE_CONDITIONS)
+            || hiddenMode.equals(HIDDEN_ALL))
         || !MUTATION_SELECTED_ACCEPTANCE_CONDITIONS.equals(mutationMode)
         || !(PROPERTY_PUBLIC_FULL_CONTRACT.equals(publicPropertyMode)
             || PROPERTY_PUBLIC_SELECTED_ACCEPTANCE_CONDITIONS.equals(publicPropertyMode))) {
