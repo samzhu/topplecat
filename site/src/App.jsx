@@ -54,10 +54,13 @@ dependencies {
 tasks.test { useJUnitPlatform() }`;
 const reviewerSequence = `./gradlew toppleCatCheck --spec specs/checkout/spec.md
 ./gradlew toppleCatReview --spec specs/checkout/spec.md
-./gradlew toppleCatSeal --spec specs/checkout/spec.md
+./gradlew toppleCatSeal
 
 ./gradlew test
-./gradlew toppleCatVerify --spec specs/checkout/spec.md`;
+./gradlew toppleCatVerify
+
+# Optional quick, scoped reviewer report:
+./gradlew toppleCatVerify --ac AC-CHECKOUT-THRESHOLD --ac AC-CHECKOUT-VIP`;
 
 const scenarioCode = `@ToppleAcceptanceTest("AC-CART-COUPON")
 void appliesCoupon(
@@ -311,10 +314,10 @@ const copyByLocale = {
           body: "Render the complete selected Spec and its bound executable material before any implementation handoff.",
         },
         {
-          command: "toppleCatSeal --spec specs/023-checkout/spec.md",
+          command: "toppleCatSeal",
           label: "Seal",
           title: "Keep the approved question fixed",
-          body: "Move reviewer source into local custody and seal the public contract plus verification policy.",
+          body: "Move all reviewer source into local custody and seal the complete public contract plus verification policy.",
         },
         {
           command: "test",
@@ -323,10 +326,10 @@ const copyByLocale = {
           body: "The implementation agent uses ordinary project tests for fast feedback. This green check is not the final verdict.",
         },
         {
-          command: "toppleCatVerify --spec specs/023-checkout/spec.md",
+          command: "toppleCatVerify",
           label: "Verify",
           title: "Test the done claim with fresh evidence",
-          body: "Run the selected public contract and enabled safeguards, write current evidence, then re-hide reviewer source.",
+          body: "Run the complete contract and enabled safeguards, write current evidence, then re-hide reviewer source. For a quick feature check, select either Spec files or repeated AC IDs, never both; the scoped report says its PASS covers only those ACs.",
         },
       ],
       verdictLabel: "Aggregate verdict",
@@ -347,7 +350,7 @@ const copyByLocale = {
       copy: "Copy build.gradle.kts",
       copied: "Copied",
       verifyKicker: "3. Verify the finished work",
-      verifyBody: "After the acceptance contract is ready and the agent has implemented the feature, run formal verification against that same selected Spec.",
+      verifyBody: "After the acceptance contract is ready and the agent has implemented the feature, run the full formal verification command. CI uses that full run; a reviewer can use either Spec files or repeated AC IDs for a quick scoped report, whose PASS covers only the selected ACs.",
       sample: "Run the sample",
       install: "Read the full quick start",
       skill: "Read the acceptance skill",
@@ -592,10 +595,10 @@ const copyByLocale = {
           body: "在任何實作交付前，呈現完整的已選 Spec 與其綁定的可執行材料。",
         },
         {
-          command: "toppleCatSeal --spec specs/023-checkout/spec.md",
+          command: "toppleCatSeal",
           label: "Seal",
           title: "固定已接受的題目",
-          body: "將審查者原始碼移入本機保管，並封存公開契約與驗證政策。",
+          body: "將所有審查者原始碼移入本機保管，並封存完整公開契約與驗證政策。",
         },
         {
           command: "test",
@@ -604,10 +607,10 @@ const copyByLocale = {
           body: "實作 agent 使用一般專案測試取得快速回饋；這個綠燈不是最終判定。",
         },
         {
-          command: "toppleCatVerify --spec specs/023-checkout/spec.md",
+          command: "toppleCatVerify",
           label: "Verify",
           title: "用全新證據檢驗完成宣稱",
-          body: "執行選取的公開契約與啟用的 safeguards、寫入本次證據，然後重新隱藏審查者原始碼。",
+          body: "執行完整契約與啟用的 safeguards、寫入本次證據，然後重新隱藏審查者原始碼。若想快速確認剛完成的功能，可指定 Spec 或重複指定 AC ID，兩種不能混用；範圍報告會明說 PASS 只代表這些 AC。",
         },
       ],
       verdictLabel: "彙總判定",
@@ -627,7 +630,7 @@ const copyByLocale = {
       copy: "複製 build.gradle.kts",
       copied: "已複製",
       verifyKicker: "3. 驗證這次完成的功能",
-      verifyBody: "驗收契約準備好、agent 完成功能後，就用同一份選定的 Spec 跑正式驗證。",
+      verifyBody: "驗收契約準備好、agent 完成功能後，就執行完整的正式驗證。CI 使用這個全量執行；Reviewer 若想快速看剛完成的範圍，可指定 Spec 或重複指定 AC ID；範圍 PASS 只代表選定的 AC。",
       sample: "執行範例",
       install: "閱讀完整快速開始",
       skill: "閱讀 acceptance skill",

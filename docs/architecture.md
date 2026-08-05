@@ -33,7 +33,7 @@ ordinary ./gradlew test
     public project tests + public acceptance methods
     no ToppleCat evidence, custody, review, report, or sealing dependency
 
-./gradlew toppleCatVerify [--spec ...]
+./gradlew toppleCatVerify [--spec ... | --ac AC-...]
     fresh formal public acceptance run
     + enabled Hidden Tests, PBT, Mutation Testing, expected consumption
     -> current-run evidence and reports
@@ -120,13 +120,22 @@ These reviewer-only coordinates and details do not enter safe feedback.
 
 ## Scope and custody
 
-`--spec` is the sole selection input. It maps external Spec ACs to executable
-acceptance methods; no input means every AC. `--all-hidden-tests` broadens
-hidden typed rows only. Public acceptance, PBT, and Mutation Testing follow the
-selected ACs. An unselected AC cannot affect the current delivery verdict.
+Check and Review accept repeatable `--spec` paths. Check maps the external
+Spec's ACs to executable acceptance methods; Review needs the same document to
+render its full prose with the executable material. Seal and Reseal have no
+selection: they custody all reviewer source and approve the complete contract.
+
+Verify has no selection by default and then runs every AC. For a quick formal
+report, it accepts either repeatable `--spec` paths or repeatable `--ac AC-...`
+IDs, never both. Either form selects the ACs for public acceptance, PBT, Hidden
+Tests, and Mutation Testing; the persisted scope distinguishes document-based
+selection from direct AC selection. `--all-hidden-tests` broadens hidden typed
+rows only. An unselected AC cannot affect a scoped run's verdict.
+For a scoped `PASS`, the Reviewer HTML summary repeats that the result covers
+only the selected ACs rather than the complete executable contract.
 
 `--language` is a separate invocation-only presentation input for
-`toppleCatReview`, `toppleCatSeal`, `toppleCatReseal`, and `toppleCatVerify`.
+`toppleCatReview` and `toppleCatVerify`.
 It accepts exactly `en` and `zh-TW`, defaults to `en`, and reaches only the
 Reviewer HTML-writing tasks. It is not Gradle DSL configuration, a browser or
 operating-system locale, a scope input, or an approval input. Invalid values
@@ -141,7 +150,7 @@ or a sandbox.
 
 Approval seals compiler-derived acceptance source closure (including resolved
 Stage owners), public typed rows,
-Property declarations, selected scope, effective policy, compiler definition,
+Property declarations, effective policy, compiler definition,
 and project Gradle logic. The source closure includes only sources javac
 resolves from acceptance methods and Stage owners; unrelated ordinary tests do
 not invalidate it.
@@ -172,7 +181,8 @@ If Public Acceptance fails, the managed PIT task may still leave producer
 diagnostics, but the Mutation Gate is `INCOMPLETE` because no trustworthy
 passing baseline exists.
 Verify reuses an existing Mechanical Seal through an internal custody check; it
-does not run Review, Seal, or update approval.
+does not run Review, Seal, or update approval. The integrity comparison always
+uses the complete contract, even when Verify later runs a selected AC scope.
 
 - Spec Review is reviewer-only, precedes handoff, and presents complete selected Markdown documents with their bound executable material.
 - Verification Report is reviewer-only and contains results, counterexamples,
@@ -202,7 +212,7 @@ safe agent feedback.
 
 Verification Report leads with the aggregate conclusion, selected-AC counts,
 and Needs Attention list. Its main summary presents Contract Integrity once:
-on pass, it says the selected executable contract matches its Mechanical Seal;
+on pass, it says the complete executable contract matches its Mechanical Seal;
 on a mismatch or missing integrity proof, it says downstream AC work did not
 run. Each AC card keeps that global result out of per-AC failure presentation
 and presents Public Acceptance, Hidden Tests, Expected Result Check,

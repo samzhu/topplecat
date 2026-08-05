@@ -59,11 +59,11 @@ Run the reviewer sequence:
 ```bash
 ./gradlew toppleCatCheck --spec specs/023-checkout/spec.md
 ./gradlew toppleCatReview --spec specs/023-checkout/spec.md
-./gradlew toppleCatSeal --spec specs/023-checkout/spec.md
+./gradlew toppleCatSeal
 ```
 
-Reviewer HTML defaults to English. Add `--language zh-TW` to Review, Seal,
-Reseal, or Verify when the Reviewer wants Traditional Chinese ToppleCat-owned
+Reviewer HTML defaults to English. Add `--language zh-TW` to Review or Verify
+when the Reviewer wants Traditional Chinese ToppleCat-owned
 presentation. This invocation-only choice preserves authored display prose and
 machine values exactly as recorded.
 
@@ -73,8 +73,20 @@ receives only public material and works with `./gradlew test`.
 ## Make the delivery earn a PASS
 
 ```bash
-./gradlew toppleCatVerify --spec specs/023-checkout/spec.md
+./gradlew toppleCatVerify
 ```
+
+This is the normal full-contract verification command for CI. When a Reviewer
+wants fast evidence for just-finished work, Verify can instead take either
+selected Spec files or repeated AC IDs, never both:
+
+```bash
+./gradlew toppleCatVerify --spec specs/023-checkout/spec.md
+./gradlew toppleCatVerify --ac AC-CHECKOUT-THRESHOLD --ac AC-CHECKOUT-VIP
+```
+
+The scoped report identifies its selected ACs and how they were selected. Its
+`PASS` does not make a claim about ACs outside that scope.
 
 The formal run creates fresh public acceptance evidence and separately records
 Hidden Tests, Mutation Testing, Property-Based Testing, and expected-value

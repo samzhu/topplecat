@@ -20,6 +20,12 @@ public abstract class ToppleCatExtension {
   /** True only when the current Gradle invocation explicitly supplied {@code --spec}. */
   public abstract Property<Boolean> getCommandLineSpecProvided();
 
+  /** Invocation-only AC IDs supplied through {@code toppleCatVerify --ac}. */
+  public abstract ListProperty<String> getCommandLineAcceptanceConditionIds();
+
+  /** True only when the current Verify invocation explicitly supplied {@code --ac}. */
+  public abstract Property<Boolean> getCommandLineAcceptanceConditionsProvided();
+
   /** Invocation-only Reviewer HTML presentation language; never project verification policy. */
   public abstract Property<String> getCommandLineReportLanguage();
 

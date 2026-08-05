@@ -25,6 +25,8 @@ import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
@@ -71,6 +73,12 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
 
   @OutputFile
   public abstract RegularFileProperty getSelectedSpecScopeFile();
+
+  @org.gradle.api.tasks.Input
+  public abstract ListProperty<String> getSelectedAcceptanceConditionIds();
+
+  @org.gradle.api.tasks.Input
+  public abstract Property<Boolean> getAcceptanceConditionsOptionProvided();
 
   @TaskAction
   public void check() {
@@ -129,7 +137,9 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
         SpecScopeResolver.resolve(
             getProjectRoot().get().getAsFile().toPath(),
             getSelectedSpecPaths().getOrElse(List.of()),
-            getSpecOptionProvided().getOrElse(false));
+            getSpecOptionProvided().getOrElse(false),
+            getSelectedAcceptanceConditionIds().getOrElse(List.of()),
+            getAcceptanceConditionsOptionProvided().getOrElse(false));
     validateSelectedBindings(scope, descriptors);
     writeDefinition(definition);
     writeScope(scope);
@@ -208,7 +218,7 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
         .ifPresent(
             acId -> {
               throw new ToppleCatException(
-                  "Selected ToppleCat Spec AC "
+                  "Selected ToppleCat AC "
                       + acId
                       + " has no @ToppleAcceptanceTest binding. Add"
                       + " @ToppleAcceptanceTest(\""

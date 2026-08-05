@@ -20,6 +20,8 @@ import io.github.samzhu.topplecat.core.PropertyDefinition;
 import io.github.samzhu.topplecat.core.PropertyResult;
 import io.github.samzhu.topplecat.core.PropertyResults;
 import io.github.samzhu.topplecat.core.PropertyResultsJson;
+import io.github.samzhu.topplecat.core.SelectedSpecScope;
+import io.github.samzhu.topplecat.core.SelectedSpecScopeJson;
 import io.github.samzhu.topplecat.core.StepRun;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.core.ToppleEvidence;
@@ -60,7 +62,6 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -155,11 +156,8 @@ public abstract class ToppleCatReportTask extends DefaultTask {
   @Input
   public abstract Property<String> getPropertyDisabledReason();
 
-  @Input
-  public abstract ListProperty<String> getSelectedSpecPaths();
-
-  @Input
-  public abstract Property<Boolean> getSpecOptionProvided();
+  @org.gradle.api.tasks.InputFile
+  public abstract RegularFileProperty getSelectedSpecScopeFile();
 
   @Input
   public abstract Property<Boolean> getAllHidden();
@@ -173,20 +171,18 @@ public abstract class ToppleCatReportTask extends DefaultTask {
     Path root = getProjectRoot().get().getAsFile().toPath();
     Path runDirectory = getRunDirectory().get().getAsFile().toPath();
     VerificationRunWorkspace.prepare(runDirectory);
-    SpecScopeResolver.ResolvedSpecScope selectedScope =
-        SpecScopeResolver.resolve(
-            root,
-            getSelectedSpecPaths().getOrElse(List.of()),
-            getSpecOptionProvided().getOrElse(false));
-    boolean allHidden = getAllHidden().getOrElse(false) || !selectedScope.scope().selected();
+    SelectedSpecScope selectedScope = selectedScope();
+    boolean allHidden = getAllHidden().getOrElse(false) || !selectedScope.selected();
     VerificationScope verificationScope =
         new VerificationScope(
             VerificationScope.SCHEMA_VERSION,
-            selectedScope.scope(),
-            allHidden ? VerificationScope.HIDDEN_ALL : VerificationScope.HIDDEN_SELECTED_SPECS,
+            selectedScope,
+            allHidden
+                ? VerificationScope.HIDDEN_ALL
+                : VerificationScope.HIDDEN_SELECTED_ACCEPTANCE_CONDITIONS,
             VerificationScope.MUTATION_SELECTED_ACCEPTANCE_CONDITIONS,
-            selectedScope.scope().selected()
-                ? VerificationScope.PROPERTY_PUBLIC_SELECTED_SPECS
+            selectedScope.selected()
+                ? VerificationScope.PROPERTY_PUBLIC_SELECTED_ACCEPTANCE_CONDITIONS
                 : VerificationScope.PROPERTY_PUBLIC_FULL_CONTRACT);
     Path verificationScopeFile = runDirectory.resolve("verification-scope.json");
     write(verificationScopeFile, VerificationScopeJson.write(verificationScope));
@@ -204,8 +200,8 @@ public abstract class ToppleCatReportTask extends DefaultTask {
             .filter(testCase -> testCase.visibility() == CaseVisibility.PUBLIC)
             .filter(
                 testCase ->
-                    !selectedScope.scope().selected()
-                        || selectedScope.scope().acceptanceConditionIds().contains(testCase.acId()))
+                    !selectedScope.selected()
+                        || selectedScope.acceptanceConditionIds().contains(testCase.acId()))
             .toList();
     List<ToppleCaseData> hiddenVerificationCases =
         reviewerDefinition.acceptanceConditions().stream()
@@ -216,10 +212,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
                     testCase.visibility() == CaseVisibility.HIDDEN
                         && getHiddenTestsEnabled().get()
                         && (allHidden
-                            || selectedScope
-                                .scope()
-                                .acceptanceConditionIds()
-                                .contains(testCase.acId())))
+                            || selectedScope.acceptanceConditionIds().contains(testCase.acId())))
             .toList();
     List<ToppleCaseData> verificationCases = new ArrayList<>(publicCases);
     verificationCases.addAll(hiddenVerificationCases);
@@ -254,8 +247,8 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         executions(runDirectory, definitionDigestsByCaseId, definedCaseIds);
     Map<String, ReportViews.CaseExecution> executions = executionSummary.executions();
     Set<String> selectedAcIds =
-        selectedScope.scope().selected()
-            ? Set.copyOf(selectedScope.scope().acceptanceConditionIds())
+        selectedScope.selected()
+            ? Set.copyOf(selectedScope.acceptanceConditionIds())
             : reviewerDefinition.acceptanceConditions().stream()
                 .map(AcceptanceContract::acId)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
@@ -279,7 +272,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
         collectProperties(
             runDirectory,
             publicDefinition,
-            selectedScope.scope(),
+            selectedScope,
             getPropertyEnabled().get(),
             integrityPassed,
             runId);
@@ -341,7 +334,7 @@ public abstract class ToppleCatReportTask extends DefaultTask {
             reviewerGates,
             generatedAt,
             DeliveryScope.from(
-                selectedScope.scope(),
+                selectedScope,
                 verificationScope.hiddenMode(),
                 verificationScope.mutationMode(),
                 verificationScope.publicPropertyMode(),
@@ -429,6 +422,17 @@ public abstract class ToppleCatReportTask extends DefaultTask {
           "ToppleCat hidden verification requires a run-scoped reviewer definition.");
     }
     return definition(getReviewerDefinitionFile(), "reviewer");
+  }
+
+  private SelectedSpecScope selectedScope() {
+    Path scope = getSelectedSpecScopeFile().get().getAsFile().toPath();
+    try {
+      return SelectedSpecScopeJson.read(Files.readString(scope));
+    } catch (IOException exception) {
+      throw new GradleException(
+          "Cannot read ToppleCat verification scope " + scope + ": " + exception.getMessage(),
+          exception);
+    }
   }
 
   private PropertyCollection collectProperties(

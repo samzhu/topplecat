@@ -135,10 +135,13 @@ shape—not merely a changed visible literal. Passing hidden rows does not prove
 all shortcuts are impossible; it is evidence for Hidden Tests only.
 
 An external workflow supplies optional Markdown context with repeated `--spec`
-paths. Each selected `AC-...` needs an executable public binding. The same
-selection is used for Check, Review, Seal, and Verify, and becomes part of the
-mechanical approval. Markdown is reading context, not another authoring
-language or source of executable truth.
+paths. Each selected `AC-...` needs an executable public binding. Check and
+Review use those paths to validate and read the complete Markdown Spec. Seal
+always approves the complete executable contract. Verify normally runs that
+complete contract, but a Reviewer may ask for quick scoped evidence with either
+`--spec` paths or repeated `--ac AC-...` IDs; the two forms cannot be combined.
+Markdown is reading context, not another authoring language or source of
+executable truth.
 
 Run `./gradlew toppleCatCheck` before handoff. An authorized reviewer then runs
 `./gradlew toppleCatReview`; its output contains reviewer material and must not

@@ -106,10 +106,9 @@ _Avoid_: Contract Review, Public Spec, Living Documentation
 
 **Selected Spec Document／已選規格文件**:
 A repository-relative Markdown document selected by the human or external
-workflow for one delivery. Its complete contents belong in Spec Review, and
-every `AC-...` identifier anchored in the document belongs to that delivery's
-Delivery Scope. ToppleCat does not select a second AC subset inside the
-document or manage the document's lifecycle.
+workflow for Spec Review. Its complete contents belong in that Review. Verify
+may also derive a scoped Delivery Scope from every `AC-...` identifier in one
+or more selected documents. ToppleCat does not manage the document's lifecycle.
 _Avoid_: partially selected Spec, ToppleCat-managed requirement
 
 **Verification Report／驗證報告**:
@@ -125,11 +124,13 @@ A failing or incomplete result remains valid evidence when it truthfully
 records what happened.
 
 **Delivery Scope／交付範圍**:
-The Acceptance Conditions selected by the human or external workflow for one
-verification run. It names what is being verified, not a task lifecycle.
+The Acceptance Conditions covered by one verification run. A normal Verify
+covers the complete contract; a scoped Verify gets its ACs from selected Spec
+documents or explicit AC IDs, but never both. It names what is being verified,
+not a task lifecycle.
 
 **Mechanical Seal／機械封印**:
-The content-based integrity record over the selected executable contract and
+The content-based integrity record over the complete executable contract and
 verification policy. It confirms consistency, not human or organizational
 approval.
 _Avoid_: sign-off, approval decision
@@ -147,6 +148,8 @@ The current formal run's `PASS`, `FAIL`, or `INCOMPLETE` conclusion for the
 selected Delivery Scope. `PASS` means every required Gate passed under the
 sealed policy in this run; it is evidence, not proof that the business rules
 are complete, an acceptance recommendation, or organizational approval.
+For a non-empty Delivery Scope, Verification Report states this restriction
+beside its `PASS` conclusion.
 _Avoid_: delivery recommendation, sign-off, proof of correctness
 
 ## People and orchestration

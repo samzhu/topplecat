@@ -7,12 +7,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.stream.Stream;
+import org.gradle.api.DefaultTask;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.options.Option;
 
 /** Seals reviewer-only source into local custody before implementation work. */
-public abstract class ToppleCatSealTask extends ToppleCatReviewerPresentationTask
+public abstract class ToppleCatSealTask extends DefaultTask
     implements ToppleCatApprovalInputs {
   @Internal
   public abstract DirectoryProperty getProjectRoot();
@@ -38,6 +40,18 @@ public abstract class ToppleCatSealTask extends ToppleCatReviewerPresentationTas
             "Never expose reviewer source through agent-readable Git history. Give the"
                 + " implementation agent a public export without .git, .topplecat, or build/, or"
                 + " use an isolated environment whose history never contained it.");
+  }
+
+  @Option(option = "spec", description = "Unsupported: Seal always handles the complete contract.")
+  public void rejectSpec(String ignored) {
+    throw new org.gradle.api.GradleException(
+        "toppleCatSeal always seals the complete contract and accepts no --spec selection.");
+  }
+
+  @Option(option = "ac", description = "Unsupported: Seal always handles the complete contract.")
+  public void rejectAcceptanceCondition(String ignored) {
+    throw new org.gradle.api.GradleException(
+        "toppleCatSeal always seals the complete contract and accepts no --ac selection.");
   }
 
   private static void clearTransientHiddenCompilerOutput(Path output) {

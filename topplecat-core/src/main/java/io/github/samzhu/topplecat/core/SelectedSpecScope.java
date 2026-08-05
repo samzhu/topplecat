@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Immutable, tamper-evident selection of external Spec documents and their executable AC IDs. */
+/** Immutable selection of external Spec documents or explicit executable AC IDs. */
 public record SelectedSpecScope(
     String schemaVersion,
     List<SelectedSpecDocument> specDocuments,
@@ -42,9 +42,9 @@ public record SelectedSpecScope(
     return create(List.of(), List.of());
   }
 
-  /** True when a delivery selected one or more external Spec documents. */
+  /** True when a run selected one or more Spec documents or Acceptance Conditions. */
   public boolean selected() {
-    return !specDocuments.isEmpty();
+    return !specDocuments.isEmpty() || !acceptanceConditionIds.isEmpty();
   }
 
   private static String digest(List<SelectedSpecDocument> documents, List<String> acIds) {

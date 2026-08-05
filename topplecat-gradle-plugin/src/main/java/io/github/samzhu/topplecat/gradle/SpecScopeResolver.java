@@ -17,7 +17,32 @@ final class SpecScopeResolver {
 
   static ResolvedSpecScope resolve(
       Path projectRoot, List<String> commandLineSpecPaths, boolean commandLineSpecProvided) {
+    return resolve(
+        projectRoot,
+        commandLineSpecPaths,
+        commandLineSpecProvided,
+        List.of(),
+        false);
+  }
+
+  static ResolvedSpecScope resolve(
+      Path projectRoot,
+      List<String> commandLineSpecPaths,
+      boolean commandLineSpecProvided,
+      List<String> commandLineAcceptanceConditionIds,
+      boolean commandLineAcceptanceConditionsProvided) {
     Path root = projectRoot.toAbsolutePath().normalize();
+    if (commandLineSpecProvided && commandLineAcceptanceConditionsProvided) {
+      throw new ToppleCatException(
+          "Use either ToppleCat --spec or --ac for Verify, not both in the same invocation.");
+    }
+    if (commandLineAcceptanceConditionsProvided) {
+      return new ResolvedSpecScope(
+          SelectedSpecScope.create(List.of(), selectedAcceptanceConditions(commandLineAcceptanceConditionIds)),
+          ExternalSpecDocumentReader.ParsedSpecs.empty(),
+          List.of(),
+          true);
+    }
     List<Path> documents =
         commandLineSpecProvided ? selectedMarkdownDocuments(root, commandLineSpecPaths) : List.of();
     ExternalSpecDocumentReader.ParsedSpecs parsed =
@@ -45,6 +70,20 @@ final class SpecScopeResolver {
         SelectedSpecScope.create(
             sealedDocuments, commandLineSpecProvided ? parsed.acceptanceConditionIds() : List.of());
     return new ResolvedSpecScope(scope, parsed, documents, commandLineSpecProvided);
+  }
+
+  private static List<String> selectedAcceptanceConditions(List<String> rawAcIds) {
+    if (rawAcIds == null || rawAcIds.isEmpty()) {
+      throw new ToppleCatException("ToppleCat --ac requires at least one AC-... identifier.");
+    }
+    LinkedHashSet<String> acIds = new LinkedHashSet<>();
+    for (String acId : rawAcIds) {
+      if (acId == null || !acId.matches("AC-[A-Za-z0-9][A-Za-z0-9-]*")) {
+        throw new ToppleCatException("ToppleCat --ac requires literal AC-... identifiers: " + acId);
+      }
+      acIds.add(acId);
+    }
+    return acIds.stream().sorted().toList();
   }
 
   private static List<Path> selectedMarkdownDocuments(Path root, List<String> rawPaths) {

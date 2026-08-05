@@ -51,6 +51,8 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     extension.getPropertyBasedTesting().getEnabled().convention(true);
     extension.getCommandLineSpecPaths().convention(List.of());
     extension.getCommandLineSpecProvided().convention(false);
+    extension.getCommandLineAcceptanceConditionIds().convention(List.of());
+    extension.getCommandLineAcceptanceConditionsProvided().convention(false);
     extension.getCommandLineReportLanguage().convention(ReportLanguage.EN.tag());
     extension.getAllHiddenRequested().convention(false);
     project
@@ -197,6 +199,12 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                           validateReviewerSource.flatMap(
                               ToppleCatCompileContractsTask::getDescriptorClassesDirectory));
                   configureScopeTask(task, extension);
+                  task
+                      .getSelectedAcceptanceConditionIds()
+                      .set(extension.getCommandLineAcceptanceConditionIds());
+                  task
+                      .getAcceptanceConditionsOptionProvided()
+                      .set(extension.getCommandLineAcceptanceConditionsProvided());
                   task.getReviewRoot()
                       .set(project.getLayout().getBuildDirectory().dir("topplecat/reports/review"));
                   task.getDefinitionFile()
@@ -254,10 +262,9 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                   task.setDescription(
                       "Moves the complete reviewer-only src/hiddenTest source set into local hidden"
                           + " storage.");
-                  task.dependsOn(review);
+                  task.dependsOn(check);
                   task.getProjectRoot().set(project.getLayout().getProjectDirectory());
                   task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
-                  configureScopeTask(task, extension);
                   configureApprovalInputs(task, project, test, extension);
                 });
     Provider<ToppleCatCustodyBuildService> custodyService =
@@ -320,12 +327,10 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                 task -> {
                   task.setGroup("verification");
                   task.setDescription(
-                      "Validates, reviews, and explicitly updates reviewer-only local escrow"
-                          + " custody.");
-                  task.dependsOn(review);
+                      "Validates and explicitly updates complete reviewer-only local escrow custody.");
+                  task.dependsOn(check);
                   task.getProjectRoot().set(project.getLayout().getProjectDirectory());
                   task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
-                  configureScopeTask(task, extension);
                   configureApprovalInputs(task, project, test, extension);
                 });
     updateEscrow.configure(
@@ -573,10 +578,14 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                               .getLayout()
                               .getBuildDirectory()
                               .file("topplecat/contract-definition.json"));
-                  task.getSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
-                  task.getSpecOptionProvided().set(extension.getCommandLineSpecProvided());
                   task.getAllHidden().set(extension.getAllHiddenRequested());
                   task.getReportLanguage().set(extension.getCommandLineReportLanguage());
+                  task.getSelectedSpecScopeFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/selected-spec-scope.json"));
                   task.getRunDirectory().set(runDirectory);
                   task.getContractIntegrityResultFile()
                       .set(
@@ -676,8 +685,10 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     task.doFirst(
         ignored -> {
           boolean noSpecSelection = !extension.getCommandLineSpecProvided().getOrElse(false);
+          boolean noAcSelection =
+              !extension.getCommandLineAcceptanceConditionsProvided().getOrElse(false);
           boolean allSelected =
-              noSpecSelection
+              (noSpecSelection && noAcSelection)
                   || (allowAllHiddenTests && extension.getAllHiddenRequested().getOrElse(false));
           task.systemProperty(
               ToppleJunit.SELECTED_SCOPE_FILE_PROPERTY, allSelected ? "" : scope.toString());
@@ -922,8 +933,6 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     task.getApprovalExpectedConsumptionEnabled().convention(true);
     task.getApprovalPropertyEnabled().convention(true);
     task.getApprovalMutationEnabled().convention(true);
-    task.getApprovalSelectedSpecPaths().set(extension.getCommandLineSpecPaths());
-    task.getApprovalSpecOptionProvided().set(extension.getCommandLineSpecProvided());
   }
 
   private static void configureScopeTask(ToppleCatScopedTask task, ToppleCatExtension extension) {

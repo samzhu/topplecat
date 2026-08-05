@@ -3,14 +3,12 @@ package io.github.samzhu.topplecat.gradle;
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
 import io.github.samzhu.topplecat.core.ReviewerContractApproval;
-import io.github.samzhu.topplecat.core.SelectedSpecScope;
 import io.github.samzhu.topplecat.core.VerificationPolicy;
 import java.io.IOException;
 import java.nio.file.Files;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Internal;
 
@@ -44,11 +42,6 @@ interface ToppleCatApprovalInputs {
   Property<Boolean> getApprovalMutationEnabled();
 
   @Internal
-  ListProperty<String> getApprovalSelectedSpecPaths();
-
-  @Internal
-  Property<Boolean> getApprovalSpecOptionProvided();
-
   default ReviewerContractApproval currentApproval() {
     ContractDefinition definition;
     try {
@@ -67,12 +60,6 @@ interface ToppleCatApprovalInputs {
             getApprovalExpectedConsumptionEnabled().get(),
             getApprovalPropertyEnabled().get(),
             getApprovalMutationEnabled().get());
-    SelectedSpecScope scope =
-        SpecScopeResolver.resolve(
-                getApprovalBuildRoot().get().getAsFile().toPath(),
-                getApprovalSelectedSpecPaths().getOrElse(java.util.List.of()),
-                getApprovalSpecOptionProvided().getOrElse(false))
-            .scope();
     return ContractApprovalFactory.create(
         getApprovalBuildRoot().get().getAsFile().toPath(),
         getApprovalPublicSourceRoots().getFiles().stream().map(file -> file.toPath()).toList(),
@@ -80,6 +67,6 @@ interface ToppleCatApprovalInputs {
         getApprovalPublicCaseRoot().get().getAsFile().toPath(),
         definition,
         policy,
-        scope);
+        io.github.samzhu.topplecat.core.SelectedSpecScope.empty());
   }
 }

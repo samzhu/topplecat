@@ -27,9 +27,9 @@ class SelectedSpecScopeTest {
                     new VerificationScope(
                         VerificationScope.SCHEMA_VERSION,
                         scope,
-                        VerificationScope.HIDDEN_SELECTED_SPECS,
+                        VerificationScope.HIDDEN_SELECTED_ACCEPTANCE_CONDITIONS,
                         VerificationScope.MUTATION_ALL_PUBLIC_ACCEPTANCE_CONTRACTS,
-                        VerificationScope.PROPERTY_PUBLIC_SELECTED_SPECS)))
+                        VerificationScope.PROPERTY_PUBLIC_SELECTED_ACCEPTANCE_CONDITIONS)))
             .selectedSpecScope());
   }
 

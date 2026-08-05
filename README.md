@@ -74,7 +74,7 @@ them and whether they run locally, in CI, or in another workflow.
 
 The safeguards are independent: one never supplies evidence for another, and
 their results are not blended into a quality score. Contract Integrity confirms
-that the selected contract and verification policy still match the Mechanical
+that the complete contract and verification policy still match the Mechanical
 Seal. Expected Consumption separately checks that authored expected values were
 actually asserted.
 
@@ -113,21 +113,35 @@ dependencies {
 tasks.test { useJUnitPlatform() }
 ```
 
-Prepare and inspect the contract before implementation, then verify the same
-selected Spec after the agent's done claim:
+Prepare and inspect the feature Spec before implementation, then seal the
+complete contract. After the agent's done claim, the normal command verifies
+the whole project:
 
 ```bash
 ./gradlew toppleCatCheck --spec specs/checkout/spec.md
 ./gradlew toppleCatReview --spec specs/checkout/spec.md
-./gradlew toppleCatSeal --spec specs/checkout/spec.md
+./gradlew toppleCatSeal
 
 ./gradlew test
-./gradlew toppleCatVerify --spec specs/checkout/spec.md
+./gradlew toppleCatVerify
 ```
 
+For a quick reviewer check of the work just delivered, Verify can scope the
+formal run with either one or more Spec files or repeated AC IDs. Do not combine
+the two forms:
+
+```bash
+./gradlew toppleCatVerify --spec specs/checkout/spec.md
+./gradlew toppleCatVerify --ac AC-CHECKOUT-THRESHOLD --ac AC-CHECKOUT-VIP
+```
+
+A scoped Verification Report repeats that its `PASS` covers only the listed ACs
+and does not mean the complete executable contract passed. CI should use
+`toppleCatVerify` without either option.
+
 Reviewer HTML is English by default. To read ToppleCat-owned report prose in
-Traditional Chinese, add `--language zh-TW` to `toppleCatReview`,
-`toppleCatSeal`, `toppleCatReseal`, or `toppleCatVerify`. The choice applies
+Traditional Chinese, add `--language zh-TW` to `toppleCatReview` or
+`toppleCatVerify`. The choice applies
 only to that invocation's HTML; authored text and canonical values such as AC
 IDs, Gate names, verdicts, and PIT outcomes stay exactly as recorded.
 
@@ -175,7 +189,7 @@ complete Java, Stage, case, expected-value, and Property rules.
 | `build/topplecat/agent-feedback.json` | Implementation Agent | Safe Gate-level remediation without reviewer answers. |
 
 Both Reviewer HTML reports accept the same invocation-only `--language en` or
-`--language zh-TW` presentation choice. This changes headings, accessibility
+`--language zh-TW` presentation choice on their report command. This changes headings, accessibility
 text, controls, explanations, and HTML language metadata, but never report
 JSON, evidence, safe feedback, the Mechanical Seal, or the contract itself.
 Verification Report uses plain reader outcomes before canonical technical
@@ -190,7 +204,8 @@ or safeguard targets are revealed before the report moves to them.
 
 The aggregate verdict is:
 
-- `PASS`: every required Gate passed for the selected ACs in the current run;
+- `PASS`: every required Gate passed for this run's ACs; a scoped run covers
+  only its selected ACs;
 - `FAIL`: completed verification found a blocking AC or Gate problem; or
 - `INCOMPLETE`: ToppleCat could not obtain enough trustworthy current-run
   evidence.

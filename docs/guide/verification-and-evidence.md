@@ -19,27 +19,41 @@ final decision.
 ```bash
 ./gradlew toppleCatCheck --spec specs/023-checkout/spec.md
 ./gradlew toppleCatReview --spec specs/023-checkout/spec.md
-./gradlew toppleCatSeal --spec specs/023-checkout/spec.md
+./gradlew toppleCatSeal
 ./gradlew test
-./gradlew toppleCatVerify --spec specs/023-checkout/spec.md
+./gradlew toppleCatVerify
 ```
 
-`--spec` is repeatable and selects the delivery at invocation time. Use the
-same selection for Check, Review, Seal, and Verify. `--all-hidden-tests`
-widens only hidden typed rows. Public acceptance and PBT follow the selected
-ACs; Mutation Testing is attributed independently to each selected AC's public
-Acceptance Method. An unselected AC cannot affect this run's verdict.
+Check and Review use repeatable `--spec` paths. Check verifies that every AC in
+the selected Markdown documents has an executable public binding; Review shows
+that prose with its Scenario and case rows. Seal and Reseal always custody the
+complete reviewer source and approve the complete executable contract. They do
+not take a Spec or AC selection.
+
+Verify without a selection is the normal full-contract command and the command
+for CI. A Reviewer who needs a quicker report for an implementation just
+completed can use either repeatable `--spec` paths or repeatable `--ac AC-...`
+values, never both:
+
+```bash
+./gradlew toppleCatVerify --spec specs/023-checkout/spec.md
+./gradlew toppleCatVerify --ac AC-CHECKOUT-THRESHOLD --ac AC-CHECKOUT-VIP
+```
+
+Both forms limit public acceptance, Hidden Tests, PBT, and Mutation Testing to
+the selected ACs. The report names the source of the selection and lists its
+AC IDs. Beside a scoped `PASS`, it says that the result covers only those ACs
+and does not mean the complete executable contract passed. `--all-hidden-tests`
+widens only hidden typed rows.
 PIT cannot express a compiler JVM descriptor when selecting JUnit 5 tests. If
 one selected AC shares its test class with an unselected public Acceptance
 Method, formal Verify stops before PIT rather than run that class ambiguously.
 Select every AC in that class or place the selected methods in a dedicated
 class.
 
-The Reviewer may add `--language zh-TW` to Review, Seal, Reseal, or Verify to
+The Reviewer may add `--language zh-TW` to Review or Verify to
 render ToppleCat-owned Reviewer HTML in Traditional Chinese; `en` is the
-default. Seal and Reseal forward the selection to their dependent Spec Review,
-so a custody operation does not overwrite a localized review with English.
-The choice is made again for each invocation and does not enter the Seal or
+default. The choice is made again for each report invocation and does not enter the Seal or
 verification policy. Only `en` and `zh-TW` are valid; a blank or unsupported
 explicit value fails before formal verification begins.
 
@@ -186,8 +200,8 @@ organizational approval.
 and rehide before failing Gradle for an aggregate `FAIL` or `INCOMPLETE`.
 
 Contract integrity seals the compiler-derived acceptance source closure, public
-typed rows, project Gradle logic, semantic definition, selected scope, and
-effective verification policy. It excludes production source and unrelated
+typed rows, project Gradle logic, semantic definition, and effective verification
+policy for the complete contract. It excludes production source and unrelated
 ordinary tests. An approval mismatch is `FAIL`; missing current approval is
 `INCOMPLETE`. Verify uses only an existing Mechanical Seal and records that its
 approval was not updated. If none exists, run `toppleCatSeal` before Verify;

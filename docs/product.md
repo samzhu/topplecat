@@ -19,10 +19,10 @@ Review to confirm what will be checked. The agent implements against only the
 public handoff and uses ordinary `./gradlew test` feedback.
 
 After the agent claims completion, the same developer may act as the Reviewer.
-Formal Verify runs the sealed public acceptance and every enabled Independent
-Safeguard. ToppleCat records `PASS` only when every required Gate passes in the
-current run; the Reviewer reads Verification Report and decides whether that
-evidence is sufficient for the next delivery decision. Neither `PASS` nor
+Formal Verify normally runs the complete sealed public acceptance contract and
+every enabled Independent Safeguard. ToppleCat records `PASS` only when every
+required Gate passes in the current run; the Reviewer reads Verification Report
+and decides whether that evidence is sufficient for the next delivery decision. Neither `PASS` nor
 `FAIL` proves that no business rule was omitted.
 
 The team may run ToppleCat locally, in CI, or through another workflow. That
@@ -51,6 +51,13 @@ coding agents while a human remains accountable for acceptance.
 2. **After the agent's done claim:** formal Verify produces Current-run Evidence
    and Verification Report so the human can judge the delivery before accepting
    it or submitting a PR.
+
+The normal Verify command is the full-project command used in CI. A Reviewer
+may instead request a fast report for a just-finished feature by selecting its
+ACs through either Spec documents or explicit AC IDs. That report says exactly
+which ACs ran and, beside a scoped `PASS`, says it does not mean the complete
+executable contract passed. Sealing is never scoped: it always protects the
+complete executable contract and policy.
 
 Both HTML reports are human, reviewer-only reading surfaces. Java/JUnit
 Acceptance Methods and Typed Case Rows remain the Executable Contract;

@@ -62,7 +62,7 @@ ToppleCat 提供命令、證據與報告；團隊自行決定由誰執行，以�
 | **Mutation Testing** | 每個精確的公開 Acceptance Method，能否發現自己執行到的 managed-profile mutants？ | `MUTATION` |
 
 三者彼此獨立：一種結果不能替另一種補證據，也不會混成一個品質分數。
-Contract Integrity 確認已選契約與驗證政策仍符合 Mechanical Seal；
+Contract Integrity 確認完整契約與驗證政策仍符合 Mechanical Seal；
 Expected Consumption 另外確認作者寫下的預期值真的有被斷言。
 
 正式 Mutation Testing 使用 ToppleCat 固定、版本化的 PIT profile，並保留 PIT
@@ -95,19 +95,30 @@ dependencies {
 tasks.test { useJUnitPlatform() }
 ```
 
-實作前先準備並檢視契約；AI 宣稱完成後，再驗證同一份已選 Spec：
+實作前先準備並檢視功能 Spec，再封印完整契約。AI 宣稱完成後，正常流程會驗證整個專案：
 
 ```bash
 ./gradlew toppleCatCheck --spec specs/checkout/spec.md
 ./gradlew toppleCatReview --spec specs/checkout/spec.md
-./gradlew toppleCatSeal --spec specs/checkout/spec.md
+./gradlew toppleCatSeal
 
 ./gradlew test
-./gradlew toppleCatVerify --spec specs/checkout/spec.md
+./gradlew toppleCatVerify
 ```
 
+若 AI 剛完成一段工作，Reviewer 想先快速確認那次範圍，可以用一份或多份 Spec，或重複
+指定 AC ID 來執行 Verify；兩種選法不能混用：
+
+```bash
+./gradlew toppleCatVerify --spec specs/checkout/spec.md
+./gradlew toppleCatVerify --ac AC-CHECKOUT-THRESHOLD --ac AC-CHECKOUT-VIP
+```
+
+範圍驗證報告會明說這種 `PASS` 只代表列出的 AC 通過，不代表完整可執行契約通過。CI
+應使用不帶選項的 `toppleCatVerify`。
+
 Reviewer HTML 預設使用英文。要以繁體中文閱讀 ToppleCat 自己的報告介面，請在
-`toppleCatReview`、`toppleCatSeal`、`toppleCatReseal` 或 `toppleCatVerify` 加上
+`toppleCatReview` 或 `toppleCatVerify` 加上
 `--language zh-TW`。這只影響該次執行的 HTML；作者寫下的文字與 AC ID、Gate 名稱、
 verdict、PIT 結果等 canonical 值都會維持原樣。
 
@@ -153,7 +164,7 @@ Typed Case Rows 提供輸入與預期結果：
 | `build/topplecat/evidence.json` | Reviewer／automation | machine-readable 本次 verdict 與 Gate 摘要值。 |
 | `build/topplecat/agent-feedback.json` | Implementation Agent | 不含 reviewer 答案的安全 Gate 層級修正方向。 |
 
-兩份 Reviewer HTML 都支援同一次執行選擇 `--language en` 或
+兩份 Reviewer HTML 都支援在各自的報告命令選擇 `--language en` 或
 `--language zh-TW`。這會改變標題、無障礙文字、控制項、說明與 HTML 語言中繼資料，
 但不會改變報告 JSON、evidence、安全 agent feedback、Mechanical Seal 或契約本身。
 Verification Report 會先顯示白話的閱讀結果，再提供 canonical 技術證據。案例失敗時，
@@ -164,7 +175,7 @@ Verification Report 會先顯示白話的閱讀結果，再提供 canonical 技�
 
 整體 verdict 有三種：
 
-- `PASS`：本次執行中，已選 AC 的每個必要 Gate 都通過；
+- `PASS`：本次執行的每個必要 Gate 都通過；若有指定範圍，僅代表該範圍的 AC；
 - `FAIL`：完整執行發現阻擋性的 AC 或 Gate 問題；以及
 - `INCOMPLETE`：沒有取得足夠可信的本次執行證據。
 

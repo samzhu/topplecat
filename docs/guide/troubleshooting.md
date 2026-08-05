@@ -7,10 +7,10 @@ that uses direct `scenario.given|when|then|and(stage).step(...)` calls. Declare 
 `ToppleScenario` second, then distinct non-final concrete `ToppleStage`
 parameters with accessible no-argument constructors. Move setup, service calls,
 assertions, local variables, helper calls, and control flow into Stage methods.
-## A row or selected Spec AC has no acceptance binding
+## A row or selected AC has no acceptance binding
 
 Add one compilable public `@ToppleAcceptanceTest` with the same literal AC ID,
-or correct the `acId`/`--spec` selection. A hidden row cannot create an AC.
+or correct the `acId`, `--spec`, or `--ac` selection. A hidden row cannot create an AC.
 
 ## Reviewer coverage is incomplete while a Property passed
 
@@ -59,8 +59,8 @@ aggregate failure; stale producer reports cannot be reused.
 
 ## Contract integrity failed
 
-The sealed acceptance source closure, public rows, selected scope, Gradle logic,
-semantic definition, or policy changed. Restore reviewer custody, make the
+The sealed acceptance source closure, public rows, Gradle logic, semantic definition,
+or policy changed. Restore reviewer custody, make the
 intended change, then Check, Review, and Reseal. Do not edit sealed public
 contract inputs in the implementation handoff. If Verify says an existing
 Mechanical Seal is missing, run `toppleCatSeal`; Verify never replaces approval

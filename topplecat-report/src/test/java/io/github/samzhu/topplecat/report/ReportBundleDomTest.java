@@ -248,7 +248,7 @@ class ReportBundleDomTest {
           ((HtmlElement) page.querySelector("#summary"))
               .getTextContent()
               .contains(
-                  "Contract Integrity passed: the selected executable contract matches its"
+                  "Contract Integrity passed: the complete executable contract matches its"
                       + " Mechanical Seal."));
       assertNotNull(page.querySelector("#problems"));
       assertNotNull(page.querySelector("#contract-integrity"));
@@ -293,7 +293,7 @@ class ReportBundleDomTest {
       assertTrue(
           ((HtmlElement) page.querySelector("#summary"))
               .getTextContent()
-              .contains("契約完整性已通過：已選可執行契約符合其機械封印。"));
+              .contains("契約完整性已通過：完整可執行契約符合機械封印。"));
       ((HtmlElement) page.querySelector("#verification-AC-CHECKOUT [data-ac-toggle]")).click();
       client.waitForBackgroundJavaScript(50);
       assertEquals(
@@ -303,6 +303,67 @@ class ReportBundleDomTest {
       assertTrue(page.asNormalizedText().contains("未出現在比對中的規則"));
       assertTrue(page.asNormalizedText().contains("FAIL"));
       assertFalse(page.asNormalizedText().contains("交付遭拒"));
+    }
+  }
+
+  @Test
+  void scopedVerificationPassExplainsThatItDoesNotCoverTheCompleteContract() throws Exception {
+    VerificationView scoped =
+        verificationPassView(
+            DeliveryScope.from(
+                SelectedSpecScope.create(List.of(), List.of("AC-CHECKOUT")),
+                "SELECTED_ACCEPTANCE_CONDITIONS",
+                "SELECTED_ACCEPTANCE_CONDITIONS",
+                "SELECTED_ACCEPTANCE_CONDITIONS",
+                1,
+                0));
+    Path scopedEnglish = tempDir.resolve("scoped-verification-en");
+    Path scopedTraditionalChinese = tempDir.resolve("scoped-verification-zh-TW");
+    HtmlBundleWriter.verification(scopedEnglish, scoped);
+    HtmlBundleWriter.verification(scopedTraditionalChinese, scoped, ReportLanguage.ZH_TW);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage english = client.getPage(scopedEnglish.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+      assertTrue(
+          ((HtmlElement) english.querySelector("#summary"))
+              .getTextContent()
+              .contains(
+                  "This PASS covers only the selected ACs; it does not mean the complete"
+                      + " executable contract passed."));
+      assertTrue(
+          ((HtmlElement) english.querySelector("#summary"))
+              .getTextContent()
+              .contains("Selected by explicit AC IDs: AC-CHECKOUT."));
+
+      HtmlPage traditionalChinese =
+          client.getPage(scopedTraditionalChinese.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+      assertTrue(
+          ((HtmlElement) traditionalChinese.querySelector("#summary"))
+              .getTextContent()
+              .contains("這個 PASS 只代表選定的 AC 通過，不代表完整可執行契約通過。"));
+      assertTrue(
+          ((HtmlElement) traditionalChinese.querySelector("#summary"))
+              .getTextContent()
+              .contains("由明確 AC ID 選取：AC-CHECKOUT。"));
+    }
+
+    VerificationView fullContract =
+        verificationPassView(
+            DeliveryScope.from(
+                SelectedSpecScope.empty(), "ALL", "ALL", "FULL_CONTRACT", 1, 0));
+    Path fullContractBundle = tempDir.resolve("full-contract-verification");
+    HtmlBundleWriter.verification(fullContractBundle, fullContract);
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(fullContractBundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+      assertFalse(
+          ((HtmlElement) page.querySelector("#summary"))
+              .getTextContent()
+              .contains("This PASS covers only the selected ACs"));
     }
   }
 
@@ -482,7 +543,7 @@ class ReportBundleDomTest {
           ((HtmlElement) page.querySelector("#summary"))
               .getTextContent()
               .contains(
-                  "Contract Integrity failed: the selected executable contract no longer matches"
+                  "Contract Integrity failed: the complete executable contract no longer matches"
                       + " its Mechanical Seal, so downstream AC work did not run."));
       assertTrue(
           page.querySelector("#all-acs")
@@ -500,7 +561,7 @@ class ReportBundleDomTest {
       assertTrue(
           ((HtmlElement) page.querySelector("#summary"))
               .getTextContent()
-              .contains("契約完整性失敗：已選可執行契約已不符合其機械封印，因此未執行下游 AC 工作。"));
+              .contains("契約完整性失敗：完整可執行契約已不符合機械封印，因此未執行下游 AC 工作。"));
       assertTrue(page.querySelector("#all-acs").getTextContent().contains("未執行下游 AC 工作"));
       assertEquals(0, page.querySelectorAll(".ac-card").getLength());
     }
@@ -1142,6 +1203,27 @@ class ReportBundleDomTest {
       assertTrue(technical.getTextContent().contains("SURVIVED"));
       assertTrue(technical.getTextContent().contains("Replaced integer addition with subtraction"));
     }
+  }
+
+  private VerificationView verificationPassView(DeliveryScope deliveryScope) throws Exception {
+    VerificationView view =
+        new VerificationView(
+            VerificationView.SCHEMA_VERSION,
+            NOW,
+            CaseResultStatus.PASS,
+            true,
+            List.of(
+                new EvidenceGate("CONTRACT_INTEGRITY", EvidenceVerdict.PASS, null),
+                new EvidenceGate("JUNIT", EvidenceVerdict.PASS, null),
+                new EvidenceGate("REVIEWER_JUNIT", EvidenceVerdict.PASS, null),
+                new EvidenceGate("EXPECTED_CONSUMPTION", EvidenceVerdict.PASS, null),
+                new EvidenceGate("PROPERTY", EvidenceVerdict.NOT_APPLICABLE, null),
+                new EvidenceGate("MUTATION", EvidenceVerdict.NOT_APPLICABLE, null)),
+            List.of(mutationAcceptanceCondition("AC-CHECKOUT", "Checkout total")),
+            deliveryScope,
+            null,
+            new VerificationRunSummary("run-scoped", NOW, NOW, 1, 0, 0, 0));
+    return ReportViews.withMutationAttribution(view, null);
   }
 
   private VerificationView readingControlsView() throws Exception {

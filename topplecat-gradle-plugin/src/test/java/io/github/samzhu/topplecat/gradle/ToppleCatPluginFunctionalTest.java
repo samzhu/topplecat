@@ -96,7 +96,7 @@ class ToppleCatPluginFunctionalTest {
   }
 
   @Test
-  void reviewerLanguageIsInvocationScopedForReviewSealResealAndVerify() throws Exception {
+  void reviewerLanguageIsInvocationScopedForReviewAndVerify() throws Exception {
     writeProject(
         """
         toppleCat {
@@ -122,11 +122,9 @@ class ToppleCatPluginFunctionalTest {
     runner("toppleCatReview").build();
     assertReportLanguage("review", "en");
 
-    runner("toppleCatSeal", "--language", "zh-TW").build();
-    assertReportLanguage("review", "zh-TW");
+    runner("toppleCatSeal").build();
     runner("toppleCatRestore").build();
-    runner("toppleCatReseal", "--language", "zh-TW").build();
-    assertReportLanguage("review", "zh-TW");
+    runner("toppleCatReseal").build();
 
     runner("toppleCatVerify", "--language", "zh-TW").build();
     assertReportLanguage("verification", "zh-TW");
@@ -166,7 +164,7 @@ class ToppleCatPluginFunctionalTest {
     assertEquals(EvidenceVerdict.PASS, gate("JUNIT"));
     assertEquals(EvidenceVerdict.PASS, gate("REVIEWER_JUNIT"));
     assertEquals(EvidenceVerdict.NOT_APPLICABLE, gate("PROPERTY"));
-    assertTrue(Files.isRegularFile(project.resolve("build/topplecat/reports/review/index.html")));
+    assertFalse(Files.exists(project.resolve("build/topplecat/reports/review/index.html")));
     assertTrue(
         Files.isRegularFile(project.resolve("build/topplecat/reports/verification/index.html")));
     assertFalse(Files.exists(project.resolve("build/topplecat/reports/public")));
@@ -849,7 +847,7 @@ class ToppleCatPluginFunctionalTest {
     Files.createDirectories(spec.getParent());
     Files.writeString(spec, "# Coupon\n\nAC-COUPON\n");
 
-    runner("toppleCatSeal", "--spec", "specs/coupon.md").build();
+    runner("toppleCatSeal").build();
     var verify = runner("toppleCatVerify", "--spec", "specs/coupon.md").build();
 
     assertEquals(TaskOutcome.SUCCESS, verify.task(":toppleCatVerificationTest").getOutcome());
@@ -867,6 +865,74 @@ class ToppleCatPluginFunctionalTest {
             .buildAndFail()
             .getOutput()
             .contains("Unknown command-line option"));
+  }
+
+  @Test
+  void sealAlwaysApprovesTheCompleteContractAndDoesNotNeedSpecReview() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+    runner("toppleCatSeal").build();
+    assertFalse(Files.exists(project.resolve("build/topplecat/reports/review/index.html")));
+    runner("toppleCatVerify").build();
+    assertEquals(EvidenceVerdict.PASS, gate("CONTRACT_INTEGRITY"));
+
+    var selectedSeal = runner("toppleCatSeal", "--spec", "specs/coupon.md").buildAndFail();
+    assertTrue(selectedSeal.getOutput().contains("always seals the complete contract"));
+    var directAcSeal = runner("toppleCatSeal", "--ac", "AC-COUPON").buildAndFail();
+    assertTrue(directAcSeal.getOutput().contains("always seals the complete contract"));
+
+    runner("toppleCatRestore").build();
+    var selectedReseal = runner("toppleCatReseal", "--spec", "specs/coupon.md").buildAndFail();
+    assertTrue(selectedReseal.getOutput().contains("always seals the complete contract"));
+    var directAcReseal = runner("toppleCatReseal", "--ac", "AC-COUPON").buildAndFail();
+    assertTrue(directAcReseal.getOutput().contains("always seals the complete contract"));
+  }
+
+  @Test
+  void verifyAcceptsRepeatedAcSelectionAndRejectsMixedSpecSelection() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeTwoAcceptanceConditionsWithPropertyOnlyOnB();
+    writePublicCasesForAAndB();
+    Path spec = project.resolve("specs/a.md");
+    Files.createDirectories(spec.getParent());
+    Files.writeString(spec, "# A\n\nAC-A\n");
+    runner("toppleCatSeal").build();
+
+    runner("toppleCatVerify", "--ac", "AC-A", "--ac", "AC-B").buildAndFail();
+    String multiple =
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
+    assertTrue(multiple.contains("\"AC-A\""));
+    assertTrue(multiple.contains("\"AC-B\""));
+    String directScope =
+        Files.readString(project.resolve("build/topplecat/selected-spec-scope.json"));
+    assertTrue(directScope.contains("\"AC-A\""));
+    assertTrue(directScope.contains("\"AC-B\""));
+    assertFalse(directScope.contains("specDocuments\" : [ {"));
+
+    runner("toppleCatVerify", "--ac", "AC-A").build();
+    String one = Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
+    assertTrue(one.contains("\"AC-A\""));
+    assertFalse(one.contains("onlyBHasAProperty"));
+    String report =
+        Files.readString(project.resolve("build/topplecat/reports/verification/assets/report.js"));
+    assertTrue(report.contains("Selected by explicit AC IDs"));
+
+    var mixed =
+        runner("toppleCatVerify", "--spec", "specs/a.md", "--ac", "AC-B").buildAndFail();
+    assertTrue(mixed.getOutput().contains("either ToppleCat --spec or --ac"));
   }
 
   @Test
@@ -947,7 +1013,7 @@ class ToppleCatPluginFunctionalTest {
     Files.createDirectories(spec.getParent());
     Files.writeString(spec, "# A\n\nAC-A\n");
 
-    runner("toppleCatSeal", "--spec", "specs/a.md").build();
+    runner("toppleCatSeal").build();
     runner("toppleCatVerify", "--spec", "specs/a.md").build();
 
     assertEquals(EvidenceVerdict.PASS, gate("JUNIT"));
@@ -957,6 +1023,39 @@ class ToppleCatPluginFunctionalTest {
     assertFalse(
         Files.readString(project.resolve("build/topplecat/reports/verification/data.json"))
             .contains("onlyBHasAProperty"));
+  }
+
+  @Test
+  void directAcceptanceConditionSelectionScopesHiddenTypedRows() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            propertyBasedTesting { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeTwoAcceptanceConditionsWithPropertyOnlyOnB();
+    writePublicCasesForAAndB();
+    Path hidden = project.resolve("src/hiddenTest/resources/topplecat/cases/scoped.json");
+    Files.createDirectories(hidden.getParent());
+    Files.writeString(
+        hidden,
+        """
+        [
+          {"caseId":"hidden-a","acId":"AC-A","inputs":{},"expected":{"discount":100}},
+          {"caseId":"hidden-b","acId":"AC-B","inputs":{},"expected":{"discount":100}}
+        ]
+        """);
+
+    runner("toppleCatSeal").build();
+    var verify = runner("toppleCatVerify", "--ac", "AC-A").build();
+
+    assertEquals(TaskOutcome.SUCCESS, verify.task(":toppleCatHiddenTest").getOutcome());
+    assertEquals(EvidenceVerdict.PASS, gate("REVIEWER_JUNIT"));
+    String report =
+        Files.readString(project.resolve("build/topplecat/reports/verification/data.json"));
+    assertTrue(report.contains("hidden-a"));
+    assertFalse(report.contains("hidden-b"));
   }
 
   @Test
@@ -976,7 +1075,7 @@ class ToppleCatPluginFunctionalTest {
     Files.createDirectories(spec.getParent());
     Files.writeString(spec, "# A\n\nAC-A\n");
 
-    runner("toppleCatSeal", "--spec", "specs/a.md").build();
+    runner("toppleCatSeal").build();
     var failure = runner("toppleCatVerify", "--spec", "specs/a.md").buildAndFail();
 
     assertTrue(
@@ -992,7 +1091,8 @@ class ToppleCatPluginFunctionalTest {
   }
 
   @Test
-  void selectedSpecMutationRunExcludesUnselectedAcAndRetainsPerAcDetection() throws Exception {
+  void directAcceptanceConditionMutationRunExcludesUnselectedAcAndRetainsPerAcDetection()
+      throws Exception {
     writeProject(
         """
         toppleCat {
@@ -1001,12 +1101,8 @@ class ToppleCatPluginFunctionalTest {
         }
         """);
     writeSelectedSpecMutationFixture();
-    Path spec = project.resolve("specs/selected.md");
-    Files.createDirectories(spec.getParent());
-    Files.writeString(spec, "# Selected\n\nAC-A\n\nAC-C\n");
-
-    runner("toppleCatSeal", "--spec", "specs/selected.md").build();
-    var verify = runner("toppleCatVerify", "--spec", "specs/selected.md").buildAndFail();
+    runner("toppleCatSeal").build();
+    var verify = runner("toppleCatVerify", "--ac", "AC-A", "--ac", "AC-C").buildAndFail();
 
     assertEquals(
         TaskOutcome.SUCCESS, verify.task(":toppleCatManagedPit").getOutcome(), verify.getOutput());
