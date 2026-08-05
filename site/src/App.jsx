@@ -37,14 +37,14 @@ const superpowersUrl = "https://github.com/obra/superpowers";
 const engineeringSkillsUrl = "https://github.com/mattpocock/skills/tree/main";
 const gettingStartedUrl =
   `${repositoryUrl}/blob/main/docs/guide/getting-started.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.26"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.27"';
 const gradleSetup = `plugins {
     java
     ${pluginLine}
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.26")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.27")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
