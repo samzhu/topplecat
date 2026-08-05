@@ -78,16 +78,16 @@ agent feedback。報告也會在 Mutation Testing 與容易陌生的卡片術語
 
 ## 快速開始
 
-ToppleCat 0.0.25 需要 Java 25 與相容的 Gradle。
+ToppleCat 0.0.26 需要 Java 25 與相容的 Gradle。
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.25"
+    id("io.github.samzhu.topplecat") version "0.0.26"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.25")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.26")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -203,7 +203,7 @@ ToppleCat 從可執行驗收邊界開始：
 - [架構](docs/architecture.md)
 - [共同語言](CONTEXT.md)
 - [文件索引](docs/README.md)
-- [0.0.25 release notes](docs/releases/0.0.25.zh-TW.md)
+- [0.0.26 release notes](docs/releases/0.0.26.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

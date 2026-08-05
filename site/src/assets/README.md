@@ -39,9 +39,10 @@ Run `npm run optimize:assets` after an approved source-art change. The command
 regenerates AVIF and WebP derivatives without modifying the `.org.png` files;
 `npm run verify:assets` validates their dimensions and alpha-channel presence.
 
-The three character frames must remain aligned to the same grounded paw anchor.
-Keep transparent padding intact when replacing a character or prop, because the
-hero composition relies on those shared coordinates.
+The three character frames must share a grounded baseline. Keep transparent
+padding intact when replacing a character or prop. The named optical-centering
+offsets in `styles.css` then keep the visible cat centered when a reaching pose
+changes its silhouette.
 
 Equal canvas dimensions do not guarantee equal visual proportions. Compare the
 visible alpha bounds and keep silhouette scale, outline thickness, and

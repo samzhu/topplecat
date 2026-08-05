@@ -18,8 +18,6 @@ import uprightCup960Webp from "./assets/props/cup-upright-960.webp";
 import stageFloorLayer from "./assets/scene/tabletop.svg";
 import contractIntegrity640 from "./assets/demonstrations/contract-integrity-640.jpg";
 import contractIntegrity1280 from "./assets/demonstrations/contract-integrity-1280.jpg";
-import expectedConsumption640 from "./assets/demonstrations/expected-consumption-640.jpg";
-import expectedConsumption1280 from "./assets/demonstrations/expected-consumption-1280.jpg";
 import hiddenTests640 from "./assets/demonstrations/hidden-tests-640.jpg";
 import hiddenTests1280 from "./assets/demonstrations/hidden-tests-1280.jpg";
 import mutationTesting640 from "./assets/demonstrations/mutation-testing-640.jpg";
@@ -39,14 +37,14 @@ const superpowersUrl = "https://github.com/obra/superpowers";
 const engineeringSkillsUrl = "https://github.com/mattpocock/skills/tree/main";
 const gettingStartedUrl =
   `${repositoryUrl}/blob/main/docs/guide/getting-started.md`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.25"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.0.26"';
 const gradleSetup = `plugins {
     java
     ${pluginLine}
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.25")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.26")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -164,7 +162,7 @@ const copyByLocale = {
       heading: "Problems ToppleCat can catch",
       summary:
         "Each example starts with a feature that looks done, then shows the issue a check finds.",
-      sectionLabel: "Six checks",
+      sectionLabel: "Other demonstrations",
       syntheticLabel: "Simulated example",
       open: "Open demonstration",
       close: "Close demonstration",
@@ -210,20 +208,6 @@ const copyByLocale = {
           observed: "The public Acceptance Method returned a result that did not meet its authored rule.",
           supports: "This supports that the delivery does not meet the public rule in the contract.",
           cannotProve: "It does not reveal intent or prove behavior for every other input.",
-        },
-        {
-          id: "expected-consumption",
-          label: "Expected Consumption",
-          detailLabel: "The assertion obligation",
-          title: "The test read the answer but never checked it.",
-          summary: "A declared result was available, but the acceptance work never compared actual and expected receipts.",
-          gate: "EXPECTED_CONSUMPTION",
-          verdict: "FAIL",
-          changed: "The acceptance flow read an expected receipt and then skipped the comparison.",
-          observed:
-            "ToppleCat saw that the expected result was consumed as data but the acceptance contract did not assert the actual receipt against it. A related public JUnit failure is the same missing-comparison root cause.",
-          supports: "This supports that the acceptance contract did not prove actual and expected receipts match.",
-          cannotProve: "It does not show that the production calculator is incorrect, and it is not a second production defect.",
         },
         {
           id: "property-based-testing",
@@ -451,7 +435,7 @@ const copyByLocale = {
       heading: "ToppleCat 抓得到哪些問題",
       summary:
         "每個案例都從一個看起來做完的功能開始，再看看檢查怎麼找出問題。",
-      sectionLabel: "六種檢查",
+      sectionLabel: "其他示範",
       syntheticLabel: "模擬案例",
       open: "開啟示範",
       close: "關閉示範",
@@ -469,7 +453,7 @@ const copyByLocale = {
       stories: [
         {
           id: "hidden-tests",
-          label: "換一個例子再試",
+          label: "Hidden Tests／隱藏測試",
           detailLabel: "換一個合法情境",
           title: "公開案例過了，換個合法金額就失敗。",
           summary: "公開案例有折扣，但另一筆合法訂單沒有。程式只記住了它看過的例子。",
@@ -482,7 +466,7 @@ const copyByLocale = {
         },
         {
           id: "public-acceptance",
-          label: "規格條件檢查",
+          label: "Public Acceptance／公開驗收",
           detailLabel: "規格裡寫的驗收條件",
           title: "規格裡的條件，馬上就抓到錯。",
           summary: "滿 1,000 元該有折扣，實際上卻沒有。",
@@ -494,21 +478,8 @@ const copyByLocale = {
           cannotProve: "這不代表每一筆訂單都會出錯。",
         },
         {
-          id: "expected-consumption",
-          label: "有沒有真的比對",
-          detailLabel: "有讀取，沒比對",
-          title: "測試讀了預期結果，卻沒拿來比對。",
-          summary: "它知道正確收據長什麼樣，卻沒有檢查實際收據。",
-          gate: "EXPECTED_CONSUMPTION",
-          verdict: "FAIL",
-          changed: "測試讀了預期收據，卻跳過比對。",
-          observed: "預期值有被讀到，實際收據沒有拿來比較。",
-          supports: "這個測試沒有證明結果正確。",
-          cannotProve: "這不代表計算程式本身算錯。",
-        },
-        {
           id: "property-based-testing",
-          label: "多試幾種情況",
+          label: "Property-Based Testing／性質導向測試",
           detailLabel: "自動找邊界",
           title: "自動產生的測試，找到一筆出錯訂單。",
           summary: "一般案例沒碰到這個範圍，付款金額卻在這裡變成負數。",
@@ -521,7 +492,7 @@ const copyByLocale = {
         },
         {
           id: "mutation-testing",
-          label: "測試有沒有漏掉",
+          label: "Mutation Testing／突變測試",
           detailLabel: "改壞程式再重跑",
           title: "程式被改壞了，測試還是過。",
           summary: "折扣門檻被悄悄改掉，原本的驗收測試沒有發現。",
@@ -534,7 +505,7 @@ const copyByLocale = {
         },
         {
           id: "contract-integrity",
-          label: "資料有沒有被換掉",
+          label: "Contract Integrity／契約完整性",
           detailLabel: "封存後被改動",
           title: "封存後被改過，這次驗證不算。",
           summary: "契約和封存版本不同，後面的檢查不再可信。",
@@ -689,7 +660,6 @@ const cupSources = {
 const demonstrationReportImages = {
   "public-acceptance": { preview: publicAcceptance640, detail: publicAcceptance1280 },
   "hidden-tests": { preview: hiddenTests640, detail: hiddenTests1280 },
-  "expected-consumption": { preview: expectedConsumption640, detail: expectedConsumption1280 },
   "property-based-testing": { preview: propertyTesting640, detail: propertyTesting1280 },
   "mutation-testing": { preview: mutationTesting640, detail: mutationTesting1280 },
   "contract-integrity": { preview: contractIntegrity640, detail: contractIntegrity1280 },
@@ -1132,9 +1102,8 @@ function App() {
           <div className="demonstration-feature-copy">
             <div className="card-topline">
               <span>{copy.demonstrations.syntheticLabel}</span>
-              <span>{copy.demonstrations.sectionLabel}</span>
+              <span>{primaryDemonstration.label}</span>
             </div>
-            <p className="demonstration-feature-label">{primaryDemonstration.label}</p>
             <h3>{primaryDemonstration.title}</h3>
             <p className="demonstration-feature-summary">{primaryDemonstration.summary}</p>
             <div className="demonstration-attribution">

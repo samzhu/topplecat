@@ -23,7 +23,7 @@ work; ToppleCat's Reviewer sequence happens after that contract is prepared.
 
 ## Public safeguard demonstrations
 
-The page includes six clearly labelled, synthetic checkout demonstrations for
+The page includes five clearly labelled, synthetic checkout demonstrations for
 human visitors. Each card uses a responsive image excerpt from its matching
 synthetic Verification Report and opens the same evidence in a native dialog
 with bounded explanation layers. A fully synthetic story may show the complete

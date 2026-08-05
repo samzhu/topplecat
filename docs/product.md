@@ -97,10 +97,11 @@ same product boundary: an agent's done claim earns `PASS` only when every
 required Gate passes in a current run. It explains the independent checks and
 the Reviewer’s final responsibility in English and Traditional Chinese, then
 points developers to the Java/JUnit installation path and source repository.
-It now shows six image-backed, clearly labelled synthetic checkout
-demonstrations:
-Public Acceptance, Hidden Tests, Expected Consumption, Property-Based Testing,
-Mutation Testing, and Contract Integrity. Each card is labelled as a
+It now shows five image-backed, clearly labelled synthetic checkout
+demonstrations: Public Acceptance, Hidden Tests, Property-Based Testing,
+Mutation Testing, and Contract Integrity. Expected Consumption remains a
+required expected-output assertion check within Public Acceptance rather than a
+separate public demonstration. Each card is labelled as a
 reproducible demonstration and opens an excerpt from its matching synthetic
 Verification Report alongside bounded explanations of what changed, what was
 observed, what the Gate verdict supports, and what it cannot prove. A fully

@@ -1,6 +1,6 @@
 # Samples
 
-Both samples show the 0.0.25 boundary: public acceptance methods, public rows,
+Both samples show the 0.0.26 boundary: public acceptance methods, public rows,
 and Properties stay under `src/test`; reviewer-owned hidden rows stay under
 `src/hiddenTest` until Seal.
 

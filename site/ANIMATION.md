@@ -51,8 +51,10 @@ depends on these exact layout properties:
   `.motion-cat-strip`. CSS initially renders the Rest frame, then its stepped
   keyframes switch the strip to the exact `translateX` values in the state
   table. Do not substitute approximate percentages or animate between frames.
-- The grounded paw occupies the same pixel coordinate in all three cat frames.
-  Preserve the transparent padding. Never auto-trim the frames independently.
+- The cat frames share a grounded baseline. Preserve the transparent padding.
+  Never auto-trim the frames independently: a reaching paw changes the visible
+  silhouette, and the named optical-centering offsets keep the cat itself
+  centered without using the cup as part of the calculation.
 - `original/props/cup-upright.org.png` and
   `original/props/cup-tipped.org.png` are both `1254 × 1254`. Their responsive
   production AVIF/WebP derivatives must retain transparent edges and visual
@@ -66,8 +68,9 @@ depends on these exact layout properties:
   and dark backgrounds before using it.
 
 When replacing the cat sprite, compose all three poses on the same frame grid,
-align them to the grounded paw, and export the complete strip once. This avoids
-per-image decoding flashes and small coordinate differences.
+align their grounded baseline, then calibrate the named optical-centering
+offsets against the visible cat silhouette and export the complete strip once.
+This avoids per-image decoding flashes and visible horizontal jumps.
 
 ## Edge and proportion contract
 
@@ -131,15 +134,17 @@ These visual relationships must remain true:
 
 - The cat is centered by its own visible sprite body, not by the combined
   cat-and-cup composition. Recalibrate the cat, cup, coaster, and PASS/FAKE
-  coordinates together when the composition changes; never patch one layer in
-  isolation.
+  coordinates together when the composition changes. The named cat optical
+  offsets are the sole exception: they correct the cat sprite's internal
+  silhouette without moving the cup or scene layers.
 - In Rest, the cup sits centered on the coaster.
 - In Contact, the paw just touches the cup rim; the cup and coaster do not move.
 - In Verdict, the cup moves slightly away from the cat and tips sideways. It
   does not flip toward the viewer.
 - The tipped cup keeps the same perceived size as the upright cup.
 - The coaster remains in its original position after the cup leaves it.
-- The cat's grounded paw is the positional anchor across all three frames.
+- The cat's visible body remains centered across all three frames; the cup is
+  deliberately excluded from that alignment.
 
 Text shadows must use `text-shadow`. A `box-shadow` on `.sprite-label` draws the
 rectangular text box and creates a false line below PASS or FAKE.

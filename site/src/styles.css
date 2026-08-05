@@ -98,8 +98,12 @@ button { font: inherit; }
 }
 /* These shared coordinates are an animation contract; see site/ANIMATION.md. */
 .hero-stage {
-  --cat-anchor-left: 49%;
+  --cat-anchor-left: 52.5%;
   --cat-frame-height: 77.6%;
+  /* Equal sprite canvases do not make a reaching pose optically centered.
+     These values are relative to the three-frame strip, so they scale with it. */
+  --cat-contact-centering: -1.05%;
+  --cat-verdict-centering: -3.3%;
   --cat-rest-bottom: -3%;
   --cat-reach-bottom: -3%;
   --floor-left: 50%;
@@ -149,8 +153,8 @@ button { font: inherit; }
 }
 @keyframes cat-frame {
   0%, 44.147% { transform: translate3d(0, 0, 0); }
-  44.148%, 50.718% { transform: translate3d(-33.333333%, 0, 0); }
-  50.719%, 84.599% { transform: translate3d(-66.666667%, 0, 0); }
+  44.148%, 50.718% { transform: translate3d(calc(-33.333333% + var(--cat-contact-centering)), 0, 0); }
+  50.719%, 84.599% { transform: translate3d(calc(-66.666667% + var(--cat-verdict-centering)), 0, 0); }
   84.6%, 100% { transform: translate3d(0, 0, 0); }
 }
 @keyframes rest-frame {
@@ -205,6 +209,7 @@ button { font: inherit; }
 .demonstration-feature { display: grid; grid-template-columns: minmax(0, 1.03fr) minmax(360px, 0.97fr); gap: 0; overflow: hidden; border: 1px solid rgba(18, 52, 49, 0.18); color: #123431; background: #f0ede5; box-shadow: 0 24px 70px rgba(2, 28, 27, 0.18); }
 .demonstration-feature-copy { min-width: 0; padding: clamp(28px, 4vw, 56px); display: flex; flex-direction: column; justify-content: space-between; }
 .demonstration-feature-copy .card-topline { color: rgba(18, 52, 49, 0.58); }
+.demonstration-feature-copy .card-topline + h3 { margin-top: 44px; }
 .demonstration-feature-label { margin: 44px 0 14px; color: #9f4e1d; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
 .demonstration-feature h3 { max-width: 610px; margin-bottom: 20px; font-size: clamp(2.35rem, 4.25vw, 5rem); font-weight: 800; letter-spacing: -0.07em; line-height: 0.9; }
 .demonstration-feature-summary { max-width: 580px; margin-bottom: 28px; color: rgba(18, 52, 49, 0.7); font-size: clamp(1rem, 1.4vw, 1.14rem); line-height: 1.5; }
@@ -339,7 +344,7 @@ button { font: inherit; }
   .reveal-word { opacity: 1; }
   .motion-rest-cup, .sprite-label--pass { visibility: hidden !important; opacity: 0 !important; }
   .motion-cat-sprite, .motion-fake-cup, .sprite-label--fake { visibility: visible !important; opacity: 1 !important; filter: none !important; }
-  .motion-cat-strip { animation: none !important; transform: translate3d(-66.666667%, 0, 0) !important; }
+  .motion-cat-strip { animation: none !important; transform: translate3d(calc(-66.666667% + var(--cat-verdict-centering)), 0, 0) !important; }
   .accordion-detail { transform: none; }
   .demonstration-dialog[open] .demonstration-dialog-panel { animation: none; }
 }
@@ -368,6 +373,7 @@ button { font: inherit; }
 
 @media (max-width: 700px) {
   .hero-cinematic { padding: 22px 0 0; }
+  .hero-cinematic .hero-summary { margin-bottom: 4px; }
   .site-nav { gap: 8px; }
   .language-toggle { min-width: 80px; margin-left: auto; }
   .nav-repository { margin-left: 0; }
@@ -380,7 +386,8 @@ button { font: inherit; }
   }
   .hero-stage {
     --floor-left: calc(50% - var(--mobile-scene-shift));
-    --cat-anchor-left: 41.6%;
+    --cat-anchor-left: 46.5%;
+    --cat-frame-height: 62%;
     --coaster-left: 53.5%;
     --pass-left: 53.5%;
     --fake-left: 57.5%;

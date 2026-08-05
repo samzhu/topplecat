@@ -96,16 +96,16 @@ disclosures remain readable without opening help.
 
 ## Quick start
 
-ToppleCat 0.0.25 requires Java 25 and a compatible Gradle version.
+ToppleCat 0.0.26 requires Java 25 and a compatible Gradle version.
 
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.0.25"
+    id("io.github.samzhu.topplecat") version "0.0.26"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.25")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.0.26")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -238,7 +238,7 @@ before proposing a new ToppleCat responsibility.
 - [Architecture](docs/architecture.md)
 - [Context glossary](CONTEXT.md)
 - [Documentation index](docs/README.md)
-- [0.0.25 release notes](docs/releases/0.0.25.md)
+- [0.0.26 release notes](docs/releases/0.0.26.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 
