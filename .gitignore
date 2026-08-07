@@ -68,6 +68,7 @@ outputs/
 .worktrees/
 
 # Local agent tooling. ToppleCat's repository skills remain versioned.
+research
 .claude/
 .agents/skills/*
 !.agents/skills/topplecat-product-design/

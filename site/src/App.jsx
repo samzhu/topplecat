@@ -89,7 +89,7 @@ const copyByLocale = {
     hero: {
       titleChunks: ["Make every agent’s", "“done” earn a PASS."],
       summary:
-        "Executable Java acceptance contracts challenge the same delivery with reviewer-owned cases, changed code, and generated inputs. Every required gate must pass in the current run.",
+        "ToppleCat is a mischievous cat that loves knocking things off the table. When it sees PASS, it reaches out a paw to see if it holds up. An agent’s “done” claim gets the same treatment. Public tests may look convincing, but ToppleCat challenges the delivery from different angles. Every required gate must pass before it earns PASS.",
       explore: "See how it works",
       repository: "View on GitHub",
       scene:
@@ -362,7 +362,7 @@ const copyByLocale = {
     hero: {
       titleChunks: ["agent 每次交付，", "都得先通過考驗，", "才拿得到 PASS。"],
       summary:
-        "可執行的 Java 驗收契約，會用審閱者案例、變更後的程式碼與產生的輸入，從不同角度檢驗同一份交付；本次執行的必要 gate 必須全部通過。",
+        "ToppleCat 是一隻愛把東西推下桌的頑皮貓。看見標著 PASS 的東西，牠不會只因為它站得好好的就相信——牠會伸出爪子，試試它是否真的站得住。Agent 交出的「完成」也一樣。公開測試通過，只代表交付看起來沒問題。ToppleCat 會從不同角度重新挑戰它；只有每一道必要檢查都通過，這份交付才拿得到 PASS。",
       explore: "看看如何運作",
       repository: "在 GitHub 查看",
       scene:
