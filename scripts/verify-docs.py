@@ -200,6 +200,10 @@ def markdown_anchors(path: Path) -> set[str]:
         if not match:
             continue
         heading = re.sub(r"<[^>]+>", "", match.group(1))
+        explicit = re.search(r"\s*\{#([A-Za-z][A-Za-z0-9_\-:.]*)\}\s*$", heading)
+        if explicit:
+            anchors.add(explicit.group(1))
+            heading = heading[: explicit.start()].rstrip()
         heading = re.sub(r"[^\w\- ]", "", heading.lower())
         base = re.sub(r"\s+", "-", heading.strip())
         count = occurrences.get(base, 0)

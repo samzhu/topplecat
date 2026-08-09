@@ -1,5 +1,8 @@
 # Verification and evidence
 
+This guide is also available as the [official English technical documentation](https://topplecat.samzhu.dev/docs/verification-and-evidence/)
+and [Traditional Chinese documentation](https://topplecat.samzhu.dev/docs/zh-TW/verification-and-evidence/).
+
 ToppleCat verifies an executable Java/JUnit acceptance contract. It does not
 select the current work, manage delivery history, grant organizational approval,
 or provide an operating-system security boundary.

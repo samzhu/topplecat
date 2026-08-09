@@ -26,6 +26,19 @@ or a projection of an actual delivery. External Workflow chooses the Spec and
 execution placement. No module owns CI, PR operations, Spec lifecycle, or
 organizational approval.
 
+## Public documentation build
+
+The repository also builds a public, current-only explanation site beside the
+four Java modules. Human-authored Markdown under `site/docs/en/` and
+`site/docs/zh-TW/` is rendered by MkDocs with Material into one GitHub Pages
+artifact alongside the Vite project page. The artifact verifier checks the
+combined output for page pairing, metadata, links, page-level Markdown,
+discovery files, and denied information categories before deployment.
+
+This publication path is not a fifth ToppleCat product module. It does not
+publish Javadoc, site search, versioned sites, actual delivery reports, or
+reviewer-owned material.
+
 ## Execution boundary
 
 ```text

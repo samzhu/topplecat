@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run build:docs",
+    "build:docs": "python3 scripts/build-docs.py",
+    "verify:artifact": "python3 ../scripts/verify-site-artifact.py",
     "preview": "vite preview",
     "optimize:assets": "node scripts/optimize-assets.mjs",
     "verify:assets": "node scripts/optimize-assets.mjs --verify"

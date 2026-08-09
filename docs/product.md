@@ -119,6 +119,14 @@ It links to Spec Kit, Superpowers, and Matt Pocock's skills as optional external
 references without treating any of them as a ToppleCat integration or changing
 their ownership of the Spec, plan, or task state.
 
+## Public technical documentation
+
+The current task-oriented explanation is published in English and Traditional
+Chinese at the [official documentation site](https://topplecat.samzhu.dev/docs/).
+Each page is a static projection of the current Product, Architecture, guides,
+glossary, and release notes. The site adds no authority over the Executable
+Contract, no runtime translation, and no delivery evidence surface.
+
 ## Responsibility boundary
 
 | ToppleCat owns | The human, team, project, or external workflow owns |

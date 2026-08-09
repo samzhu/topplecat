@@ -1,13 +1,18 @@
-name: Deploy project page
+name: Deploy project page and documentation
 
 on:
   push:
     branches:
       - main
     paths:
+      - README.md
+      - README.zh-TW.md
+      - CONTEXT.md
+      - docs/**
       - site/**
+      - scripts/verify-docs.py
+      - scripts/verify-site-artifact.py
       - .github/workflows/pages.yml
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,9 +24,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build project page
+  project-verification:
+    name: Verify Java project and executable sample
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Setup Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Run project checks
+        run: ./gradlew check
+
+      - name: Run release gate
+        run: scripts/verify-release.sh
+        env:
+          GRADLE_CMD: ./gradlew
+
+      - name: Exercise the documented JUnit sample workflow
+        run: bash samples/junit-cart-orders/demo.sh
+
+  build:
+    name: Build and verify Pages artifact
+    needs: project-verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
@@ -37,15 +74,33 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: site/requirements.txt
+
+      - name: Install documentation dependencies
+        run: python -m pip install --requirement site/requirements.txt
+
       - name: Install page dependencies
         working-directory: site
         run: npm ci
 
-      - name: Build page
+      - name: Build project page and bilingual docs
         working-directory: site
         env:
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: npm run build
+
+      - name: Verify public Markdown and documentation boundaries
+        run: python3 scripts/verify-docs.py
+
+      - name: Verify the served final Pages artifact
+        env:
+          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: python3 scripts/verify-site-artifact.py --self-test --base-path "$PAGES_BASE_PATH"
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v5
@@ -53,7 +108,7 @@ jobs:
           path: site/dist
 
   deploy:
-    name: Deploy project page
+    name: Deploy verified Pages artifact
     needs: build
     runs-on: ubuntu-latest
     environment:

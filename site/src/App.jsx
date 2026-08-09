@@ -28,6 +28,7 @@ import publicAcceptance640 from "./assets/demonstrations/public-acceptance-640.j
 import publicAcceptance1280 from "./assets/demonstrations/public-acceptance-1280.jpg";
 
 const repositoryUrl = "https://github.com/samzhu/topplecat";
+const docsUrl = `${import.meta.env.BASE_URL}docs/`;
 const verificationGuideUrl =
   `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
 const acceptanceSkillUrl =
@@ -91,6 +92,7 @@ const copyByLocale = {
       summary:
         "ToppleCat is a mischievous cat that loves knocking things off the table. When it sees PASS, it reaches out a paw to see if it holds up. An agent’s “done” claim gets the same treatment. Public tests may look convincing, but ToppleCat challenges the delivery from different angles. Every required gate must pass before it earns PASS.",
       explore: "See how it works",
+      docs: "Read the docs",
       repository: "View on GitHub",
       scene:
         "A ToppleCat watches a PASS label on a coffee mug, reaches for it, then tips the mug so the label becomes FAKE.",
@@ -364,6 +366,7 @@ const copyByLocale = {
       summary:
         "ToppleCat 是一隻愛把東西推下桌的頑皮貓。看見標著 PASS 的東西，牠不會只因為它站得好好的就相信——牠會伸出爪子，試試它是否真的站得住。Agent 交出的「完成」也一樣。公開測試通過，只代表交付看起來沒問題。ToppleCat 會從不同角度重新挑戰它；只有每一道必要檢查都通過，這份交付才拿得到 PASS。",
       explore: "看看如何運作",
+      docs: "閱讀技術文件",
       repository: "在 GitHub 查看",
       scene:
         "ToppleCat 看著咖啡杯上方的 PASS，伸手撥倒杯子，標示隨之變成 FAKE。",
@@ -996,8 +999,11 @@ function App() {
             <a className="button button-amber" href="#gates">
               {copy.hero.explore} <Arrow />
             </a>
+            <a className="button button-cream" href={docsUrl}>
+              {copy.hero.docs} <Arrow />
+            </a>
             <a
-              className="button button-ghost"
+              className="button button-outline"
               href={repositoryUrl}
               target="_blank"
               rel="noreferrer"

@@ -1,5 +1,8 @@
 # Troubleshooting
 
+This guide is also available as the [official English technical documentation](https://topplecat.samzhu.dev/docs/troubleshooting/)
+and [Traditional Chinese documentation](https://topplecat.samzhu.dev/docs/zh-TW/troubleshooting/).
+
 ## The acceptance method breaks Scenario authoring
 
 `toppleCatCheck` requires a public `@ToppleAcceptanceTest("AC-...")` method

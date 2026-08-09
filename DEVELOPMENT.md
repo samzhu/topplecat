@@ -99,6 +99,7 @@ dependencies with:
 ```bash
 cd site
 npm ci
+python3 -m pip install --requirement requirements.txt
 ```
 
 ## Development workflow
@@ -147,8 +148,14 @@ npm run dev
 npm run build
 ```
 
-GitHub Actions builds `site/dist/` and deploys it as a Pages artifact. The
-repository does not maintain a `gh-pages` branch.
+`npm run build` builds the Vite project page and both MkDocs/Material language
+sites into one `site/dist/` artifact. Validate the served artifact with
+`python3 scripts/verify-site-artifact.py --self-test`; it checks the final URL
+seam, not the documentation engine internals. GitHub Actions builds and
+deploys that artifact only after project checks, the release gate, the sample
+workflow, public-document verification, and artifact verification pass. The
+repository does not maintain a `gh-pages` branch or a supported manual
+deployment procedure.
 
 Any visual or interactive change requires checking the rendered page, not only
 the build output. Hero animation and artwork changes must follow every check in

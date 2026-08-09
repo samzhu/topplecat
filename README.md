@@ -145,7 +145,8 @@ Traditional Chinese, add `--language zh-TW` to `toppleCatReview` or
 only to that invocation's HTML; authored text and canonical values such as AC
 IDs, Gate names, verdicts, and PIT outcomes stay exactly as recorded.
 
-Start with the [getting-started guide](docs/guide/getting-started.md) or run the
+Start with the [official technical documentation](https://topplecat.samzhu.dev/docs/),
+the [getting-started guide](docs/guide/getting-started.md), or run the
 [JUnit sample](samples/junit-cart-orders).
 
 ## A minimal acceptance contract
@@ -230,6 +231,9 @@ Read the canonical
 before proposing a new ToppleCat responsibility.
 
 ## Learn more
+
+- [Official technical documentation](https://topplecat.samzhu.dev/docs/) ·
+  [繁體中文](https://topplecat.samzhu.dev/docs/zh-TW/)
 
 - [Getting started](docs/guide/getting-started.md)
 - [Authoring contracts](docs/guide/authoring.md)

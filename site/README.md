@@ -1,16 +1,28 @@
 # ToppleCat project page
 
-This Vite/React project builds the public project page for GitHub Pages.
+This Vite/React project builds the public project page and the combined static
+GitHub Pages artifact. MkDocs with Material renders the human-authored English
+and Traditional Chinese technical documentation under the same origin.
 
 ```bash
 cd site
-npm install
+python3 -m pip install --requirement requirements.txt
+npm ci
 npm run dev
 npm run build
 ```
 
-The deployment workflow uploads `site/dist` as a GitHub Pages artifact. It does
-not create or maintain a `gh-pages` branch.
+`npm run build` builds the Vite project page, both MkDocs sites, page-level
+Markdown, sitemap, robots policy, and the three small LLM manifests. The
+deployment workflow uploads `site/dist` as one verified GitHub Pages artifact;
+it does not create or maintain a `gh-pages` branch and there is no supported
+manual deployment path.
+
+Run the final artifact contract locally with:
+
+```bash
+python3 ../scripts/verify-site-artifact.py --self-test
+```
 
 ## Get started content
 
@@ -57,12 +69,10 @@ do not execute React. Its card image lives at
 public URL. Publish a new versioned filename for a card update so Meta and
 LinkedIn do not retain a cached previous image.
 
-## Search discovery
+## Documentation discovery
 
-The canonical English homepage is the only URL in `public/sitemap.xml`; the
-language query changes the client-side interface and is not an independently
-indexed page. `robots.txt` advertises that sitemap. The static HTML head holds
-the canonical URL, social metadata, and JSON-LD that describes the visible
-ToppleCat website and Java source project. Keep that metadata aligned with the
-visible English homepage; do not add AI-only files, hidden text, or FAQ markup
-for content that is not displayed.
+The canonical project homepage remains `/`. The combined artifact adds
+`/docs/` and `/docs/zh-TW/` as paired current-only documentation paths, with
+ordinary links and the complete HTML sitemap as primary discovery. Page-level
+Markdown and the language manifests are deliberately small; there is no site
+search, version selector, `llms-full`, Javadoc, RAG/chatbot, MCP, or docs API.

@@ -3,6 +3,9 @@
 ToppleCat formalizes a Java/JUnit acceptance contract after an implementation
 handoff. During development, continue to use ordinary `./gradlew test`.
 
+This guide is also available as the [official English technical documentation](https://topplecat.samzhu.dev/docs/getting-started/)
+and [Traditional Chinese documentation](https://topplecat.samzhu.dev/docs/zh-TW/getting-started/).
+
 ## Install
 
 ```kotlin

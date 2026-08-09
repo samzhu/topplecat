@@ -1,0 +1,57 @@
+site_name: ToppleCat 技術文件
+site_description: ToppleCat 可執行驗收契約與驗證 Gate 的任務導向技術文件。
+site_url: !ENV [DOCS_SITE_URL, https://topplecat.samzhu.dev/docs/zh-TW]
+docs_dir: docs/zh-TW
+site_dir: dist/docs/zh-TW
+use_directory_urls: true
+strict: true
+theme:
+  name: material
+  custom_dir: docs-theme
+  language: zh-Hant
+  font: false
+  favicon: assets/favicon.svg
+  logo: assets/favicon.svg
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+  palette:
+    - scheme: topplecat
+      primary: custom
+      accent: amber
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: 連結到這個段落
+plugins: []
+extra:
+  site_origin: !ENV [PUBLIC_ORIGIN, https://topplecat.samzhu.dev]
+  base_path: !ENV [PAGES_BASE_PATH, ""]
+extra_css:
+  - assets/stylesheets/topplecat-docs.css
+extra_javascript:
+  - assets/javascripts/topplecat-docs.js
+nav:
+  - "開始：":
+      - 文件首頁: index.md
+      - Getting started: getting-started.md
+  - "撰寫契約：":
+      - Authoring contracts: authoring-contracts.md
+  - "驗證交付：":
+      - Verification and evidence: verification-and-evidence.md
+  - "認識 ToppleCat：":
+      - Product definition: product-definition.md
+      - Architecture: architecture.md
+      - Glossary: glossary.md
+  - "協助：":
+      - Troubleshooting: troubleshooting.md
+  - "參考：":
+      - Current release notes: release-notes.md

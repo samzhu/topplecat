@@ -82,7 +82,9 @@ button { font: inherit; }
 .hero-actions, .install-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-height: 52px; padding: 14px 21px; border: 1px solid transparent; border-radius: 999px; font-size: 0.9rem; font-weight: 800; white-space: nowrap; transition: transform var(--duration-press) var(--ease-out), box-shadow var(--duration-ui) var(--ease-out), background var(--duration-ui) var(--ease-out); }
 .button-amber { background: #e8a14a; color: #143432; box-shadow: 0 12px 28px rgba(194, 114, 35, 0.2); }
-.button-ghost { border-color: rgba(244, 240, 232, 0.38); color: #123431; background: rgba(244, 240, 232, 0.9); }
+.button-cream { border-color: #f4f0e8; color: #123431; background: #f4f0e8; }
+.button-outline { border-color: rgba(244, 240, 232, 0.68); color: #f4f0e8; background: transparent; }
+.button-ghost { border-color: #f4f0e8; color: #123431; background: #f4f0e8; }
 .button-dark { background: #123c39; color: #f4f0e8; }
 .button:active, .nav-repository:active, .language-toggle:active, .accordion-panel:active, .copy-button:active { transform: scale(0.97); }
 
@@ -295,6 +297,7 @@ button { font: inherit; }
   a:hover .arrow, button:hover .arrow { transform: translate(2px, -2px); }
   .button:hover { transform: translateY(-3px); }
   .button-amber:hover { box-shadow: 0 18px 36px rgba(194, 114, 35, 0.34); }
+  .button-outline:hover { color: #123431; background: #f4f0e8; }
   .accordion-panel:hover { transform: translateY(-5px); border-color: rgba(232, 161, 74, 0.75); }
   .demonstration-entry:hover { transform: translateY(-5px); border-color: rgba(232, 161, 74, 0.75); }
   .dialog-close:hover { transform: translateY(-2px); background: rgba(244, 240, 232, 0.1); }

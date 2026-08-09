@@ -1,5 +1,8 @@
 # Authoring contracts
 
+This guide is also available as the [official English technical documentation](https://topplecat.samzhu.dev/docs/authoring-contracts/)
+and [Traditional Chinese documentation](https://topplecat.samzhu.dev/docs/zh-TW/authoring-contracts/).
+
 ## Acceptance methods and typed rows
 
 Bind each AC to exactly one literal public `@ToppleAcceptanceTest("AC-...")`

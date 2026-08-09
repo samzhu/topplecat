@@ -3,6 +3,9 @@
 This is the single index for ToppleCat's public documentation. Start with the
 root [README](../README.md) when deciding whether the project fits your team.
 Use [Getting started](guide/getting-started.md) when you are ready to run it.
+The same current facts are published as the
+[official bilingual technical documentation site](https://topplecat.samzhu.dev/docs/)
+with a [Traditional Chinese home](https://topplecat.samzhu.dev/docs/zh-TW/).
 
 ## Choose your task
 
