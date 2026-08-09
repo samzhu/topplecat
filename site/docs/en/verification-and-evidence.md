@@ -1,6 +1,6 @@
 ---
-title: Verification and evidence
-description: Run ToppleCat's formal verification and distinguish observations, contract attribution, and Gate verdicts.
+title: Verify a delivery
+description: Run ToppleCat after an AI agent says done, then understand what passed, what failed, and what still needs a human decision.
 page_id: verification-and-evidence
 language_code: en
 language_name: English
@@ -15,82 +15,108 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Verification and evidence
+# Verify a delivery and read the result
 
-## One delivery example {#delivery-example}
+Green tests are useful while an agent is coding. They are not the final claim.
+Formal Verify starts a fresh run against the sealed agreement and asks several
+different questions before it can return `PASS`.
 
-Assume the checkout contract says a 1,000-dollar order receives a 100-dollar
-discount. During formal Verify, the public Acceptance Method runs that authored
-case and the enabled safeguards run their own work. If a managed mutation
-changes the discount boundary and the same public method still passes, the
-Mutation Gate has evidence that this AC did not distinguish that temporary
-change. That is different from claiming that the original production program
-already contains the mutation.
+## What happens to the checkout delivery {#delivery-example}
 
-## Three evidence layers {#three-evidence-layers}
+The public coupon examples pass, so the agent's implementation looks plausible.
+ToppleCat then runs reviewer-chosen examples through the same public Acceptance
+Method. It also makes temporary changes to production behaviour and asks
+whether that unchanged public method notices.
 
-Read every result in three layers:
+If the method still passes after the discount boundary is temporarily changed,
+ToppleCat has found a weakness in the acceptance work for that rule. It has not
+claimed that the original program already contained that temporary change. The
+Verification Report states what happened, which rule the observation belongs
+to, and why the current run cannot earn `PASS`.
 
-1. **External observation:** a JUnit task, a Property engine, or the managed PIT
-   producer records what it observed and preserves its official outcome names.
-2. **Contract attribution:** ToppleCat connects that observation to the exact
-   public Acceptance Method, Typed Case Row, Property declaration, or sealed
-   policy that owns the question.
-3. **ToppleCat Gate verdict:** the sealed policy decides whether that safeguard
-   is `PASS`, `FAIL`, `INCOMPLETE`, `DISABLED`, or `NOT_APPLICABLE`, then the
-   aggregate run records `PASS`, `FAIL`, or `INCOMPLETE`.
+## Read the report as questions
 
-Generated JSON and HTML only project checked contract material and producer
-outcomes. They never add a rule, case, expected value, or scenario step.
+The report keeps the checks separate because they answer different questions:
 
-## Run the formal workflow
+| Question for this delivery | What a problem means | Gate name |
+| --- | --- | --- |
+| Is this still the contract the Reviewer sealed? | Public acceptance work or verification policy changed after review | `CONTRACT_INTEGRITY` |
+| Did the public examples pass? | The implementation disagreed with an example the agent could see | `JUNIT` |
+| Did independently chosen examples pass the same method? | The implementation failed a reviewer-controlled boundary | `REVIEWER_JUNIT` |
+| Were the authored expected results actually asserted? | The test read or skipped a result instead of checking it | `EXPECTED_CONSUMPTION` |
+| Did approved invariants hold over generated inputs? | A counterexample was found, or trustworthy Property evidence was not completed | `PROPERTY` |
+| Did each public method notice temporary production changes attributed to it? | The acceptance work was insensitive to a relevant change, or no trustworthy baseline existed | `MUTATION` |
 
-Development feedback remains ordinary `./gradlew test`. The normal CI command
-is:
+One result cannot cover for another. Passing reviewer examples do not repair a
+Property failure. A Property does not prove that the public method detects a
+temporary code change.
+
+## Run the workflow
+
+Before handoff, the Reviewer checks what will be executed and seals the complete
+contract:
 
 ```bash
 ./gradlew toppleCatCheck --spec specs/checkout/spec.md
 ./gradlew toppleCatReview --spec specs/checkout/spec.md
 ./gradlew toppleCatSeal
+```
+
+The agent implements with ordinary `./gradlew test` feedback. After its done
+claim, run:
+
+```bash
 ./gradlew test
 ./gradlew toppleCatVerify
 ```
 
-Verify normally covers the complete Executable Contract. A Reviewer can scope a
-quick report with repeated `--spec` paths or repeated `--ac AC-...` values, but
-not both. Sealing and integrity always cover the complete contract.
+The Reviewer reads
+`build/topplecat/reports/verification/index.html`. Automation reads
+`build/topplecat/evidence.json`. Both describe this run; an earlier report
+cannot fill a gap in the current evidence.
+
+## From observation to verdict {#three-evidence-layers}
+
+When a result needs technical investigation, read it in three layers:
+
+1. The external tool records what it observed. JUnit, the Property engine, and
+   PIT keep their own official outcome names.
+2. ToppleCat connects that observation to the exact acceptance method, case,
+   Property, or sealed policy responsible for the question.
+3. The sealed policy turns that attributed evidence into a Gate result and then
+   an aggregate verdict.
+
+This separation stops a producer message from being mistaken for a business
+conclusion. Generated JSON and HTML report the checked contract and observed
+outcomes; they do not add new rules.
 
 ## Gates and verdicts {#gates-and-verdicts}
 
-The formal Gate order is:
+The overall result is deliberately small:
 
-```text
-CONTRACT_INTEGRITY
-JUNIT
-REVIEWER_JUNIT
-EXPECTED_CONSUMPTION
-PROPERTY
-MUTATION
-```
+- `PASS`: every required Gate passed in this run.
+- `FAIL`: a completed check found a blocking problem.
+- `INCOMPLETE`: ToppleCat could not obtain enough trustworthy current-run
+  evidence.
 
-Hidden Tests, Property-Based Testing, and Mutation Testing are Independent
-Safeguards. Hidden rows cannot substitute for a Property result; a Property
-cannot supply mutation detection. Mutation Testing additionally needs a
-passing Public Acceptance baseline, otherwise its result is `INCOMPLETE`.
+An individual check may also be explicitly disabled or not applicable. Neither
+is silently presented as a pass.
 
-`PASS` means every required Gate passed under the sealed policy in this current
-run. It is evidence, not proof that the business rules are complete and not
-organizational approval. A scoped `PASS` is explicitly limited to its selected
-Delivery Scope.
+The normal CI command verifies the complete contract. A Reviewer can request a
+faster report for selected Spec files or AC IDs, but not both at once. A scoped
+`PASS` says only that the named scope passed; it does not claim that the whole
+project passed.
 
 ## Reviewer boundary {#reviewer-boundary}
 
-Spec Review and Verification Report are reviewer-only HTML surfaces. Safe
-Implementation Agent feedback contains Gate-level reasons without reviewer
-values, source names, paths, tokens, counterexamples, or raw private failures.
-The public site may use clearly labelled synthetic demonstrations for education,
-but this documentation publishes no actual delivery material.
+Spec Review and Verification Report are private reading surfaces for the
+Reviewer. The implementation agent receives safe Gate-level feedback that says
+what kind of work needs attention without exposing reviewer examples, values,
+paths, counterexamples, or raw private failures.
 
-Read [Troubleshooting](troubleshooting.md#symptom-map) when the visible result
-is incomplete or unexpected. The [Architecture](architecture.md#execution-flow)
-page explains where each piece of evidence is produced and retained.
+An AI can summarize the public documentation or help fix the public
+implementation. The human Reviewer keeps the private report and decides whether
+the evidence is enough to accept the delivery.
+
+If a result is unexpected, start with [Troubleshooting](troubleshooting.md#symptom-map).
+For the trust and information flow, read [How ToppleCat works](architecture.md#execution-flow).

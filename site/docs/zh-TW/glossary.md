@@ -1,6 +1,6 @@
 ---
-title: Glossary
-description: ToppleCat 對 executable contract、safeguard、evidence 與 delivery boundary 的正式詞彙。
+title: 名詞解釋
+description: 用白話說明 ToppleCat 對規則、檢查、證據、報告與交付決定使用的正式詞彙。
 page_id: glossary
 language_code: zh-TW
 language_name: 繁體中文
@@ -15,63 +15,80 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Glossary
+# 名詞解釋
 
-以下是 ToppleCat 共用的正式語言，描述 executable acceptance boundary，不是新的
-authoring language。
+第一次使用 ToppleCat 不必先背這些名詞。報告、開發者或 AI 需要精確理解時，再來查
+這一頁。每個項目先用白話說明；英文大寫名稱是 ToppleCat 的正式詞彙。
 
-## Executable Contract {#executable-contract}
+## Executable Contract／可執行契約 {#executable-contract}
 
-人撰寫的 Acceptance Method 與 Typed Case Row，定義 ToppleCat 要機械化驗證什麼。規則與
-案例是否正確且完整，仍由人負責。
+公開驗收方法，以及公開與 Reviewer 控制的型別案例資料列。它們定義 ToppleCat 要機械
+化檢查什麼。規則和例子是否正確、完整，仍由人負責。
 
-## Acceptance Condition
+## Acceptance Condition／驗收條件 {#acceptance-condition}
 
-由外部選定、穩定的 `AC-...` 規則，ToppleCat 將它綁到 executable acceptance work。
-ToppleCat 不會自己發明遺漏的規則。
+一條由外部選定、使用穩定 `AC-...` ID 的規則。ToppleCat 把它連到可執行驗收工作，
+但不會自行發明缺少的規則。
 
-## Acceptance Method
+## Acceptance Method／驗收方法
 
-一個公開的 Java/JUnit method，把 Acceptance Condition 綁到 executable examples，並描述
-它的 Scenario。
+一個公開的 Java/JUnit 方法，描述某條 Acceptance Condition 的 Scenario。公開案例與
+Reviewer 控制的案例都執行同一個方法。
+
+## Typed Case Row／型別案例資料列
+
+一筆人工撰寫的 JSON 或 YAML 例子，包含 AC ID、輸入與預期結果。Property-Based
+Testing 在執行中產生的值屬於當次證據，不是 Typed Case Row。
 
 ## Scenario、Stage 與 Step
 
-Scenario 是一個 Typed Case Row 的 Given、When、Then、And 有序執行。Stage 是可重用的
-business-capability object，提供相關 Steps，並在一個 Scenario 中保存一般狀態。Step 是
-Scenario 中選定的一個業務動作或觀察。
+**Scenario** 是一筆案例依序執行的 Given、When、Then 與 And。**Stage** 把相關業務
+動作放在一起，並在該 Scenario 中保存一般狀態。**Step** 是其中一次被選定的動作或
+觀察。
 
-## Typed Case Row
+## Reviewer 與 Implementation Agent
 
-人撰寫的 JSON 或 YAML example，包含 AC ID、inputs 與 expected results。產生的 trial 不是
-Typed Case Row。
+**Reviewer** 是閱讀準備好的契約與當次 Verification Report，並決定如何處理交付的
+人。**Implementation Agent** 是收到公開契約與安全 feedback 的 AI coding agent；
+它不會取得 Reviewer 私有資料。
 
-## Independent Safeguard {#independent-safeguard}
+## Independent Safeguard／獨立防線 {#independent-safeguard}
 
-本次執行的 evidence 只回答自身問題、不能由另一個 safeguard 取代的防線。Hidden Tests、
-Property-Based Testing 與 Mutation Testing 彼此分開。
+當次證據只回答自身問題的一道檢查。Reviewer 案例、Property-Based Testing 與
+Mutation Testing 彼此分開；一項通過不能補另一項缺少的證據。
 
-## Mutation Attribution
+## Hidden Tests／隱藏測試
 
-把 Mutation Testing observation 對應到實際覆蓋它的 public Acceptance Method 與
-Acceptance Condition。PIT 的正式 outcome 名稱維持不變。
+Reviewer 控制的型別案例資料列，使用獨立選出的例子執行既有公開 Acceptance Method。
+它們檢查同一條規則，不會建立祕密的新需求。
 
-## Mechanical Seal {#mechanical-seal}
+## Property-Based Testing／性質導向測試
 
-對完整 executable contract 與 verification policy 的 content-based integrity record。它
-確認一致性，不等於人或組織 approval。
+用有界的產生輸入，檢查一條經過人核准的不變條件。它可能找到反例，但結果仍是測試
+證據，不是數學證明。
 
-## Current-run Evidence 與 Aggregate Verdict
+## Mutation Testing／突變測試與 Mutation Attribution／突變歸因
 
-Current-run Evidence 是 active formal verification run 產生的 evidence。Aggregate Verdict
-是 selected Delivery Scope 的 `PASS`、`FAIL` 或 `INCOMPLETE` 結論。`PASS` 是對已檢查範圍
-的證據，不是 proof 或 sign-off。
+Mutation Testing 會暫時改動 production behaviour，再看原本的公開 Acceptance Method
+能不能察覺。**Mutation Attribution** 把 PIT 觀察結果連到應該負責偵測它的精確
+公開方法與 Acceptance Condition。
 
-## Spec Review 與 Verification Report
+## Mechanical Seal／機械封印 {#mechanical-seal}
 
-Spec Review 是 handoff 前、reviewer-only 的 projection。Verification Report 是一次正式
-Verify run 與其 diagnostics 的 reviewer-only projection。兩者都不是 Implementation Agent
-handoff，也不是公開的 actual-delivery report。
+對完整可執行契約與驗證政策建立的 content-based integrity record。它能指出審閱後
+約定是否被改動，但不等於人的核准、加密或 security sandbox。
 
-請看 [Architecture](architecture.md#information-boundary) 了解這些詞背後的 ownership
-與資訊流。
+## Current-run Evidence／本次執行證據與 Aggregate Verdict／彙總判定
+
+**Current-run Evidence** 由目前這次 formal Verify 產生。**Aggregate Verdict** 是該
+delivery scope 的 `PASS`、`FAIL` 或 `INCOMPLETE`。`PASS` 表示每個必要 Gate 都通過，
+不代表所有業務規則都已經被寫下。
+
+## Spec Review／規格審閱與 Verification Report／驗證報告
+
+**Spec Review** 是 handoff 前閱讀選定 Spec 與準備好契約的私人頁面。
+**Verification Report** 是 agent 宣稱完成後，閱讀一次正式執行及其診斷的私人頁面。
+
+完整正式詞彙請查
+[CONTEXT.md](https://github.com/samzhu/topplecat/blob/main/CONTEXT.md)。詞彙背後的
+資訊流向請讀[系統如何運作](architecture.md#information-boundary)。

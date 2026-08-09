@@ -1,6 +1,6 @@
 ---
-title: Verification and evidence
-description: 執行 ToppleCat 正式驗證，分開 observation、契約 attribution 與 Gate verdict。
+title: 驗證交付並讀懂結果
+description: AI agent 說完成後執行 ToppleCat，弄清楚哪些檢查通過、哪裡有問題，以及還需要人做什麼決定。
 page_id: verification-and-evidence
 language_code: zh-TW
 language_name: 繁體中文
@@ -15,73 +15,93 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Verification and evidence
+# 驗證交付並讀懂結果
 
-## 一個交付案例 {#delivery-example}
+agent 開發時，綠色測試很有用，但它還不是最後的交付結論。正式 Verify 會對封存過的
+約定開始一次全新執行。好幾個彼此不同的問題都得到可信結果後，這次交付才可能取得
+`PASS`。
 
-假設 checkout 契約規定訂單滿 1,000 元折 100 元。正式 Verify 時，public Acceptance
-Method 會執行這筆人寫的案例，啟用的 safeguards 也各自執行。如果 managed mutation
-暫時改變折扣門檻，而同一個 public method 仍然通過，Mutation Gate 取得的證據是：
-這個 AC 沒有分辨出那次暫時變更。這和宣稱原本 production program 已經有這個錯，是兩
-件不同的事。
+## 結帳功能會經過什麼 {#delivery-example}
 
-## 三層證據 {#three-evidence-layers}
+公開優惠券案例通過，agent 的實作看起來沒有問題。ToppleCat 接著把審閱者另外選出的
+例子送進同一個公開驗收方法，也會暫時改動 production code 的行為，看看原本的方法
+能不能察覺。
 
-每個結果都要分三層讀：
+如果折扣門檻暫時改變後，那個方法仍然通過，ToppleCat 找到的是這條規則的驗收弱點。
+它沒有宣稱原始程式本來就含有這個暫時變更。Verification Report 會寫清楚發生什麼、
+觀察屬於哪條規則，以及這次執行為什麼不能取得 `PASS`。
 
-1. **External observation：** JUnit task、Property engine 或 managed PIT producer
-   記錄它看見的事情，並保留 producer 自己的正式 outcome 名稱。
-2. **Contract attribution：** ToppleCat 把 observation 連到擁有這個問題的 public
-   Acceptance Method、Typed Case Row、Property declaration 或 sealed policy。
-3. **ToppleCat Gate verdict：** sealed policy 決定 safeguard 是 `PASS`、`FAIL`、
-   `INCOMPLETE`、`DISABLED` 或 `NOT_APPLICABLE`，最後 aggregate run 記錄 `PASS`、
-   `FAIL` 或 `INCOMPLETE`。
+## 把報告當成幾個問題來讀
 
-產生的 JSON 與 HTML 只 projection 已檢查的契約內容與 producer outcome；不會加入新的
-規則、案例、expected value 或 Scenario step。
+每一道檢查回答不同問題，所以報告不會把它們混成一個分數：
 
-## 執行正式 workflow
+| 這次交付要回答的問題 | 發現問題時代表什麼 | Gate 名稱 |
+| --- | --- | --- |
+| 現在執行的還是 Reviewer 封存的契約嗎？ | 公開驗收內容或驗證政策在審閱後改變 | `CONTRACT_INTEGRITY` |
+| 公開案例有通過嗎？ | 實作不符合 agent 原本看得到的例子 | `JUNIT` |
+| 審閱者另外選出的案例也通過同一個方法嗎？ | 實作沒有處理某個獨立選出的邊界 | `REVIEWER_JUNIT` |
+| 人寫下的預期結果真的有被斷言嗎？ | 測試只讀取或跳過結果，沒有實際比較 | `EXPECTED_CONSUMPTION` |
+| 核准過的不變條件能通過多組產生輸入嗎？ | 找到反例，或 Property 沒有留下完整可信證據 | `PROPERTY` |
+| 每個公開方法能察覺歸屬於它的暫時程式變更嗎？ | 驗收方法對相關變更沒有反應，或缺少可信 baseline | `MUTATION` |
 
-開發回饋仍是一般的 `./gradlew test`。CI 的正常命令是：
+其中一項通過，不能補另一項的洞。審閱者案例通過，不會修好 Property failure；
+Property 通過，也不代表公開方法一定能察覺暫時的程式變更。
+
+## 執行流程
+
+handoff 前，Reviewer 先確認真正會執行的內容，再封存完整契約：
 
 ```bash
 ./gradlew toppleCatCheck --spec specs/checkout/spec.md
 ./gradlew toppleCatReview --spec specs/checkout/spec.md
 ./gradlew toppleCatSeal
+```
+
+agent 使用一般的 `./gradlew test` 開發。它宣稱完成後，再執行：
+
+```bash
 ./gradlew test
 ./gradlew toppleCatVerify
 ```
 
-Verify 預設涵蓋完整 Executable Contract。Reviewer 若想快速查看，可以重複傳入
-`--spec` 或重複傳入 `--ac AC-...`，但不能混用。Seal 與 integrity 永遠涵蓋完整契約。
+Reviewer 閱讀 `build/topplecat/reports/verification/index.html`，自動化流程讀取
+`build/topplecat/evidence.json`。兩者都只描述這次執行；舊報告不能拿來補本次缺少的
+證據。
 
-## Gates 與 verdicts {#gates-and-verdicts}
+## 從觀察走到判定 {#three-evidence-layers}
 
-正式 Gate 順序是：
+需要深入診斷時，把一個結果拆成三層：
 
-```text
-CONTRACT_INTEGRITY
-JUNIT
-REVIEWER_JUNIT
-EXPECTED_CONSUMPTION
-PROPERTY
-MUTATION
-```
+1. 外部工具先記錄它觀察到的事情。JUnit、Property engine 與 PIT 都保留自己的正式
+   outcome 名稱。
+2. ToppleCat 把觀察連到負責這個問題的驗收方法、案例、Property 或封存政策。
+3. 封存政策根據這份歸屬明確的證據，產生 Gate 結果與整體判定。
 
-Hidden Tests、Property-Based Testing 與 Mutation Testing 是 Independent Safeguards。
-Hidden row 不能代替 Property；Property 不能提供 mutation detection。Mutation Testing
-還需要 Public Acceptance 通過作為 baseline，否則它的結果是 `INCOMPLETE`。
+這個區分可以避免把工具訊息誤讀成業務結論。產生的 JSON 與 HTML 只報告已檢查的
+契約和觀察結果，不會自行加入規則。
 
-`PASS` 代表這次執行中 sealed policy 要求的每個 Gate 都通過。這是對已檢查契約的證據，
-不是規則完整性的 proof，也不是 organizational approval。Scoped `PASS` 只限它所選的
-Delivery Scope。
+## Gate 與整體結果 {#gates-and-verdicts}
 
-## Reviewer 邊界 {#reviewer-boundary}
+整體結果刻意只有三種：
 
-Spec Review 與 Verification Report 是 reviewer-only 的 HTML surface。給
-Implementation Agent 的 safe feedback 只有 Gate-level 原因，不含 reviewer 值、source
-name、path、token、counterexample 或 raw private failure。公開網站可以用清楚標示的
-synthetic demonstration 做教育，但這份文件不發布任何實際交付資料。
+- `PASS`：這次執行中，每個必要 Gate 都通過。
+- `FAIL`：某道完成的檢查找到阻擋問題。
+- `INCOMPLETE`：ToppleCat 沒有取得足夠、可信的當次證據。
 
-遇到結果不完整或出乎預期，先讀 [Troubleshooting](troubleshooting.md#symptom-map)。
-[Architecture](architecture.md#execution-flow) 說明各種 evidence 在哪裡產生與保留。
+單一道檢查也可能被政策明確停用，或不適用於這次範圍；兩者都不會偷偷當成通過。
+
+CI 的正常做法是驗證完整契約。Reviewer 若只想快速看某次交付，可以指定 Spec 或 AC
+ID，但兩種方式不能混用。有限範圍的 `PASS` 只表示列出的範圍通過，不代表整個專案
+都通過。
+
+## Reviewer 的資訊邊界 {#reviewer-boundary}
+
+Spec Review 與 Verification Report 只給 Reviewer 閱讀。實作 agent 收到的是安全的
+Gate-level feedback：它會知道哪一類工作需要處理，但不會取得審閱者案例、值、路徑、
+反例或原始私有 failure。
+
+AI 可以摘要公開文件，也可以協助修改公開實作。私人報告由人保管，是否接受交付仍由
+Reviewer 決定。
+
+如果結果不符合預期，先看[排除問題](troubleshooting.md#symptom-map)。信任邊界與
+資訊流向請讀[系統如何運作](architecture.md#execution-flow)。

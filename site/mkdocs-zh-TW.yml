@@ -1,5 +1,5 @@
-site_name: ToppleCat 技術文件
-site_description: ToppleCat 可執行驗收契約與驗證 Gate 的任務導向技術文件。
+site_name: ToppleCat 文件
+site_description: 了解 ToppleCat 如何檢查 AI coding agent 的完成宣稱，並在接受 Java 交付前留下可讀的當次證據。
 site_url: !ENV [DOCS_SITE_URL, https://topplecat.samzhu.dev/docs/zh-TW]
 docs_dir: docs/zh-TW
 site_dir: dist/docs/zh-TW
@@ -40,18 +40,17 @@ extra_css:
 extra_javascript:
   - assets/javascripts/topplecat-docs.js
 nav:
-  - "開始：":
-      - 文件首頁: index.md
-      - Getting started: getting-started.md
-  - "撰寫契約：":
-      - Authoring contracts: authoring-contracts.md
-  - "驗證交付：":
-      - Verification and evidence: verification-and-evidence.md
-  - "認識 ToppleCat：":
-      - Product definition: product-definition.md
-      - Architecture: architecture.md
-      - Glossary: glossary.md
-  - "協助：":
-      - Troubleshooting: troubleshooting.md
-  - "參考：":
-      - Current release notes: release-notes.md
+  - 從範例開始:
+      - 為什麼需要 ToppleCat: index.md
+      - 看它攔下錯誤交付: getting-started.md
+  - 用在專案裡:
+      - 把規則寫成檢查: authoring-contracts.md
+      - 驗證交付: verification-and-evidence.md
+  - 進一步了解:
+      - ToppleCat 解決什麼問題: product-definition.md
+      - 系統如何運作: architecture.md
+      - 名詞解釋: glossary.md
+  - 遇到問題:
+      - 排除問題: troubleshooting.md
+  - 版本參考:
+      - 0.1.0 版本說明: release-notes.md

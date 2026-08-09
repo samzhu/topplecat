@@ -1,6 +1,6 @@
 ---
 title: Documentation home
-description: Start with ToppleCat's task-oriented documentation for executable acceptance contracts and fresh verification evidence.
+description: See how ToppleCat checks an AI coding agent's done claim and gives a human fresh evidence before accepting a Java delivery.
 page_id: home
 language_code: en
 language_name: English
@@ -15,55 +15,71 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Documentation home {#documentation-home}
+# Make an AI delivery earn its PASS {#documentation-home}
 
-ToppleCat is a delegation-verification gate for Java/JUnit projects. These
-pages explain the supported workflow from a human-selected Spec to a fresh
-Verification Report. They are a public explanation surface; the executable
-contract remains ordinary Java/JUnit Acceptance Methods and typed JSON or YAML
-case rows.
+An AI coding agent says the change is done. The public tests are green. What do
+you actually know?
+
+You know that the examples you wrote passed. You do not yet know whether the
+agent implemented the rule or merely found a shortcut through those examples.
+ToppleCat gives the human responsible for the delivery a repeatable way to
+check the difference. It locks the agreed Java/JUnit acceptance work, runs
+fresh independent checks after the done claim, and explains why the delivery
+did or did not earn `PASS`.
 
 ## Start here {#start-here}
 
-Imagine a checkout rule that says a 1,000-dollar order receives a 100-dollar
-discount. A public example can check `1,000 -> 900`, but that one example cannot
-show that every legal checkout follows the rule. ToppleCat keeps that human-
-authored rule fixed, then runs independent checks after an implementation agent
-claims to be done.
+Suppose a checkout rule says a coupon subtracts 100 from the order total. A
+public example proves that one checkout worked. A narrow implementation could
+recognize only that exact input and still make the test green.
 
-1. Read [Getting started](getting-started.md#contract-example) for a complete
-   sample-backed path.
-2. Use [Authoring contracts](authoring-contracts.md#acceptance-method) to bind
-   Acceptance Conditions to executable Java and typed rows.
-3. Run [Verification and evidence](verification-and-evidence.md#gates-and-verdicts)
-   to interpret the current-run Gate verdict.
+The executable sample in this repository demonstrates that failure on purpose.
+ToppleCat reruns the public rule, adds independently chosen reviewer checks, and
+asks whether the public acceptance work notices temporary changes to production
+behaviour. The narrow implementation is rejected; the corrected implementation
+earns a fresh `PASS`.
 
-ToppleCat records `PASS` only when every required Gate passes in this run. A
-green development test or a ToppleCat `PASS` is evidence for the checked
-contract, not proof that the upstream Spec contains every business rule or that
-a human must accept the delivery.
+Choose the route that matches what you need:
+
+- **Quick proof:** [run the sample and watch ToppleCat reject a bad
+  delivery](getting-started.md#sample-workflow).
+- **Adopt it in a project:** [turn your own rules into executable
+  checks](authoring-contracts.md#contract-example), then [verify the agent's
+  delivery](verification-and-evidence.md#delivery-example).
+
+The business rules still come from people. ToppleCat can test the rules that
+were written down; it cannot discover a discount, exception, or approval policy
+that nobody specified.
 
 ## Choose your task {#choose-your-task}
 
-| You want to... | Read |
+| What you need | Where to go |
 | --- | --- |
-| Install ToppleCat and verify one delivery | [Getting started](getting-started.md) |
-| Write Acceptance Methods and typed case rows | [Authoring contracts](authoring-contracts.md) |
-| Interpret Gates and evidence | [Verification and evidence](verification-and-evidence.md) |
-| Diagnose a visible symptom | [Troubleshooting](troubleshooting.md) |
-| Understand ownership and use moments | [Product definition](product-definition.md) |
-| Understand modules and information flow | [Architecture](architecture.md) |
-| Look up formal project vocabulary | [Glossary](glossary.md) |
-| Read the current supported release | [Current release notes](release-notes.md) |
+| See the product catch a convincing but wrong implementation | [Getting started](getting-started.md) |
+| Tell ToppleCat what “correct” means for my feature | [Turn rules into checks](authoring-contracts.md) |
+| Decide what a `PASS`, `FAIL`, or incomplete run tells me | [Verify a delivery](verification-and-evidence.md) |
+| Fix a setup or verification problem | [Troubleshooting](troubleshooting.md) |
+| Decide whether ToppleCat fits our workflow | [What ToppleCat does](product-definition.md) |
+| Understand the trust and information boundaries | [How ToppleCat works](architecture.md) |
+| Look up an exact ToppleCat term | [Glossary](glossary.md) |
+| Check what version 0.1.0 supports | [What's in 0.1.0](release-notes.md) |
 
-## Public boundary
+## Let an AI help you read
 
-The site publishes only current, human-authored technical pages in English and
-Traditional Chinese. It does not publish Javadoc, actual delivery reports,
-reviewer-owned values, private repository workspaces, gated run notes, or task-
-coordination records, and it has no `llms-full` bundle. The two small
-language-specific Markdown manifests are an experimental convenience; ordinary
-HTML navigation and the sitemap remain the discovery path.
+Every page has a **Copy Markdown** button. Give that exact page to an AI and ask
+it to explain the idea in your domain, point your developer to the relevant
+commands, or carry out the public setup in a Java project. The Markdown is the
+same human-authored content shown on the page; it is not an automatic
+translation or a hidden API.
+
+Keep two decisions with a person: whether the business rules are complete, and
+whether the evidence is sufficient to accept the delivery.
+
+## About these docs
+
+This site publishes current English and Traditional Chinese guidance. Actual
+delivery reports and reviewer-controlled material stay private. For the exact
+ownership boundary, read [What ToppleCat does](product-definition.md#responsibility-boundary).
 
 For the project story and the open-source source tree, return to the
 [ToppleCat project page](/) or [GitHub](https://github.com/samzhu/topplecat).

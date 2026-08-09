@@ -1,6 +1,6 @@
 ---
-title: Getting started
-description: 安裝 ToppleCat、撰寫一份可執行驗收契約，並以 sample 為基礎跑完驗證流程。
+title: 開始使用
+description: 執行一個真的會攔下錯誤 AI 交付的範例，再把 ToppleCat 加進 Java/JUnit 專案。
 page_id: getting-started
 language_code: zh-TW
 language_name: 繁體中文
@@ -15,23 +15,58 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Getting started
+# 看 ToppleCat 攔下一個錯誤交付
 
-## 第一個交付案例 {#contract-example}
+如果你還不確定 ToppleCat 值不值得用，先跑範例，不必先讀完設定手冊。repository
+內有一個故意寫得太狹隘的結帳服務。它能通過公開測試，卻會被審閱者另外準備的檢查
+抓到。相同腳本接著換上修正版，再跑出通過結果。
 
-假設 checkout Spec 規定：訂單金額滿 1,000 元，就折 100 元。人先選定這條規則，
-寫下一筆公開案例，再決定要啟用哪些額外 safeguard。Implementation Agent 只會
-看到公開契約，不會看到 reviewer-owned 案例。agent 宣稱完成後，Reviewer 執行同一份
-契約、閱讀證據，再決定怎麼處理這次交付。
+執行範例需要 shell、Git 與 JDK 25。要把 ToppleCat 加進其他專案，還需要相容的
+Gradle 版本。
 
-[JUnit cart-orders sample](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)
-是這條路徑的 executable reference。想跑完整的 consumer setup，可以執行它的
-`demo.sh`；教學所說的程式與案例列都在 repository 中，沒有另外承諾一套不存在的 API。
+## 它在檢查什麼 {#contract-example}
 
-## 安裝 plugin
+結帳規則是：使用 `SAVE100` 優惠券時，訂單小計折 100 元。開發者先把規則寫成一般的
+Java/JUnit 驗收方法：
 
-ToppleCat 0.1.0 需要 Java 25 與相容的 Gradle 版本。在 consumer project 加入
-plugin 和 JUnit dependency：
+```java
+@ToppleAcceptanceTest("AC-CART-COUPON")
+@DisplayName("使用 SAVE100 折抵訂單小計")
+void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
+    scenario.given(coupon).a_payable_cart(c.input("cart", Cart.class));
+    scenario.when(coupon).checks_out();
+    scenario.then(coupon).receipt_shows_discount_and_discounted_subtotal(c);
+}
+```
+
+JSON 或 YAML 案例列提供一台具體購物車，以及預期收到的收據。這個方法和案例列合在
+一起，就是公開的可執行契約。實作 agent 可以讀它，也可以在開發時執行
+`./gradlew test`。
+
+正式驗證時，ToppleCat 會用審閱者另外選出的案例重跑同一個公開方法。agent 不需要先
+知道那些案例，仍然可以照公開規則完成實作。
+
+## 執行可重現範例 {#sample-workflow}
+
+clone repository 後執行：
+
+```bash
+bash samples/junit-cart-orders/demo.sh
+```
+
+腳本會走完三件事：
+
+1. 把目前的 ToppleCat build 發布到本機 Maven cache。
+2. 封存準備好的驗收契約，驗證故意寫錯的結帳服務。這次必須被拒絕。
+3. 換上修正版再次驗證。這次必須取得 `PASS`。
+
+任何一個結果不符預期，腳本都會失敗。程式、公開契約與清理流程都在
+[JUnit cart-orders sample](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)，
+repository 的 release gate 也會執行這條路徑。
+
+## 加到自己的專案
+
+ToppleCat 0.1.0 需要 Java 25。在 Gradle 專案加入 plugin 與 JUnit dependencies：
 
 ```kotlin
 plugins {
@@ -48,36 +83,9 @@ dependencies {
 tasks.test { useJUnitPlatform() }
 ```
 
-## 撰寫公開契約
-
-把公開 Acceptance Method 放在 `src/test/java`，把型別化 JSON/YAML 案例列放在
-`src/test/resources/topplecat/cases/`。一個 literal AC ID 綁一個公開方法。方法
-描述 Scenario；一般的 Stage method 負責業務呼叫與 assertions。
-
-```java
-@ToppleAcceptanceTest("AC-CART-COUPON")
-@DisplayName("Apply a coupon to an order")
-void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
-    scenario.given(coupon).a_cart(c.input("cart", Cart.class));
-    scenario.when(coupon).creates_an_order();
-    scenario.then(coupon).receipt_matches(c);
-}
-```
-
-規則與案例是否完整，要由人自己負責。ToppleCat 檢查選定的 Executable Contract，
-不會猜測沒有寫出的業務需求。 [Authoring contracts](authoring-contracts.md#typed-case-rows)
-會詳細說明 compiler-defined Scenario 與 expected-value 規則。
-
-## 跟著 sample workflow 走 {#sample-workflow}
-
-repository sample 執行支援的 Gradle workflow：
-
-```bash
-cd samples/junit-cart-orders
-bash demo.sh
-```
-
-在 consumer project 中，人或 External Workflow 會先選定並審閱 Spec，再封存完整契約：
+公開驗收方法放在 `src/test/java`，公開案例列放在
+`src/test/resources/topplecat/cases/`。把工作交給實作 agent 前，由負責的人確認選定
+規格和準備好的契約，再將完整契約封存：
 
 ```bash
 ./gradlew toppleCatCheck --spec specs/checkout/spec.md
@@ -85,28 +93,34 @@ bash demo.sh
 ./gradlew toppleCatSeal
 ```
 
-Implementation Agent 使用一般的 `./gradlew test` 取得回饋。這個綠燈有助於開發，
-但不是正式判定。
+接下來，實作 agent 只需要公開專案，並用一般的 `./gradlew test` 取得開發回饋。
+測試綠燈有幫助，但還不是正式的交付判定。
 
-## 執行正式 Verify {#formal-verify}
+你可以把本頁 Markdown 交給 coding agent，請它安裝 plugin，並依照你已核准的規則
+建立公開契約。不要叫它猜沒寫出的業務需求，也不要讓它接觸審閱者控制的資料。
 
-agent 宣稱 checkout 完成後，執行完整契約：
+## 驗證交付結果 {#formal-verify}
+
+agent 說工作完成後，執行：
 
 ```bash
 ./gradlew test
 ./gradlew toppleCatVerify
 ```
 
-Verify 會產生新的 Current-run Evidence，分別評估啟用的 safeguards，寫出 reviewer-only
-Verification Report，再重新隱藏 reviewer source 後回傳 aggregate result。Reviewer 若
-想快速查看，可指定 Spec 或重複指定 AC ID，但不能混用；範圍 `PASS` 只涵蓋選定範圍。
+`toppleCatVerify` 會重跑公開契約、執行每一道已啟用的獨立檢查，並產生只給 Reviewer
+看的 Verification Report。機器可讀的結論在 `build/topplecat/evidence.json`。
 
-機器判定在 `build/topplecat/evidence.json`。人閱讀 Verification Report，再決定是否
-接受交付。
+Reviewer 若只想快速看這次交付，可以指定 Spec 或 AC ID；報告會清楚標示範圍。CI
+應該使用不帶範圍的 `toppleCatVerify`，檢查完整契約。
 
-## 這個結果代表什麼 {#human-decision}
+## 根據證據做決定 {#human-decision}
 
-`PASS` 表示這次執行中，sealed policy 要求的每個 Gate 都通過。它不證明 checkout Spec
-完整、不證明未列出的輸入也都正確，也不表示組織已經批准交付。請讀
-[Verification and evidence](verification-and-evidence.md#delivery-example) 了解 observation、
-attribution 與 Gate verdict 三個層次。
+`PASS` 表示封存政策要求的每一道檢查都在這次執行中通過。`FAIL` 表示某道完成的
+檢查找到阻擋問題。`INCOMPLETE` 表示 ToppleCat 沒有取得足夠、可信的當次證據。
+
+這些結果都不會替人判斷原始業務規則是否完整。人要讀清楚跑了什麼、發生什麼，再決定
+是否接受交付。
+
+準備導入專案時，接著讀[把規則寫成可執行檢查](authoring-contracts.md#contract-example)。
+要解讀報告時，讀[驗證交付並讀懂結果](verification-and-evidence.md#delivery-example)。

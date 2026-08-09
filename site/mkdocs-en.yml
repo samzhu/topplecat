@@ -1,5 +1,5 @@
 site_name: ToppleCat documentation
-site_description: Task-oriented technical documentation for ToppleCat's executable acceptance contract and verification gate.
+site_description: Learn how ToppleCat checks an AI coding agent's done claim and gives a human fresh evidence before accepting a Java delivery.
 site_url: !ENV [DOCS_SITE_URL, https://topplecat.samzhu.dev/docs]
 docs_dir: docs/en
 site_dir: dist/docs
@@ -40,18 +40,17 @@ extra_css:
 extra_javascript:
   - assets/javascripts/topplecat-docs.js
 nav:
-  - Start:
-      - Documentation home: index.md
-      - Getting started: getting-started.md
-  - Author contracts:
-      - Authoring contracts: authoring-contracts.md
-  - Verify deliveries:
-      - Verification and evidence: verification-and-evidence.md
-  - Understand ToppleCat:
-      - Product definition: product-definition.md
-      - Architecture: architecture.md
+  - Learn by doing:
+      - Why ToppleCat: index.md
+      - See it catch a bad delivery: getting-started.md
+  - Use ToppleCat:
+      - Turn rules into checks: authoring-contracts.md
+      - Verify a delivery: verification-and-evidence.md
+  - Understand:
+      - What ToppleCat does: product-definition.md
+      - How ToppleCat works: architecture.md
       - Glossary: glossary.md
-  - Help:
+  - Get unstuck:
       - Troubleshooting: troubleshooting.md
   - Reference:
-      - Current release notes: release-notes.md
+      - What's in 0.1.0: release-notes.md

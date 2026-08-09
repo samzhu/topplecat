@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: Diagnose ToppleCat symptoms by separating what ran, what happened, and what the evidence supports.
+description: Find the ToppleCat message that matches what you see, understand what it means, and take the safest next action.
 page_id: troubleshooting
 language_code: en
 language_name: English
@@ -19,88 +19,92 @@ copied_label: Copied
 
 ## Symptom map {#symptom-map}
 
-Start with the user-visible symptom, then identify the external observation,
-ToppleCat attribution, Gate consequence, and safe next action. A status word by
-itself is not a diagnosis.
+Start with what you can see. The report or command output should say what ran,
+what happened, and why that supports the result. A bare `FAIL` or
+`INCOMPLETE` is not enough to diagnose a delivery.
 
-## The Acceptance Method does not compile
+| What you see | Start here |
+| --- | --- |
+| `toppleCatCheck` rejects the Java method | [The Acceptance Method does not compile](#acceptance-method-does-not-compile) |
+| A Spec rule or case row has no matching method | [A rule has no public binding](#missing-public-binding) |
+| The public example disagrees with the implementation | [Public Acceptance fails](#public-acceptance) |
+| A check says it could not be assessed | [Evidence is incomplete](#incomplete-evidence) |
+| Reviewer examples or mutation evidence are missing | [An independent check has no evidence](#independent-check-missing) |
+| The contract no longer matches its seal | [Contract Integrity fails](#contract-integrity-fails) |
 
-**Observed:** `toppleCatCheck` reports a binding, parameter, Stage, or direct
-Scenario-authoring problem.
+## The Acceptance Method does not compile {#acceptance-method-does-not-compile}
 
-**Attribution:** the selected AC is not bound to the required ordinary
-Java/JUnit Acceptance Method shape, so no formal contract can be trusted yet.
+This means ToppleCat cannot turn the selected rule into a trustworthy executable
+contract yet. Read the first Check error; it normally identifies the method,
+parameter, Stage, or Scenario call that broke the required shape.
 
-**Gate consequence:** Contract Integrity cannot establish downstream evidence.
+Keep `ToppleCase` first, one `ToppleScenario` second, and distinct concrete
+Stages after them. Stages must be non-final and have an accessible no-argument
+constructor. Put setup, conditionals, service calls, and assertions inside
+Stage methods.
 
-**Next action:** keep `ToppleCase` first, one non-generic `ToppleScenario` second,
-then distinct non-final concrete Stages with accessible no-argument
-constructors. Put setup and assertions inside Stage methods.
+Run `./gradlew toppleCatCheck` again. Do not seal or verify until Check can
+describe the complete contract.
 
-## A row or selected AC has no binding
+## A rule has no public binding {#missing-public-binding}
 
-**Observed:** a typed row or selected Spec AC names no compilable public
-`@ToppleAcceptanceTest` method.
-
-**Attribution:** the row cannot create a new rule; it must target an existing
-public AC binding.
-
-**Gate consequence:** Check fails before trustworthy formal evidence exists.
-
-**Next action:** correct the literal AC ID, selected Spec or `--ac` input, or
-add the missing public method. Humans still decide whether the rule itself is
-complete.
+A selected Spec rule or case row names an AC ID that has no compilable public
+`@ToppleAcceptanceTest` method. Correct the ID or add the missing method. A
+reviewer-controlled case can exercise an existing rule; it cannot create a new
+rule that the implementation agent never saw.
 
 ## Public Acceptance fails {#public-acceptance}
 
-**Observed:** the JUnit Acceptance Method compared an authored expected value
-with an actual result and found a mismatch.
+Open the failed public case in Verification Report. Read the input first, then
+the expected and actual values. That tells you which authored example disagreed
+with the implementation.
 
-**Attribution:** the mismatch belongs to that public case and Acceptance
-Method; it does not explain intent or unstated cases.
+Fix the production code if the implementation is wrong. Change the contract
+only if the human-authored rule or expected result was wrong. In either case,
+the intended contract change must go back through Check, Review, and Seal.
 
-**Gate consequence:** the `JUNIT` Gate records the completed problem. Mutation
-Testing is `INCOMPLETE` because it lacks a passing baseline, while independent
-Hidden Tests and Properties may still report their own evidence.
-
-**Next action:** inspect the public input and expected/actual comparison, then
-fix the implementation or the human-authored contract as appropriate. Do not
-replace the current run with an earlier artifact.
+Mutation Testing will be incomplete in this run because it needs a passing
+public baseline. Reviewer examples and Properties are independent and may still
+have useful current results.
 
 ## Evidence is incomplete {#incomplete-evidence}
 
-**Observed:** a safeguard did not produce trustworthy current-run evidence, for
-example because a task was interrupted, its current sidecar was missing, or a
-Property lifecycle did not match the sealed declaration.
+`INCOMPLETE` means ToppleCat cannot support either pass or fail with trustworthy
+evidence from this run. A task may have been interrupted, a current sidecar may
+be missing, or Property events may not match the sealed declaration.
 
-**Attribution:** ToppleCat cannot honestly attribute a complete observation to
-the current run. A previous archive is diagnostic only.
+Read the reason beside the affected check, repair that cause, and run formal
+Verify again. Archived output can help diagnose history, but it cannot supply
+missing evidence to a new run.
 
-**Gate consequence:** that safeguard is `INCOMPLETE`; aggregate `PASS` is not
-supported.
+## An independent check has no evidence {#independent-check-missing}
 
-**Next action:** rerun the documented workflow from a clean current run. Check
-the current task output and generated evidence, not an archived run.
+If reviewer examples are enabled, every selected rule needs an executed
+reviewer-controlled case. Add the missing case, review the complete contract,
+and reseal it. If the team intentionally does not use that check, change the
+policy explicitly and reseal; another check cannot stand in for it.
 
-## Hidden coverage or mutation evidence is missing
+If Mutation Testing has no usable result, confirm that Public Acceptance passed
+first. Then read the managed producer reason. ToppleCat uses its own fixed PIT
+profile and current-run report; a project PIT task or old report cannot replace
+it.
 
-**Observed:** a selected AC has no executed hidden typed row, or the managed
-mutation producer has no usable full matrix.
+## Contract Integrity fails {#contract-integrity-fails}
 
-**Attribution:** Hidden Tests and Mutation Testing answer separate questions;
-one cannot lend evidence to the other. Mutation Testing also requires a passing
-Public Acceptance baseline.
+The public acceptance work, Gradle logic, semantic definition, or verification
+policy no longer matches the Mechanical Seal. If the change was intended,
+restore reviewer custody, run Check and Review, then reseal the complete
+contract. If it was not intended, revert the contract change.
 
-**Gate consequence:** the relevant safeguard remains `INCOMPLETE` (or an
-explicitly sealed `DISABLED` / `NOT_APPLICABLE` state), with its reason kept.
-
-**Next action:** add the independently chosen hidden row and reseal, or repair
-the supported formal workflow. Do not expose reviewer-owned source or values to
-an Implementation Agent.
+Verify never creates a missing seal or silently approves new contract bytes.
 
 ## Safe next action {#safe-next-action}
 
-If the symptom remains unclear, read the Verification Report's plain-language
-reason first, then the canonical technical evidence. Keep the three layers
-separate: what an external producer observed, how ToppleCat attributed it, and
-which Gate conclusion the current evidence supports.
+If the message is still unclear, give an AI the public error, this page's
+Markdown, and the relevant public code. Ask it to explain what ran and propose a
+public fix. Do not give it the private Verification Report or
+reviewer-controlled values.
+
+The human Reviewer should read the plain-language reason first and open
+technical evidence only when needed. An unexplained status is a reporting
+problem; do not guess what `FAIL` or `INCOMPLETE` means.

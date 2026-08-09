@@ -1,6 +1,6 @@
 ---
-title: Authoring contracts
-description: 把人選的 Acceptance Condition 綁到一般 Java/JUnit method 與型別化案例列。
+title: 把規則寫成可執行檢查
+description: 先寫清楚 Java 交付必須做到什麼，讓實作 agent 與 ToppleCat 面對同一份公開契約。
 page_id: authoring-contracts
 language_code: zh-TW
 language_name: 繁體中文
@@ -15,26 +15,31 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Authoring contracts
+# 把業務規則寫成可執行檢查
 
-## 先寫一條具體規則 {#contract-example}
+在請 AI 實作功能前，先用看得見的結果回答一個問題：發生什麼情況時，你會相信這條
+規則真的有作用？
 
-以 checkout 規則為例：subtotal 1,000 元以上，receipt total 應該是 900。人決定這條
-規則，再選一筆公開案例，例如 `subtotal: 1000`、`total: 900`。ToppleCat 不會發明
-下限規則、不會替人選案例，也不會判斷還需要幾筆案例。
+## 先寫規則，再談 annotation {#contract-example}
 
-公開 Java method 與型別化案例列就是 Executable Contract。產生的 JSON 與 HTML 是這份
-契約的 projection，不是第二種 authoring language。
+假設規則是：「訂單成立後，系統要回傳含有正確總額的收據。」接著寫一筆具體例子，
+讓開發者、產品負責人和 AI 都能讀懂：這台購物車送進去，應該拿到這張收據。
 
-## Acceptance Method 形狀 {#acceptance-method}
+ToppleCat 不會替你定義什麼叫訂單成立。它保存人選定的規則和例子，在實作完成後檢查
+雙方原本同意的內容。
 
-每個 Acceptance Condition 綁定一個 literal 公開
-`@ToppleAcceptanceTest("AC-...")` method。給它一個讓 Reviewer 看得懂的 JUnit
-`@DisplayName`，並把 method 保持為小型 Scenario orchestration：
+在 ToppleCat 裡，描述流程的 Java 方法叫做 **Acceptance Method（驗收方法）**，JSON
+或 YAML 例子叫做 **Typed Case Row（型別案例資料列）**。兩者合在一起，就是公開的
+**Executable Contract（可執行契約）**。
+
+## 用 Java 描述行為 {#acceptance-method}
+
+每條選定規則，也就是 Acceptance Condition，都有一個公開的
+`@ToppleAcceptanceTest("AC-...")` 方法。方法名稱要說清楚業務結果：
 
 ```java
 @ToppleAcceptanceTest("AC-ORDER-CREATE")
-@DisplayName("Create an accepted order")
+@DisplayName("建立一筆已接受的訂單")
 void createsOrder(ToppleCase c, ToppleScenario scenario, OrderStage order) {
     scenario.given(order).an_order_request(c.input("request", OrderRequest.class));
     scenario.when(order).submits_it();
@@ -42,15 +47,19 @@ void createsOrder(ToppleCase c, ToppleScenario scenario, OrderStage order) {
 }
 ```
 
-參數依序是 `ToppleCase`、一個非 generic 的 `ToppleScenario`，以及一個或多個不同的
-具體 `ToppleStage` 型別。Stage 不能是 final，必須可以 proxy，而且要有可存取的無參數
-constructor。setup、service call、分支與 assertions 都放進一般 Stage method。
+這個方法應該短到可以當成一段故事閱讀。`ToppleCase` 提供當次例子，
+`ToppleScenario` 記錄 Given、When、Then 的順序，`OrderStage` 裡的方法負責真正的
+準備工作、服務呼叫與斷言。
 
-每次直接呼叫都必須是 `scenario.given|when|then|and(stage).step(...)`。compiler 負責
-phase 順序、Stage 選擇、overload identity 與呈現的 Step。`@As` 提供人看的業務文字，
-但不能讓 runtime code 改寫 compiler 描述的 Step。
+方法格式有明確限制：`ToppleCase` 必須放第一個，後面是一個 `ToppleScenario`，再
+接一個或多個不同的具體 Stage。Stage 不能是 final，並且要有可存取的無參數
+constructor。每一行直接呼叫 `scenario.given|when|then|and(stage).step(...)`；
+條件判斷、helper 與 assertions 放在 Stage 方法裡。
 
-## 型別化案例列 {#typed-case-rows}
+`@DisplayName` 與 `@As` 應使用 Reviewer 看得懂的業務文字。這些人寫的句子會原樣
+保留在契約與報告中。
+
+## 加入輸入與預期結果 {#typed-case-rows}
 
 公開案例列放在 `src/test/resources/topplecat/cases/`：
 
@@ -63,26 +72,32 @@ phase 順序、Stage 選擇、overload identity 與呈現的 Step。`@As` 提供
     response: {accepted: true}
 ```
 
-一列恰好有 `caseId`、`acId`、`inputs` 與 `expected`。reviewer-owned 案例在 reviewer
-custody 中使用同一 schema，並指向已存在的 public AC；它是獨立選出的例子，不是新規則。
-交給 Implementation Agent 的公開契約，和 formal Verify 實際執行的公開契約是同一份 bytes。
+每一列有四個部分：案例自己的 ID、它所屬的規則、輸入，以及預期結果。公開案例讓
+實作 agent 知道規則長什麼樣子。審閱者控制的案例重用同一條規則與同一個方法，但會
+選擇不同的邊界。它們不是祕密的新需求。
 
-## Expected values 與 Properties
+agent 收到的是公開契約。正式驗證之後執行的也是同一份公開內容，ToppleCat 不會在
+handoff 後偷換另一套公開規格。
 
-每個 top-level expected value 一開始都是 `UNTOUCHED`。`c.verify("receipt", actual)`
-會比較並標成 `ASSERTED`；`c.expected("receipt", Type.class)` 只讀取並標成 `READ`；
-沒有存取就維持 untouched。只有 `ASSERTED` 能滿足 expected-consumption enforcement。
+## 確認預期結果真的有比較
 
-當案例本身不夠涵蓋一條人核准的 invariant 時，使用 `@ToppleProperty`。它有獨立的
-`PROPERTY` Gate，使用有界 generator，不能產生案例列，也不能改善 Mutation Testing。
-產生的輸入是本次執行證據，不是 Typed Case Row。
+讀取 expected value 不等於驗證它。使用 `c.verify("receipt", actual)`，把實際收據
+和人寫下的完整預期收據比較。ToppleCat 會記錄每個最上層預期值是否真的被斷言、只是
+被讀取，或根本沒有執行到。
 
-## 人負責契約完整性 {#human-completeness}
+如果一條規則應該對很多輸入都成立，可以再寫公開的 `@ToppleProperty`。例如：商品
+順序改變不應影響訂單總額。Property 使用有界的產生輸入，透過自己的獨立檢查回報；
+它不會取代具體案例。
 
-人或 External Workflow 選定目前 Spec，並且負責讓規則與案例完整。ToppleCat 把選定的
-AC 綁到一般 Java/JUnit 工作，檢查 compiler-defined Scenario，再執行 sealed contract。
-它不判斷漏了哪些 requirement、不替組織 sign-off，也不是 task manager。
+## 決定要交給 AI 什麼 {#human-completeness}
 
-完整的 sample 路徑請看 [Getting started](getting-started.md#sample-workflow)。相同公開契約
-如何進入正式證據，請看 [Architecture](architecture.md#contract-authority) 與
-[Verification and evidence](verification-and-evidence.md#three-evidence-layers)。
+AI 可以依照人已核准的規則，完成 Java 接線和案例檔案。把本頁、選定的業務規則與公開
+例子交給它，要求每條規則只用一個 Acceptance Method，並比較完整、可觀察的結果。
+
+規則與例子是否完整，仍由人決定。契約裡沒寫退款例外、VIP 折扣或法規要求，
+ToppleCat 不會自行推論，也不會替組織批准交付。
+
+接著可以[執行範例](getting-started.md#sample-workflow)，或閱讀
+[驗證交付並讀懂結果](verification-and-evidence.md#delivery-example)。精確的參數與
+generator 規則保留在 repository 的
+[authoring guide](https://github.com/samzhu/topplecat/blob/main/docs/guide/authoring.md)。

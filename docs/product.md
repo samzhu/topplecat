@@ -121,10 +121,19 @@ their ownership of the Spec, plan, or task state.
 
 ## Public technical documentation
 
-The current task-oriented explanation is published in English and Traditional
-Chinese at the [official documentation site](https://topplecat.samzhu.dev/docs/).
+The current explanation is published in English and Traditional Chinese at the
+[official documentation site](https://topplecat.samzhu.dev/docs/). It serves
+Reviewers and adopters with different technical backgrounds: learning pages
+start with the human delivery problem and a reproducible outcome, then introduce
+formal terms and implementation details when the reader needs them. Readers can
+take a quick sample-backed proof path or continue into project adoption,
+verification, troubleshooting, and exact reference material.
+
 Each page is a static projection of the current Product, Architecture, guides,
-glossary, and release notes. The site adds no authority over the Executable
+glossary, and release notes, with an exact page-level Markdown sibling that a
+human may give to an AI for explanation or public implementation help. That
+convenience does not transfer responsibility for business-rule completeness or
+the delivery decision to the AI. The site adds no authority over the Executable
 Contract, no runtime translation, and no delivery evidence surface.
 
 ## Responsibility boundary

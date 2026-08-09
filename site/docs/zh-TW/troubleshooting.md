@@ -1,6 +1,6 @@
 ---
-title: Troubleshooting
-description: 依照可見症狀分開 what ran、what happened，以及證據支持的 Gate 結論。
+title: 排除問題
+description: 從眼前看到的 ToppleCat 訊息開始，弄清楚它代表什麼，以及下一步怎麼做。
 page_id: troubleshooting
 language_code: zh-TW
 language_name: 繁體中文
@@ -15,83 +15,82 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Troubleshooting
+# 排除問題
 
-## 症狀地圖 {#symptom-map}
+## 先找你看到的症狀 {#symptom-map}
 
-先從看得到的症狀開始，再分清 external observation、ToppleCat attribution、Gate
-consequence 與安全的下一步。單獨一個 status word 不是診斷。
+先從畫面或命令輸出開始。報告應該說清楚跑了什麼、發生什麼，以及為什麼得到目前的
+結果。只有一個 `FAIL` 或 `INCOMPLETE`，還不足以診斷交付。
 
-## Acceptance Method 無法編譯
+| 你看到的情況 | 從這裡開始 |
+| --- | --- |
+| `toppleCatCheck` 不接受 Java 方法 | [驗收方法無法編譯](#acceptance-method-does-not-compile) |
+| 規格或案例找不到對應方法 | [規則沒有公開綁定](#missing-public-binding) |
+| 公開案例和實作結果不一致 | [公開驗收失敗](#public-acceptance) |
+| 某道檢查顯示無法評估 | [證據不完整](#incomplete-evidence) |
+| 審閱者案例或 mutation 證據不見了 | [獨立檢查沒有證據](#independent-check-missing) |
+| 契約與封印不一致 | [契約完整性失敗](#contract-integrity-fails) |
 
-**Observation：** `toppleCatCheck` 報告 binding、parameter、Stage 或直接 Scenario
-authoring 有問題。
+## 驗收方法無法編譯 {#acceptance-method-does-not-compile}
 
-**Attribution：** 選定的 AC 不符合要求的一般 Java/JUnit Acceptance Method 形狀，還
-不能信任完整 formal contract。
+這代表 ToppleCat 還無法把選定規則整理成可信的可執行契約。先讀第一個 Check 錯誤訊息；
+它通常會指出是哪個方法、參數、Stage 或 Scenario 呼叫不符合格式。
 
-**Gate consequence：** Contract Integrity 無法建立 downstream evidence。
+`ToppleCase` 放第一個，後面是一個 `ToppleScenario`，再接不同的具體 Stage。Stage
+不能是 final，並且要有可存取的無參數 constructor。準備工作、條件判斷、服務呼叫與
+assertions 都放進 Stage 方法。
 
-**Next action：** 保持 `ToppleCase` 第一個、非 generic `ToppleScenario` 第二個，之後放
-不同的非 final concrete Stage，並提供可存取的無參數 constructor。把 setup 與 assertions
-移到 Stage method。
+修正後重新執行 `./gradlew toppleCatCheck`。Check 還不能描述完整契約前，不要 Seal
+或 Verify。
 
-## 案例列或選定 AC 沒有 binding
+## 規則沒有公開綁定 {#missing-public-binding}
 
-**Observation：** Typed row 或選定的 Spec AC 沒有可編譯的公開
-`@ToppleAcceptanceTest` method。
+選定規格或案例列使用的 AC ID，找不到可編譯的公開 `@ToppleAcceptanceTest` 方法。
+請修正 ID，或補上缺少的方法。審閱者控制的案例只能檢查既有規則，不能建立一條實作
+agent 從未看過的新規則。
 
-**Attribution：** row 不能建立新規則，必須指向已存在的 public AC binding。
+## 公開驗收失敗 {#public-acceptance}
 
-**Gate consequence：** Check 在產生可信的 formal evidence 前就停止。
+在 Verification Report 打開失敗的公開案例。先看輸入，再看 expected 與 actual；
+這會指出哪一筆人寫的例子和實作不一致。
 
-**Next action：** 修正 literal AC ID、Spec 或 `--ac` selection，或補上缺少的公開 method。
-規則本身是否完整仍是人的責任。
+實作錯了就修 production code。若人寫的規則或預期結果有誤，才修改契約。任何預期中
+的契約變更都要重新 Check、Review 與 Seal。
 
-## Public Acceptance 失敗 {#public-acceptance}
+這次 Mutation Testing 會因為沒有通過的公開 baseline 而不完整。審閱者案例和
+Properties 是獨立檢查，仍可能留下有用的當次結果。
 
-**Observation：** JUnit Acceptance Method 將 authored expected value 與 actual result
-比較後發現不一致。
+## 證據不完整 {#incomplete-evidence}
 
-**Attribution：** mismatch 屬於那個 public case 與 Acceptance Method；它不說明意圖，
-也不涵蓋未寫出的案例。
+`INCOMPLETE` 表示 ToppleCat 沒有足夠的當次可信證據，不能支持通過或失敗。可能是
+task 被中斷、當次 sidecar 遺失，或 Property events 與封存 declaration 對不上。
 
-**Gate consequence：** `JUNIT` Gate 如實記錄已完成但發現問題。Mutation Testing 因為
-沒有通過的 baseline 而是 `INCOMPLETE`；獨立的 Hidden Tests 與 Properties 仍可能各自
-產生結果。
+先讀該檢查旁邊的原因，修正後重新執行正式 Verify。舊輸出可以協助追查歷史，但不能
+補進新的執行。
 
-**Next action：** 先看 public input 與 expected/actual comparison，再視情況修改實作或
-人寫的契約。不要拿更早的 artifact 取代這次執行。
+## 獨立檢查沒有證據 {#independent-check-missing}
 
-## Evidence 不完整 {#incomplete-evidence}
+如果政策啟用了審閱者案例，每條選定規則都需要一筆實際執行的 reviewer-controlled
+case。補上案例、重新審閱完整契約，再 Reseal。若團隊確定不使用這道檢查，應明確修改
+政策並 Reseal；不能拿別的檢查代替。
 
-**Observation：** Safeguard 沒有產生可信的本次執行證據，例如 task 被中斷、current
-sidecar 不見，或 Property lifecycle 和 sealed declaration 對不上。
+Mutation Testing 沒有可用結果時，先確認 Public Acceptance 是否通過，再讀 managed
+producer 的原因。ToppleCat 使用固定的 PIT profile 與當次報告；專案自己的 PIT task
+或舊報告不能取代。
 
-**Attribution：** ToppleCat 無法誠實地把完整 observation 歸因到本次執行。先前 archive
-只能用來診斷。
+## 契約完整性失敗 {#contract-integrity-fails}
 
-**Gate consequence：** 該 safeguard 是 `INCOMPLETE`；aggregate `PASS` 不成立。
+公開驗收內容、Gradle logic、semantic definition 或 verification policy 已經和
+Mechanical Seal 不一致。若變更是預期的，先 Restore reviewer custody，執行 Check 與
+Review，再 Reseal 完整契約；若不是預期變更，就復原契約。
 
-**Next action：** 依文件 workflow 從乾淨的 current run 重新執行。檢查本次 task output 與
-新產生的 evidence，不要讀 archived run 來填洞。
-
-## Hidden coverage 或 mutation evidence 不見了
-
-**Observation：** 選定 AC 沒有執行 hidden typed row，或 managed mutation producer
-沒有可用的 full matrix。
-
-**Attribution：** Hidden Tests 與 Mutation Testing 回答不同問題，一邊不能借證據給另一邊。
-Mutation Testing 還需要 Public Acceptance baseline 通過。
-
-**Gate consequence：** 相應 safeguard 維持 `INCOMPLETE`（或明確 sealed 的 `DISABLED` /
-`NOT_APPLICABLE`），並保留原因。
-
-**Next action：** 加入獨立選出的 hidden row 並重新 seal，或修復支援的 formal workflow。
-不要把 reviewer-owned source 或值交給 Implementation Agent。
+Verify 不會自行建立缺少的 Seal，也不會默默批准新的 contract bytes。
 
 ## 安全的下一步 {#safe-next-action}
 
-症狀不清楚時，先讀 Verification Report 的白話原因，再讀 canonical technical evidence。
-維持三個層次：external producer 看到了什麼、ToppleCat 怎麼歸因，以及本次證據支持哪個
-Gate 結論。
+訊息仍然看不懂時，可以把公開 error、本頁 Markdown 與相關公開程式交給 AI，請它說明
+實際跑了什麼，並提出公開範圍內的修正。不要把私人 Verification Report 或審閱者控制
+的值交給它。
+
+Reviewer 應先讀白話原因，有需要再展開技術證據。無法解釋的狀態本身
+就是報告問題，不要靠猜測理解 `FAIL` 或 `INCOMPLETE`。

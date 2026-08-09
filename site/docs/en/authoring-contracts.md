@@ -1,6 +1,6 @@
 ---
-title: Authoring contracts
-description: Bind human-selected Acceptance Conditions to ordinary Java/JUnit methods and typed case rows.
+title: Turn rules into checks
+description: Write down what a Java delivery must do so the implementation agent and ToppleCat are checked against the same public contract.
 page_id: authoring-contracts
 language_code: en
 language_name: English
@@ -15,24 +15,29 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Authoring contracts
+# Turn business rules into executable checks
 
-## Start with one concrete rule {#contract-example}
+Before asking an AI to implement a feature, answer one question in observable
+terms: what result would convince you that this rule works?
 
-Take a checkout rule: an order with subtotal 1,000 or more has a receipt total
-of 900. A human decides that rule and chooses a public case such as
-`subtotal: 1000`, `total: 900`. ToppleCat does not invent a lower-bound rule,
-choose the example, or decide whether more cases are needed.
+## Start with the rule, not the annotation {#contract-example}
 
-The public Java method and typed row are the Executable Contract. Generated
-JSON and HTML are projections of that contract, not a second authoring
-language.
+Suppose the rule is: “an accepted order returns a receipt with its final
+total.” Write at least one concrete example that a developer, product owner, and
+AI agent can all read: this cart goes in; this receipt must come back.
 
-## Acceptance Method shape {#acceptance-method}
+ToppleCat does not decide what an accepted order means. It preserves the rule
+and examples you chose, then verifies that exact agreement after implementation.
 
-Bind each Acceptance Condition to exactly one literal public
-`@ToppleAcceptanceTest("AC-...")` method. Give it a business-readable JUnit
-`@DisplayName` and keep the method as a small Scenario orchestration:
+In ToppleCat, the Java method that tells the story is called an **Acceptance
+Method**. The JSON or YAML examples are **Typed Case Rows**. Together they form
+the public **Executable Contract**.
+
+## Describe the behaviour in Java {#acceptance-method}
+
+Each selected rule, or Acceptance Condition, has one public
+`@ToppleAcceptanceTest("AC-...")` method. Give it a name that explains the
+business result:
 
 ```java
 @ToppleAcceptanceTest("AC-ORDER-CREATE")
@@ -44,19 +49,22 @@ void createsOrder(ToppleCase c, ToppleScenario scenario, OrderStage order) {
 }
 ```
 
-The parameters are `ToppleCase`, one non-generic `ToppleScenario`, then one or
-more distinct concrete `ToppleStage` types. A Stage must be non-final,
-proxyable, and constructible with an accessible no-argument constructor. Move
-setup, service calls, branching, and assertions into ordinary Stage methods.
+Keep this method short enough to read as a story. `ToppleCase` supplies the
+current example. `ToppleScenario` records the Given, When, and Then sequence.
+The `OrderStage` methods perform the real setup, service calls, and assertions.
 
-Each direct call is exactly `scenario.given|when|then|and(stage).step(...)`.
-The compiler owns phase order, Stage selection, overload identity, and the
-rendered Step. `@As` supplies business-visible prose but does not let runtime
-code rewrite the compiler-described Step.
+The exact method contract matters: `ToppleCase` comes first, followed by one
+`ToppleScenario` and one or more distinct concrete Stage types. Stages must be
+non-final and have an accessible no-argument constructor. Each statement is a
+direct `scenario.given|when|then|and(stage).step(...)` call. Put control flow,
+helpers, and assertions inside Stage methods.
 
-## Typed Case Rows {#typed-case-rows}
+Use `@DisplayName` and `@As` for wording that a Reviewer understands. ToppleCat
+keeps those authored words unchanged in the contract and reports.
 
-Public rows live under `src/test/resources/topplecat/cases/`:
+## Add examples with inputs and expected results {#typed-case-rows}
+
+Public case rows live under `src/test/resources/topplecat/cases/`:
 
 ```yaml
 - caseId: order-public-example
@@ -67,33 +75,41 @@ Public rows live under `src/test/resources/topplecat/cases/`:
     response: {accepted: true}
 ```
 
-A row has exactly `caseId`, `acId`, `inputs`, and `expected`. Reviewer-owned
-rows use the same schema in reviewer custody and target an existing public AC;
-they add an independently chosen example rather than a new rule. The public
-contract handed to the Implementation Agent is byte-for-byte the public
-contract formal Verify runs.
+A row has four parts: its own ID, the rule it belongs to, the input, and the
+expected result. Public rows teach the implementation agent what the rule looks
+like. Reviewer-controlled rows use the same rule and method but exercise
+independently chosen boundaries. They do not add secret requirements.
 
-## Expected values and Properties
+The agent receives the public contract. Formal Verify later runs those same
+public bytes; ToppleCat does not swap in a different public specification after
+the handoff.
 
-Every top-level expected value begins `UNTOUCHED`. `c.verify("receipt", actual)`
-compares it and marks it `ASSERTED`; `c.expected("receipt", Type.class)` only
-reads it and marks it `READ`; no access leaves it untouched. Only `ASSERTED`
-fulfils expected-consumption enforcement.
+## Make sure expected results are really checked
 
-Use `@ToppleProperty` for a human-approved invariant that examples do not cover.
-It has its own independent `PROPERTY` Gate, uses bounded generators, and cannot
-create rows or improve Mutation Testing. Generated inputs are Current-run
-Evidence, not Typed Case Rows.
+Reading an expected value is not the same as asserting it. Use
+`c.verify("receipt", actual)` to compare the complete observed receipt with the
+authored expected receipt. ToppleCat records whether each top-level expected
+value was actually asserted, merely read, or never reached.
 
-## Human completeness {#human-completeness}
+When one rule should hold across many inputs, you can also write a public
+`@ToppleProperty`. For example, reordering line items should not change the
+total. Properties use bounded generated inputs and report through their own
+independent check; they do not replace concrete examples.
 
-Humans or an External Workflow select the current Spec and remain responsible
-for making its rules and cases complete. ToppleCat binds those selected ACs to
-ordinary Java/JUnit work, checks the compiler-defined Scenario, and later runs
-the sealed contract. It does not judge missing requirements, choose an
-organizational sign-off, or become a task manager.
+## Decide what to give the AI {#human-completeness}
 
-For a complete sample-backed path, see [Getting started](getting-started.md#sample-workflow).
-For how the same public contract reaches formal evidence, see
-[Architecture](architecture.md#contract-authority) and
-[Verification and evidence](verification-and-evidence.md#three-evidence-layers).
+An AI can write the Java plumbing and case files from rules you have approved.
+Give it this page, the selected business rule, and the public examples. Ask it
+to keep one Acceptance Method per rule and to verify complete observable
+results.
+
+A person still decides whether the rule and examples are complete. ToppleCat
+will not infer a refund exception, VIP discount, or legal requirement that is
+absent from the contract. It also does not decide whether your organization
+should approve the delivery.
+
+Next, [run the sample](getting-started.md#sample-workflow) or read
+[Verify a delivery](verification-and-evidence.md#delivery-example) to see how
+the same public contract becomes current-run evidence. Exact parameter and
+generator rules remain available in the repository's
+[authoring guide](https://github.com/samzhu/topplecat/blob/main/docs/guide/authoring.md).

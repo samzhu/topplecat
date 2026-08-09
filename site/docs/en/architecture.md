@@ -1,6 +1,6 @@
 ---
-title: Architecture
-description: Understand ToppleCat's four modules, execution flow, evidence, custody, and information boundary.
+title: How ToppleCat works
+description: Follow the contract, checks, evidence, and information boundaries through ToppleCat's four Java modules.
 page_id: architecture
 language_code: en
 language_name: English
@@ -15,64 +15,85 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Architecture
+# How ToppleCat works
+
+Read this page when you need to know why the formal result can be trusted, where
+private reviewer information goes, or which module owns a technical behaviour.
+If you only want to try the product, start with
+[Getting started](getting-started.md#sample-workflow).
+
+## The flow from rule to evidence {#execution-flow}
+
+```text
+human selects rules and examples
+    -> public Java/JUnit executable contract
+    -> Reviewer checks and seals the complete contract
+    -> AI agent implements with ordinary test feedback
+    -> formal Verify runs fresh public and independent checks
+    -> current evidence and a private Verification Report
+    -> human decides what to do with the delivery
+```
+
+Ordinary `./gradlew test` runs the public project tests and acceptance methods.
+It produces development feedback, not formal ToppleCat evidence.
+
+`./gradlew toppleCatVerify` first checks that the complete contract and policy
+still match the Mechanical Seal. It then runs public acceptance and every
+enabled independent safeguard, writes the current evidence and reports, and
+returns one aggregate result.
+
+## What is authoritative {#contract-authority}
+
+The public Java/JUnit Acceptance Methods and typed JSON or YAML case rows are
+the executable contract. Generated JSON and HTML explain that contract and the
+observed results; they never become another place to author rules.
+
+One public `@ToppleAcceptanceTest("AC-...")` method owns each selected rule.
+Public and reviewer-controlled rows run the same method in separate modes.
+`@ToppleProperty` declarations are public invariants with their own generated
+evidence. Generated Property choices never become hidden case rows.
+
+This matters because the implementation agent must be judged against the same
+public contract it received. ToppleCat does not reinterpret that contract in
+the report layer.
 
 ## Four modules {#four-modules}
 
-| Module | Responsibility |
+| Module | What it owns |
 | --- | --- |
-| `topplecat-core` | Case, evidence, custody, Property, and safe-feedback models |
-| `topplecat-junit` | Acceptance annotations, typed rows, compiler-described Scenario/Stage proxies, expected consumption, and Properties |
-| `topplecat-report` | Reviewer-only Spec Review and Verification Report projections |
-| `topplecat-gradle-plugin` | Commands, task wiring, scope, custody, integrity, and mutation orchestration |
+| `topplecat-core` | Case, evidence, custody, Property, and safe-feedback data models |
+| `topplecat-junit` | Acceptance annotations, typed rows, Scenario/Stage execution, expected-value checking, and Properties |
+| `topplecat-report` | The private Spec Review and Verification Report projections |
+| `topplecat-gradle-plugin` | Commands, task order, scope, custody, integrity, and managed Mutation Testing |
 
-The repository keeps exactly these four product modules. Samples and maintainer
-validation infrastructure are not additional ToppleCat product modules.
+The public website and executable samples explain and verify the product; they
+are not extra runtime modules.
 
-## Contract authority {#contract-authority}
+## Independent checks
 
-Ordinary Java/JUnit Acceptance Methods and typed JSON/YAML case rows are
-authoritative. One public `@ToppleAcceptanceTest("AC-...")` binds each AC; the
-compiler defines its Scenario phases, Stage selection, overload identity, and
-rendered Steps. Public rows run in `PUBLIC_ONLY` mode and hidden rows reuse the
-same method in `HIDDEN_ONLY` mode. Generated JSON and HTML are projections.
+Reviewer examples, Property-Based Testing, and Mutation Testing answer different
+questions. They share the delivery scope, integrity check, and final report, but
+not evidence. Once contract integrity passes, reviewer examples and Properties
+can still produce results when Public Acceptance fails. Mutation Testing needs a
+passing public baseline before it can assess temporary production changes.
 
-`@ToppleProperty` is a separate public declaration for a human-approved
-invariant. Its generated choices are current evidence and never become case
-rows or hidden contract input.
+Formal Mutation Testing uses ToppleCat's fixed managed PIT profile and maps PIT
+observations to exact public Acceptance Methods. Project-specific PIT tasks stay
+outside ToppleCat evidence.
 
-## Execution flow {#execution-flow}
+## Custody and information boundary {#information-boundary}
 
-```text
-ordinary ./gradlew test
-    -> public project tests and public acceptance methods
+`toppleCatSeal` moves reviewer-controlled source into local plaintext custody
+and records a content-based seal over the complete executable contract and
+verification policy. This detects contract changes. It is not encryption,
+hostile-process isolation, or an operating-system security boundary.
 
-./gradlew toppleCatVerify
-    -> current public acceptance
-    -> enabled Hidden Tests, Properties, Expected Consumption, Mutation Testing
-    -> Current-run Evidence and reviewer reports
-```
+The Implementation Agent receives the public contract and safe Gate-level
+feedback. The Reviewer keeps Spec Review, Verification Report, private examples,
+counterexamples, producer diagnostics, and raw failures. A public site may show
+clearly labelled synthetic demonstrations, never material from an actual
+delivery.
 
-Contract Integrity first compares the complete contract and verification policy
-with the Mechanical Seal. When it passes, the independent safeguards run in
-their fixed order. A failing Public Acceptance does not erase independent Hidden
-or Property evidence; Mutation Testing instead lacks a trustworthy baseline.
-
-## Custody and integrity
-
-`toppleCatSeal` keeps reviewer-owned source in local plaintext mechanical
-custody and records an integrity seal over the complete contract and policy.
-Custody is not encryption, hostile-process isolation, CI isolation, or an
-operating-system security boundary. Verify reuses the existing seal; it does
-not create approval or update it.
-
-## Information boundary {#information-boundary}
-
-Spec Review and Verification Report are reviewer-only, human-readable
-projections. Safe Implementation Agent feedback contains Gate-level remediation
-without reviewer values, identifiers, paths, source names, tokens, raw private
-failures, or Property trial material. The public project page may show a labelled
-synthetic demonstration for education, never a real delivery.
-
-For the product owner and use moments, read [Product definition](product-definition.md#responsibility-boundary).
-For exact terms, read the [Glossary](glossary.md#independent-safeguard).
+For exact product terms, use the [Glossary](glossary.md#executable-contract).
+For the human responsibility boundary, read
+[What ToppleCat does](product-definition.md#responsibility-boundary).

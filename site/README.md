@@ -76,3 +76,19 @@ The canonical project homepage remains `/`. The combined artifact adds
 ordinary links and the complete HTML sitemap as primary discovery. Page-level
 Markdown and the language manifests are deliberately small; there is no site
 search, version selector, `llms-full`, Javadoc, RAG/chatbot, MCP, or docs API.
+
+## Documentation content model
+
+The documentation serves people evaluating a delivery as well as developers
+integrating the Java tooling. Learning pages lead with the user's problem,
+observable outcome, and one continuous checkout example before introducing
+ToppleCat's formal vocabulary. They offer a quick executable proof and a longer
+adoption path with visible checkpoints. How-to and troubleshooting pages start
+from the task or symptom; Product, Architecture, Glossary, and release notes
+remain explicit reference surfaces.
+
+English and Traditional Chinese follow the same information architecture, but
+Traditional Chinese is written as natural prose rather than a word-for-word
+technical mirror. Page-level Markdown may be handed to an AI for explanation or
+public implementation help. It does not let the AI choose missing business
+rules, inspect reviewer-controlled material, or make the delivery decision.
