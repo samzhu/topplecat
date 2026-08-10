@@ -80,7 +80,26 @@ agent feedback。報告也會在 Mutation Testing 與容易陌生的卡片術語
 
 ## 快速開始
 
-ToppleCat 0.1.0 需要 Java 25 與相容的 Gradle。
+ToppleCat 0.1.0 需要 Java 25 與相容的 Gradle。正式套件已發布到
+[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)，
+使用端專案不必下載或 build ToppleCat repository。
+
+`settings.gradle.kts`：
+
+```kotlin
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+}
+```
+
+`build.gradle.kts`：
 
 ```kotlin
 plugins {

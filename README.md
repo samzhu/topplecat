@@ -98,7 +98,27 @@ disclosures remain readable without opening help.
 
 ## Quick start
 
-ToppleCat 0.1.0 requires Java 25 and a compatible Gradle version.
+ToppleCat 0.1.0 requires Java 25 and a compatible Gradle version. The official
+artifacts are available from
+[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat),
+so consumer projects do not need to clone or build this repository.
+
+`settings.gradle.kts`:
+
+```kotlin
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+}
+```
+
+`build.gradle.kts`:
 
 ```kotlin
 plugins {

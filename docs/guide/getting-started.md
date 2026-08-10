@@ -9,6 +9,28 @@ and [Traditional Chinese documentation](https://topplecat.samzhu.dev/docs/zh-TW/
 
 ## Install ToppleCat
 
+ToppleCat 0.1.0 is available from
+[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat).
+Consumer projects do not need to clone or build the ToppleCat repository.
+
+In `settings.gradle.kts`, make the plugin marker and libraries available from
+Maven Central:
+
+```kotlin
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+}
+```
+
+Then configure `build.gradle.kts`:
+
 ```kotlin
 plugins {
     java

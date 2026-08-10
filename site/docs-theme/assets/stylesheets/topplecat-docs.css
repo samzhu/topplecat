@@ -161,6 +161,8 @@ body {
 }
 @media (max-width: 1219px) { .md-content__inner { margin-inline: 1rem; } }
 @media (max-width: 760px) {
+  .md-header__title,
+  .md-header__ellipsis { min-width: 0; overflow: hidden; }
   .md-main__inner { display: flex; flex-direction: column; padding: 0; }
   .md-sidebar--primary { order: -2; }
   .md-sidebar--secondary { display: block !important; order: -1; position: static; width: 100%; min-width: 0; max-width: 100%; padding: .55rem 1rem 0; overflow: hidden; box-sizing: border-box; }

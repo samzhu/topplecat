@@ -48,7 +48,7 @@ nav:
       - From rules to results: architecture.md
       - Glossary: glossary.md
   - Start using it:
-      - Run the sample: getting-started.md
+      - Install ToppleCat: getting-started.md
       - Turn rules into checks: authoring-contracts.md
   - Get unstuck:
       - Troubleshooting: troubleshooting.md

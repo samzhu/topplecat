@@ -1,6 +1,6 @@
 ---
 title: 開始使用
-description: 執行一個真的會攔下錯誤 AI 交付的範例，再把 ToppleCat 加進 Java/JUnit 專案。
+description: 從 Maven Central 把 ToppleCat 加進 Java/JUnit 專案，再準備可供 AI 實作與驗證的驗收內容。
 page_id: getting-started
 language_code: zh-TW
 language_name: 繁體中文
@@ -15,14 +15,12 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# 看 ToppleCat 攔下一個錯誤交付
+# 把 ToppleCat 加進 Java 專案
 
-如果你還不確定 ToppleCat 值不值得用，先跑範例，不必先讀完設定手冊。專案原始碼
-內有一個故意寫得太狹隘的結帳服務。它能通過公開測試，卻會被審閱者另外準備的檢查
-抓到。相同腳本接著換上修正版，再跑出通過結果。
+ToppleCat 0.1.0 已發布到 Maven Central。直接把 Gradle plugin 和 JUnit library 加進
+現有專案即可，不必下載 ToppleCat 原始碼，也不用自己 build。
 
-執行範例需要 shell、Git 與 JDK 25。要把 ToppleCat 加進其他專案，還需要相容的
-Gradle 版本。
+使用 ToppleCat 需要 JDK 25 與相容的 Gradle 版本。
 
 ## 它在檢查什麼 {#contract-example}
 
@@ -46,24 +44,6 @@ JSON 或 YAML 案例列提供一台具體購物車，以及預期收到的收據
 正式驗證時，ToppleCat 會用審閱者另外選出的案例重跑同一個公開方法。AI 不需要先
 知道那些案例，仍然可以照公開規則完成實作。
 
-## 執行可重現範例 {#sample-workflow}
-
-clone 專案後執行：
-
-```bash
-bash samples/junit-cart-orders/demo.sh
-```
-
-腳本會走完三件事：
-
-1. 把目前的 ToppleCat build 發布到本機 Maven cache。
-2. 封存準備好的驗收契約，驗證故意寫錯的結帳服務。這次必須被拒絕。
-3. 換上修正版再次驗證。這次必須取得 `PASS`。
-
-任何一個結果不符預期，腳本都會失敗。程式、公開契約與清理流程都在
-[JUnit cart-orders sample](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)，
-ToppleCat 自己的發布驗證也會執行這條路徑。
-
 ## 把 ToppleCat 和撰寫契約的 skill 加到專案 {#ai-assisted-authoring}
 
 如果要讓實作 AI 和 ToppleCat 一起工作，要準備兩樣東西：
@@ -72,7 +52,23 @@ ToppleCat 自己的發布驗證也會執行這條路徑。
 - `topplecat-acceptance` skill 告訴 AI，怎麼把你選定的驗收條件寫成
   Java/JUnit 能執行的驗收方法與案例。
 
-ToppleCat 0.1.0 需要 Java 25。在 Gradle 專案加入 plugin 與 JUnit dependencies：
+[ToppleCat 的正式套件](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)
+已發布到 Maven Central。先在 `settings.gradle.kts` 設定 plugin marker 與 library 的來源：
+
+```kotlin
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+}
+```
+
+再到 `build.gradle.kts` 加入 plugin 與 JUnit dependencies：
 
 ```kotlin
 plugins {
@@ -99,6 +95,23 @@ npx skills@latest add samzhu/topplecat --skill topplecat-acceptance
 [skill 原始碼](https://github.com/samzhu/topplecat/tree/main/.agents/skills/topplecat-acceptance)。
 它不會替你補寫需求。它會協助 AI 問清楚規則，再把你選定的規則綁成 ToppleCat
 可以執行的 Java/JUnit 驗收內容。
+
+## 選用：執行 repository 範例 {#sample-workflow}
+
+如果想親自看 ToppleCat 攔下錯誤實作，再換上修正版跑出 `PASS`，可以 clone repository
+後執行：
+
+```bash
+bash samples/junit-cart-orders/demo.sh
+```
+
+這支腳本是 ToppleCat repository 的自我驗證。它會先把目前 checkout 的 ToppleCat build
+發布到本機 Maven cache，確保測到的是這份原始碼；接著封存範例契約，確認故意寫錯的
+結帳服務被拒絕，再換上修正版驗證一次。
+
+一般使用者直接使用 Maven Central 的正式版本，不需要執行本機發布。範例程式與清理流程
+放在 [JUnit cart-orders sample](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)，
+ToppleCat 的 release Gate 也會執行這條路徑。
 
 ## 和 AI 準備一次交付 {#prepare-with-an-ai}
 

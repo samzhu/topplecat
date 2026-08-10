@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Run a real sample that rejects a bad AI delivery, then add ToppleCat to a Java/JUnit project.
+description: Add ToppleCat from Maven Central to a Java/JUnit project, then prepare acceptance work for AI implementation and verification.
 page_id: getting-started
 language_code: en
 language_name: English
@@ -15,16 +15,13 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# See ToppleCat reject a bad delivery
+# Add ToppleCat to a Java project
 
-Start here if you want proof before configuration. The repository contains a
-consumer project with a deliberately narrow checkout implementation. Its public
-tests pass. ToppleCat still rejects it because an independently chosen check
-finds the shortcut. The same script installs the corrected implementation and
-shows the next run passing.
+ToppleCat 0.1.0 is published on Maven Central. Add the Gradle plugin and JUnit
+library directly to an existing project; you do not need to clone or build
+ToppleCat from source.
 
-To run the sample you need a shell, Git, and JDK 25. To adopt ToppleCat in
-another project you also need a compatible Gradle version.
+ToppleCat requires JDK 25 and a compatible Gradle version.
 
 ## What is being checked {#contract-example}
 
@@ -48,27 +45,6 @@ implementation agent can read them and run `./gradlew test` while it works.
 ToppleCat later runs that same public method with independently chosen reviewer
 examples. The agent never needs those examples to implement the rule.
 
-## Run the executable sample {#sample-workflow}
-
-Clone the repository, then run:
-
-```bash
-bash samples/junit-cart-orders/demo.sh
-```
-
-The script performs a complete consumer workflow:
-
-1. It publishes the current ToppleCat build to the local Maven cache.
-2. It seals the prepared acceptance contract and verifies the deliberately bad
-   checkout service. That run is expected to be rejected.
-3. It installs the corrected service and verifies again. That run must earn
-   `PASS`.
-
-The script exits unsuccessfully if either checkpoint behaves differently. Its
-source, public contract, and cleanup logic live in the
-[JUnit cart-orders sample](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders),
-so this walkthrough is exercised by the repository release gate.
-
 ## Add ToppleCat and its authoring skill {#ai-assisted-authoring}
 
 To use ToppleCat with an implementation agent, install two things:
@@ -77,7 +53,24 @@ To use ToppleCat with an implementation agent, install two things:
 - The `topplecat-acceptance` skill teaches an AI how to turn rules you have
   chosen into Java/JUnit acceptance code and case data.
 
-ToppleCat 0.1.0 requires Java 25. Add the plugin and JUnit dependencies:
+The [official ToppleCat artifacts](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)
+are available from Maven Central. Make the plugin marker and libraries available
+in `settings.gradle.kts`:
+
+```kotlin
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+}
+```
+
+Then add the plugin and JUnit dependencies in `build.gradle.kts`:
 
 ```kotlin
 plugins {
@@ -104,6 +97,25 @@ Read the [skill source](https://github.com/samzhu/topplecat/tree/main/.agents/sk
 before granting an agent its normal project permissions. The skill does not
 invent a missing business rule. It helps the AI ask about unclear behaviour,
 then binds the rule you chose to Java/JUnit work that ToppleCat can run.
+
+## Optional: run the repository sample {#sample-workflow}
+
+To watch ToppleCat reject a deliberately bad implementation and then accept the
+fixed version, clone the repository and run:
+
+```bash
+bash samples/junit-cart-orders/demo.sh
+```
+
+This script is a self-test for the ToppleCat repository. It first publishes the
+current checkout to the local Maven cache so the demo exercises that source. It
+then seals the sample contract, confirms that the deliberately bad checkout
+service is rejected, installs the fixed service, and verifies again.
+
+Consumers of the Maven Central release do not run the local publication step.
+The [JUnit cart-orders sample](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)
+contains the source and cleanup logic, and the ToppleCat release gate runs the
+same path.
 
 ## Prepare one delivery with an AI {#prepare-with-an-ai}
 

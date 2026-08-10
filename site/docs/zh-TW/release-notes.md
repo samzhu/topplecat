@@ -27,7 +27,8 @@ repository 的
 ## 目前版本 {#current-release}
 
 ToppleCat 0.1.0 支援 Java 25、JUnit 6.1.1 與相容的 Gradle 版本。使用端專案
-使用一個 Gradle plugin 與一個 JUnit library。
+需要的 Gradle plugin 與 JUnit library 已發布到
+[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)。
 
 這個版本可以：
 
@@ -73,5 +74,6 @@ AC ID；兩種選法不能混用。報告頂端會列出這次實際檢查的規
 - 審閱者資料保存在本機的純文字儲存區，不是加密或程序隔離。
 - `PASS` 是已檢查範圍的證據，不證明所有業務規則都已寫下，也不代表組織核准。
 
-要試用目前支援的路徑，請[執行可重現範例](getting-started.md#sample-workflow)。要解讀
+要導入目前版本，請[從 Maven Central 安裝 ToppleCat](getting-started.md#ai-assisted-authoring)。
+repository 範例保留為選用的原始碼驗證示範。要解讀
 結果，請讀[ToppleCat 如何檢查交付](verification-and-evidence.md#gates-and-verdicts)。

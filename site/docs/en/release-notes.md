@@ -27,7 +27,8 @@ For the full historical record, use the repository's
 ## Current release {#current-release}
 
 ToppleCat 0.1.0 supports Java 25, JUnit 6.1.1, and a compatible Gradle version.
-It is published as a Gradle plugin plus a JUnit library for consumer projects.
+Its Gradle plugin and JUnit library are available from
+[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat).
 
 In this release a team can:
 
@@ -86,6 +87,7 @@ or make private reports available to an AI.
 - `PASS` is evidence for the checked scope. It does not prove that every
   business rule was specified or grant organizational approval.
 
-To try the supported path, [run the executable sample](getting-started.md#sample-workflow).
+To adopt the current release, [install ToppleCat from Maven Central](getting-started.md#ai-assisted-authoring).
+The repository sample remains available as an optional source-checkout demo.
 To understand a result, read
 [How ToppleCat verifies a delivery](verification-and-evidence.md#gates-and-verdicts).
