@@ -199,7 +199,7 @@ def check(root: Path, base: str, base_url: str | None = None) -> list[str]:
                     failures.append(
                         f"{html_path}: {logo_class} brand logo does not link to product homepage"
                     )
-            copy_href = f"data-copy-markdown=\"{('index.md' if page_id == 'home' else '../' + page_id + '.md')}\""
+            copy_href = f'data-copy-markdown="{md_path}"'
             if "topplecat-copy-button" not in html or copy_href not in html:
                 failures.append(f"{html_path}: missing page-level Copy Markdown control")
             if any(term in html for term in ("Edit this page", "View on GitHub", "Search")):

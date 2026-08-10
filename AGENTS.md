@@ -22,6 +22,18 @@ Before changing supported behavior, read:
 - `docs/guide/authoring.md`
 - `docs/guide/verification-and-evidence.md`
 
+## Agent skills
+
+### Issue tracker
+
+Specs and issues use the repository-local Markdown tracker under `.scratch/`.
+See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+This is a single-context repository rooted at `CONTEXT.md`. See
+`docs/agents/domain.md`.
+
 ## Design Records And Documentation
 
 - Do not leave an accepted product design only in a chat, prompt, issue, or

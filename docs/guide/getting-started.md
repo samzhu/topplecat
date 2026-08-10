@@ -1,12 +1,13 @@
 # Getting started
 
-ToppleCat formalizes a Java/JUnit acceptance contract after an implementation
-handoff. During development, continue to use ordinary `./gradlew test`.
+ToppleCat helps a team prepare Java/JUnit acceptance checks before an
+implementation handoff, then verifies a delivery after the implementation agent
+says it is done. During development, continue to use ordinary `./gradlew test`.
 
 This guide is also available as the [official English technical documentation](https://topplecat.samzhu.dev/docs/getting-started/)
 and [Traditional Chinese documentation](https://topplecat.samzhu.dev/docs/zh-TW/getting-started/).
 
-## Install
+## Install ToppleCat
 
 ```kotlin
 plugins {
@@ -25,6 +26,27 @@ tasks.test { useJUnitPlatform() }
 
 Java 25 and a compatible Gradle version are required. `toppleCatInit` can add a
 non-destructive starter to an empty consumer project.
+
+## Prepare acceptance work with an AI
+
+For AI-assisted authoring, install the repository-local acceptance skill in the
+consumer project:
+
+```text
+npx skills@latest add samzhu/topplecat --skill topplecat-acceptance
+```
+
+The [skill source](https://github.com/samzhu/topplecat/tree/main/.agents/skills/topplecat-acceptance)
+explains how it turns human-selected Acceptance Conditions (ACs) into Java/JUnit
+acceptance methods, public case rows, and separately prepared reviewer examples.
+It does not select a Spec, manage tickets, infer missing business rules, or
+accept a delivery.
+
+In Codex, use `$to-spec + $topplecat-acceptance` in the same conversation once
+the rules have been discussed. `$to-spec` records the agreed rules in a Spec;
+`$topplecat-acceptance` binds each AC to Java/JUnit acceptance work. If a rule
+is ambiguous, return it to the human or the Spec owner before creating the
+acceptance binding.
 
 ## Create the public acceptance contract
 
@@ -57,21 +79,47 @@ public under `src/test`; ToppleCat does not discover or execute Properties from
 reviewer custody. Ordinary reviewer Java tests and helper source are outside
 ToppleCat evidence.
 
-Run the reviewer sequence:
+## Read, plan, and seal before implementation
+
+If the repository uses [Matt Pocock's skills](https://github.com/mattpocock/skills/tree/main/skills),
+run `$setup-matt-pocock-skills` once before its first engineering workflow.
+That records the repository's issue tracker and domain documentation. Use
+`$to-tickets` only when a prepared Spec needs several independent work items;
+small work can proceed directly from the Spec.
+
+After the Spec and Java acceptance code are ready, create the private Spec
+Review:
 
 ```bash
-./gradlew toppleCatCheck --spec specs/023-checkout/spec.md
 ./gradlew toppleCatReview --spec specs/023-checkout/spec.md
+```
+
+Review runs its required Check. It places the complete selected Spec beside the
+Java-derived Given/When/Then Scenario, public rows, and reviewer material. It
+has no execution verdict: the Reviewer uses it to confirm what the Java code
+will check. Run `toppleCatCheck` directly only when fast feedback on bindings or
+case data is useful without opening the Review page.
+
+After that reading, seal the complete contract before handing work to the
+implementation agent:
+
+```bash
 ./gradlew toppleCatSeal
 ```
 
-Reviewer HTML defaults to English. Add `--language zh-TW` to Review or Verify
-when the Reviewer wants Traditional Chinese ToppleCat-owned
-presentation. This invocation-only choice preserves authored display prose and
-machine values exactly as recorded.
+Seal moves reviewer source to local custody and records the complete acceptance
+content and verification policy. Later Verify detects an unintended contract or
+policy change. Seal is not encryption, process isolation, human approval, or a
+delivery verdict.
 
-Seal moves the reviewer source to local custody. The implementation agent then
-receives only public material and works with `./gradlew test`.
+The implementation agent receives only public material. Use `$implement` with
+the Spec or its tickets; it can use ordinary `./gradlew test` during development.
+Do not give it the private Spec Review or reviewer-owned source.
+
+Reviewer HTML defaults to English. Add `--language zh-TW` to Review or Verify
+when the Reviewer wants Traditional Chinese ToppleCat-owned presentation. This
+invocation-only choice preserves authored display prose and machine values
+exactly as recorded.
 
 ## Make the delivery earn a PASS
 
@@ -79,7 +127,8 @@ receives only public material and works with `./gradlew test`.
 ./gradlew toppleCatVerify
 ```
 
-This is the normal full-contract verification command for CI. When a Reviewer
+Run this after the implementation agent's done claim. It is the normal
+full-contract verification command for CI. When a Reviewer
 wants fast evidence for just-finished work, Verify can instead take either
 selected Spec files or repeated AC IDs, never both:
 

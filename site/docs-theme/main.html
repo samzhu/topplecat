@@ -9,10 +9,10 @@
     <link rel="alternate" hreflang="en" href="{{ config.extra.site_origin }}{{ config.extra.base_path | default('', true) }}{{ en_path }}">
     <link rel="alternate" hreflang="zh-TW" href="{{ config.extra.site_origin }}{{ config.extra.base_path | default('', true) }}{{ zh_path }}">
     <link rel="alternate" hreflang="x-default" href="{{ config.extra.site_origin }}{{ config.extra.base_path | default('', true) }}{{ en_path }}">
-    {% set docs_path = "/docs/" if config.theme.language == "en" else "/docs/zh-TW/" %}
+    {% set pages_base = config.extra.base_path | default('', true) %}
+    {% set docs_path = pages_base ~ ("/docs/" if config.theme.language == "en" else "/docs/zh-TW/") %}
     {% set markdown_path = docs_path ~ ("index.md" if page.meta.page_id == "home" else page.meta.page_id ~ ".md") %}
-    {% set markdown_relative = "index.md" if page.meta.page_id == "home" else "../" ~ page.meta.page_id ~ ".md" %}
-    <link rel="alternate" type="text/markdown" href="{{ markdown_relative }}">
+    <link rel="alternate" type="text/markdown" href="{{ markdown_path }}">
     <meta name="doc-language" content="{{ page.meta.language_code }}">
     <meta name="doc-page-id" content="{{ page.meta.page_id }}">
   {% endif %}
@@ -21,11 +21,11 @@
 {% block content %}
   {% if page is defined and page and page.meta %}
   {% set slug = "" if page.meta.page_id == "home" else page.meta.page_id ~ "/" %}
-  {% set docs_path = "/docs/" if config.theme.language == "en" else "/docs/zh-TW/" %}
+  {% set pages_base = config.extra.base_path | default('', true) %}
+  {% set docs_path = pages_base ~ ("/docs/" if config.theme.language == "en" else "/docs/zh-TW/") %}
   {% set alternate_path = "/docs/zh-TW/" ~ slug if config.theme.language == "en" else "/docs/" ~ slug %}
   {% set markdown_path = docs_path ~ ("index.md" if page.meta.page_id == "home" else page.meta.page_id ~ ".md") %}
   {% set alternate_relative = ("zh-TW/" if page.meta.page_id == "home" else "../zh-TW/" ~ page.meta.page_id ~ "/") if config.theme.language == "en" else ("../" if page.meta.page_id == "home" else "../../" ~ page.meta.page_id ~ "/") %}
-  {% set markdown_relative = "index.md" if page.meta.page_id == "home" else "../" ~ page.meta.page_id ~ ".md" %}
   <div class="topplecat-doc-toolbar" data-doc-toolbar data-doc-page-id="{{ page.meta.page_id }}" data-doc-language="{{ page.meta.language_code }}">
     <div class="topplecat-doc-language" aria-label="{{ page.meta.language_label }}">
       <span class="topplecat-doc-language__current">{{ page.meta.language_name }}</span>
@@ -33,7 +33,7 @@
       <a href="{{ alternate_relative }}" hreflang="{{ page.meta.alternate_language }}" data-language-switch>{{ page.meta.alternate_label }}</a>
     </div>
     <div class="topplecat-doc-actions">
-      <button class="topplecat-copy-button" type="button" data-copy-markdown="{{ markdown_relative }}" data-copied-label="{{ page.meta.copied_label }}" aria-describedby="copy-markdown-status">
+      <button class="topplecat-copy-button" type="button" data-copy-markdown="{{ markdown_path }}" data-copied-label="{{ page.meta.copied_label }}" aria-describedby="copy-markdown-status">
         <span data-copy-label>{{ page.meta.copy_label }}</span>
       </button>
       <span id="copy-markdown-status" class="topplecat-copy-status" role="status" aria-live="polite"></span>
