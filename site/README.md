@@ -79,13 +79,22 @@ search, version selector, `llms-full`, Javadoc, RAG/chatbot, MCP, or docs API.
 
 ## Documentation content model
 
-The documentation serves people evaluating a delivery as well as developers
-integrating the Java tooling. Learning pages lead with the user's problem,
-observable outcome, and one continuous checkout example before introducing
-ToppleCat's formal vocabulary. They offer a quick executable proof and a longer
-adoption path with visible checkpoints. How-to and troubleshooting pages start
+Documentation Home owns first-time product understanding. Before it offers an
+installation command, a visitor who has never heard of ToppleCat must be able
+to explain the AI-delivery problem, the checks ToppleCat runs, the two private
+report moments, the end-to-end human/AI flow, and what remains a human decision.
+Plain questions and one checkout example introduce each capability before its
+formal name.
+
+Navigation follows the same order: meet the product, understand its checks and
+flow, then run a sample or adopt it. How-to and troubleshooting pages start
 from the task or symptom; Product, Architecture, Glossary, and release notes
-remain explicit reference surfaces.
+remain explicit reference surfaces. Release details explain the user
+consequence before command options or producer vocabulary.
+
+On a narrow screen, the table of contents stays immediately before the article
+as one horizontally scrollable row. It must not consume the first viewport or
+push the product definition below a full-screen navigation block.
 
 English and Traditional Chinese follow the same information architecture, but
 Traditional Chinese is written as natural prose rather than a word-for-word

@@ -109,7 +109,7 @@ absent from the contract. It also does not decide whether your organization
 should approve the delivery.
 
 Next, [run the sample](getting-started.md#sample-workflow) or read
-[Verify a delivery](verification-and-evidence.md#delivery-example) to see how
+[How ToppleCat verifies a delivery](verification-and-evidence.md#delivery-example) to see how
 the same public contract becomes current-run evidence. Exact parameter and
 generator rules remain available in the repository's
 [authoring guide](https://github.com/samzhu/topplecat/blob/main/docs/guide/authoring.md).

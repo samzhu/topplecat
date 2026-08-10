@@ -22,7 +22,7 @@ copied_label: Copied
 
 ## Executable Contract／可執行契約 {#executable-contract}
 
-公開驗收方法，以及公開與 Reviewer 控制的型別案例資料列。它們定義 ToppleCat 要機械
+公開驗收方法，以及公開與審閱者控制的型別案例資料列。它們定義 ToppleCat 要機械
 化檢查什麼。規則和例子是否正確、完整，仍由人負責。
 
 ## Acceptance Condition／驗收條件 {#acceptance-condition}
@@ -33,7 +33,7 @@ copied_label: Copied
 ## Acceptance Method／驗收方法
 
 一個公開的 Java/JUnit 方法，描述某條 Acceptance Condition 的 Scenario。公開案例與
-Reviewer 控制的案例都執行同一個方法。
+審閱者控制的案例都執行同一個方法。
 
 ## Typed Case Row／型別案例資料列
 
@@ -46,20 +46,20 @@ Testing 在執行中產生的值屬於當次證據，不是 Typed Case Row。
 動作放在一起，並在該 Scenario 中保存一般狀態。**Step** 是其中一次被選定的動作或
 觀察。
 
-## Reviewer 與 Implementation Agent
+## Reviewer／審閱者與 Implementation Agent／實作 AI
 
 **Reviewer** 是閱讀準備好的契約與當次 Verification Report，並決定如何處理交付的
-人。**Implementation Agent** 是收到公開契約與安全 feedback 的 AI coding agent；
-它不會取得 Reviewer 私有資料。
+人。**Implementation Agent** 是收到公開契約與安全回饋的 AI coding agent；它不會
+取得審閱者私有資料。
 
 ## Independent Safeguard／獨立防線 {#independent-safeguard}
 
-當次證據只回答自身問題的一道檢查。Reviewer 案例、Property-Based Testing 與
+當次證據只回答自身問題的一道檢查。審閱者案例、Property-Based Testing 與
 Mutation Testing 彼此分開；一項通過不能補另一項缺少的證據。
 
 ## Hidden Tests／隱藏測試
 
-Reviewer 控制的型別案例資料列，使用獨立選出的例子執行既有公開 Acceptance Method。
+審閱者控制的型別案例資料列，使用獨立選出的例子執行既有公開 Acceptance Method。
 它們檢查同一條規則，不會建立祕密的新需求。
 
 ## Property-Based Testing／性質導向測試
@@ -69,7 +69,7 @@ Reviewer 控制的型別案例資料列，使用獨立選出的例子執行既�
 
 ## Mutation Testing／突變測試與 Mutation Attribution／突變歸因
 
-Mutation Testing 會暫時改動 production behaviour，再看原本的公開 Acceptance Method
+Mutation Testing 會暫時改動程式行為，再看原本的公開 Acceptance Method
 能不能察覺。**Mutation Attribution** 把 PIT 觀察結果連到應該負責偵測它的精確
 公開方法與 Acceptance Condition。
 
@@ -80,15 +80,16 @@ Mutation Testing 會暫時改動 production behaviour，再看原本的公開 Ac
 
 ## Current-run Evidence／本次執行證據與 Aggregate Verdict／彙總判定
 
-**Current-run Evidence** 由目前這次 formal Verify 產生。**Aggregate Verdict** 是該
-delivery scope 的 `PASS`、`FAIL` 或 `INCOMPLETE`。`PASS` 表示每個必要 Gate 都通過，
+**Current-run Evidence** 由目前這次正式驗證產生。**Aggregate Verdict** 是該
+驗證範圍的 `PASS`、`FAIL` 或 `INCOMPLETE`。`PASS` 表示每一道必要檢查都通過，
 不代表所有業務規則都已經被寫下。
 
 ## Spec Review／規格審閱與 Verification Report／驗證報告
 
-**Spec Review** 是 handoff 前閱讀選定 Spec 與準備好契約的私人頁面。
-**Verification Report** 是 agent 宣稱完成後，閱讀一次正式執行及其診斷的私人頁面。
+**Spec Review** 是 AI 開始實作前使用的私人頁面，讓人確認選定的規格與準備好的檢查。
+**Verification Report** 是 AI 宣稱完成後使用的私人頁面，說明本次驗證結果與需要追查的
+問題。
 
 完整正式詞彙請查
 [CONTEXT.md](https://github.com/samzhu/topplecat/blob/main/CONTEXT.md)。詞彙背後的
-資訊流向請讀[系統如何運作](architecture.md#information-boundary)。
+資訊流向請讀[從規則到結果](architecture.md#information-boundary)。

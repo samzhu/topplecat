@@ -96,11 +96,12 @@ business rule was written down.
 
 ## Spec Review and Verification Report
 
-**Spec Review** is the private pre-handoff reading surface for the selected Spec
-and prepared executable contract. **Verification Report** is the private
-post-done reading surface for one formal run and its diagnostics.
+**Spec Review** is the private page used before the AI starts, so a person can
+confirm the selected Spec and prepared checks. **Verification Report** is the
+private page used after the AI says done; it explains the current verification
+result and the problems that need investigation.
 
 For the complete canonical vocabulary, see
 [CONTEXT.md](https://github.com/samzhu/topplecat/blob/main/CONTEXT.md). For the
 information flow behind these terms, read
-[How ToppleCat works](architecture.md#information-boundary).
+[From rules to results](architecture.md#information-boundary).

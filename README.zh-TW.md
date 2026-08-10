@@ -6,10 +6,12 @@
 
 <p align="center"><a href="README.md">English</a> · <a href="LICENSE">Apache-2.0</a></p>
 
-ToppleCat 是給 Java/JUnit 團隊使用的委派驗證 Gate：團隊把已選 Spec 交給 AI
-程式代理實作，人類仍負責驗收。AI 宣稱完成後，ToppleCat 會重新執行封印過的
-可執行契約；只有本次執行的每個必要 Gate 都通過，才會記錄 `PASS`，再把判定
-背後的證據交給人類 Reviewer。
+ToppleCat 是給 Java/JUnit 團隊使用的開源驗證工具。團隊可以把功能交給 AI coding
+agent 實作，但仍由人負責驗收。AI 說完成後，ToppleCat 會用人事先確認的業務規則，
+從幾個不同角度重新檢查，並說明這次執行發生了什麼。
+
+ToppleCat 把這些可以執行的規則稱為「可執行契約」。只有本次執行的每一道必要檢查
+都通過，才會記錄 `PASS`，再把結果背後的證據交給負責驗收的人。
 
 一般 Java 驗收測試與有型別的 JSON/YAML 案例資料列是事實來源。產生的 JSON
 與 HTML 只解釋檢查了什麼，不會變成第二份規格。

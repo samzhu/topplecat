@@ -1,6 +1,6 @@
 ---
-title: How ToppleCat works
-description: Follow the contract, checks, evidence, and information boundaries through ToppleCat's four Java modules.
+title: From rules to results
+description: Follow a business rule as it becomes an executable check, goes through AI implementation and fresh verification, and returns as a result a person can read.
 page_id: architecture
 language_code: en
 language_name: English
@@ -15,14 +15,16 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# How ToppleCat works
+# From rules to results
 
-Read this page when you need to know why the formal result can be trusted, where
-private reviewer information goes, or which module owns a technical behaviour.
-If you only want to try the product, start with
-[Getting started](getting-started.md#sample-workflow).
+This page connects the complete flow: people state what correct means, an AI
+implements from public information, and ToppleCat rechecks the same agreement.
+The second half explains the technical modules and where private information
+stays.
 
-## The flow from rule to evidence {#execution-flow}
+If you only want to see the result, [run the sample](getting-started.md#sample-workflow).
+
+## The complete delivery flow {#execution-flow}
 
 ```text
 human selects rules and examples
@@ -96,4 +98,4 @@ delivery.
 
 For exact product terms, use the [Glossary](glossary.md#executable-contract).
 For the human responsibility boundary, read
-[What ToppleCat does](product-definition.md#responsibility-boundary).
+[When ToppleCat is useful](product-definition.md#responsibility-boundary).

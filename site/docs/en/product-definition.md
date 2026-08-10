@@ -1,6 +1,6 @@
 ---
-title: What ToppleCat does
-description: Decide whether ToppleCat fits a Java team that delegates implementation to AI but keeps acceptance with a human.
+title: When ToppleCat is useful
+description: Decide whether ToppleCat fits a team that lets AI implement Java features but keeps acceptance with a person.
 page_id: product-definition
 language_code: en
 language_name: English
@@ -15,72 +15,79 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# What ToppleCat does
+# When ToppleCat is useful
 
-ToppleCat is for a specific moment: a team gives a selected feature to an AI
-coding agent, the agent says it is done, and a person still has to decide
-whether to accept the delivery.
+ToppleCat fills a specific gap: a team lets AI write a Java feature but does
+not want to accept the result using only tests that the AI already saw.
 
-Without a separate verification step, that decision often rests on the same
-public examples the agent used while coding. ToppleCat keeps those examples,
-adds independent checks, and produces fresh evidence for the person making the
-decision.
+It keeps the human-confirmed rules fixed. After the AI says done, ToppleCat
+reruns the public examples, adds independent checks, and gives the current
+results to the person responsible for acceptance. The tool records evidence;
+the person makes the decision.
 
 ## When it is useful {#use-moment}
 
-Imagine that a product owner defines a coupon rule and a developer turns it
-into public Java/JUnit acceptance work. Before handoff, the responsible person
-reviews the rule, examples, and additional checks that will run. After the
-agent's done claim, ToppleCat verifies that sealed agreement.
+Suppose a product owner defines a coupon rule and a developer or AI connects it
+to Java/JUnit checks. Before implementation starts, the team reviews the rule,
+examples, and additional checks that will run. After the AI says done,
+ToppleCat verifies that same agreement.
 
-The Reviewer does not have to be a Java expert. A developer or coding agent can
-prepare the public integration. The Reviewer can be the developer, product
-owner, tester, or another accountable person who understands the expected
-business result and can read the plain-language report.
-
-ToppleCat is most useful when all of these are true:
+ToppleCat is most useful when:
 
 - the project uses Java and JUnit;
-- an AI agent implements selected work;
-- people can state observable rules and examples before handoff; and
+- an AI coding agent implements selected features;
+- people can state observable rules and examples before implementation; and
 - the team wants current evidence before accepting or merging the result.
+
+The person responsible for acceptance does not have to write Java. They may be
+a developer, product owner, tester, or another person who understands the
+expected business result and is accountable for the delivery. A developer or
+AI can handle the technical wiring.
 
 ## What changes in the workflow
 
-Before implementation, the human-selected rules become an executable contract.
-The Reviewer confirms what will be checked and seals the complete contract and
-verification policy.
+### Before the AI starts
 
-The agent works only with the public project and ordinary test feedback. After
-the agent says done, formal Verify runs the sealed contract and every enabled
-independent safeguard. The Reviewer reads the result and decides what happens
-next.
+People select the rules for this delivery and turn the expected behaviour into
+runnable checks. Spec Review lets the responsible person see exactly what will
+be checked. ToppleCat then records the content of the complete contract and its
+verification settings.
 
-ToppleCat records `PASS` only when every required Gate passes in that run. It
-does not turn `PASS` into an automatic approval.
+### While the AI implements
+
+The AI sees only public rules, public examples, and ordinary project tests. It
+can keep using `./gradlew test` for fast feedback. Reviewer-controlled material
+does not enter that handoff.
+
+### After the AI says done
+
+ToppleCat first confirms that the reviewed material did not change, then runs
+the public and additional checks. Verification Report explains what happened
+for each rule. The run records `PASS` only when every required check passes.
+
+`PASS` is not an automatic approval. The responsible person still decides
+whether the rules are complete and the evidence is enough.
 
 ## Responsibility boundary {#responsibility-boundary}
 
-| ToppleCat is responsible for | People, teams, projects, or external workflows are responsible for |
+| ToppleCat is responsible for | People, teams, or the existing delivery process are responsible for |
 | --- | --- |
-| Binding selected rules to ordinary executable acceptance work | Choosing the Spec and making its rules and examples complete |
-| Detecting changes to the complete contract and verification policy | Deciding who reviews, approves, or signs off |
-| Running fresh formal verification and keeping the checks independent | Deciding whether commands run locally, in CI, or elsewhere |
-| Writing private Reviewer reports and safe agent feedback | Managing tasks, delivery history, pull requests, and releases |
-| Using the fixed managed mutation profile and exact method attribution | Ordinary unit/QA tests, custom PIT, performance, and security work |
+| Connecting selected rules to runnable Java/JUnit acceptance work | Selecting the feature and making its rules and examples complete |
+| Detecting changes to reviewed contract or verification settings | Deciding who reviews, approves, or signs off |
+| Rerunning verification and keeping each check's result separate | Deciding whether it runs locally, in CI, or elsewhere |
+| Producing private reports and AI feedback that omits reviewer material | Managing tasks, delivery history, pull requests, and releases |
+| Running ToppleCat's fixed mutation checks | Ordinary unit/QA tests, performance, and security work |
 
-This division is deliberate. ToppleCat reports what the checked contract and
-current evidence support. It does not infer intent from missing requirements.
+## What ToppleCat will not do {#what-topplecat-does-not-own}
 
-## What ToppleCat does not own {#what-topplecat-does-not-own}
+ToppleCat does not manage tasks or Spec versions, and it does not approve a
+delivery for an organization. It is not a CI service, general test framework,
+or security sandbox. Its local reviewer custody helps keep private material out
+of the implementation handoff; it is not encryption.
 
-ToppleCat is not a task manager, Spec manager, approval system, CI service,
-general test framework, or security sandbox. Its local reviewer custody is a
-mechanical handoff safeguard, not encryption.
+Most importantly, it cannot answer: “Did we forget a business rule that
+matters?” If the contract omits a VIP discount, refund exception, or regulatory
+requirement, ToppleCat will not invent it.
 
-It also cannot answer the most important upstream question: “Did we write every
-business rule that matters?” That remains a human responsibility.
-
-If this fits your use moment, [run the executable sample](getting-started.md#sample-workflow).
-If you need the technical trust boundaries, read
-[How ToppleCat works](architecture.md#information-boundary).
+If this matches your use case, [run the reproducible sample](getting-started.md#sample-workflow).
+To see each check, read [How ToppleCat verifies a delivery](verification-and-evidence.md#delivery-example).

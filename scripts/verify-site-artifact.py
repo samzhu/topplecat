@@ -30,7 +30,17 @@ PAGE_IDS = (
     "release-notes",
 )
 REQUIRED_ANCHORS = {
-    "home": {"documentation-home", "start-here", "choose-your-task"},
+    "home": {
+        "documentation-home",
+        "problem",
+        "checks",
+        "start-here",
+        "reports",
+        "audience",
+        "terms",
+        "choose-your-task",
+        "ai-help",
+    },
     "getting-started": {"contract-example", "sample-workflow", "formal-verify", "human-decision"},
     "authoring-contracts": {"contract-example", "acceptance-method", "typed-case-rows", "human-completeness"},
     "verification-and-evidence": {"delivery-example", "three-evidence-layers", "gates-and-verdicts", "reviewer-boundary"},
@@ -40,6 +50,16 @@ REQUIRED_ANCHORS = {
     "glossary": {"executable-contract", "acceptance-condition", "independent-safeguard", "mechanical-seal"},
     "release-notes": {"current-release", "documentation-surface", "upgrade-notes"},
 }
+HOME_SECTION_ORDER = (
+    "problem",
+    "checks",
+    "start-here",
+    "reports",
+    "audience",
+    "terms",
+    "choose-your-task",
+    "ai-help",
+)
 DENIED_PATHS = ("docs/design", "docs/research", "docs/validation", ".scratch", "src/hiddenTest", ".topplecat", "integration-tests")
 DENIED_MARKERS = ("coupon-hidden-800", "ReviewerBoundary", "reviewer-only-value", "raw failure from an actual delivery")
 
@@ -170,6 +190,10 @@ def check(root: Path, base: str, base_url: str | None = None) -> list[str]:
             for anchor in REQUIRED_ANCHORS[page_id]:
                 if anchor not in anchors and f'id="{anchor}"' not in html:
                     failures.append(f"{html_path}: missing stable anchor #{anchor}")
+            if page_id == "home":
+                positions = [html.find(f'id="{anchor}"') for anchor in HOME_SECTION_ORDER]
+                if any(position < 0 for position in positions) or positions != sorted(positions):
+                    failures.append(f"{html_path}: first-visit sections are out of order")
             md_status, md_type, md = get(md_path)
             if md_status != 200 or "text/markdown" not in md_type or not md.startswith("---"):
                 failures.append(f"{md_path}: missing clean Markdown sibling or content type")

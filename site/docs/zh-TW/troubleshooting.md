@@ -40,22 +40,22 @@ copied_label: Copied
 不能是 final，並且要有可存取的無參數 constructor。準備工作、條件判斷、服務呼叫與
 assertions 都放進 Stage 方法。
 
-修正後重新執行 `./gradlew toppleCatCheck`。Check 還不能描述完整契約前，不要 Seal
-或 Verify。
+修正後重新執行 `./gradlew toppleCatCheck`。檢查命令還不能描述完整契約前，不要封存
+或正式驗證。
 
 ## 規則沒有公開綁定 {#missing-public-binding}
 
 選定規格或案例列使用的 AC ID，找不到可編譯的公開 `@ToppleAcceptanceTest` 方法。
 請修正 ID，或補上缺少的方法。審閱者控制的案例只能檢查既有規則，不能建立一條實作
-agent 從未看過的新規則。
+AI 從未看過的新規則。
 
 ## 公開驗收失敗 {#public-acceptance}
 
-在 Verification Report 打開失敗的公開案例。先看輸入，再看 expected 與 actual；
+在 Verification Report 打開失敗的公開案例。先看輸入，再看預期結果與實際結果；
 這會指出哪一筆人寫的例子和實作不一致。
 
-實作錯了就修 production code。若人寫的規則或預期結果有誤，才修改契約。任何預期中
-的契約變更都要重新 Check、Review 與 Seal。
+實作錯了就修正式程式。若人寫的規則或預期結果有誤，才修改契約。任何預期中的
+契約變更都要重新檢查、審閱與封存。
 
 這次 Mutation Testing 會因為沒有通過的公開 baseline 而不完整。審閱者案例和
 Properties 是獨立檢查，仍可能留下有用的當次結果。
@@ -63,28 +63,28 @@ Properties 是獨立檢查，仍可能留下有用的當次結果。
 ## 證據不完整 {#incomplete-evidence}
 
 `INCOMPLETE` 表示 ToppleCat 沒有足夠的當次可信證據，不能支持通過或失敗。可能是
-task 被中斷、當次 sidecar 遺失，或 Property events 與封存 declaration 對不上。
+工作被中斷、當次附帶資料遺失，或性質檢查事件與封存宣告對不上。
 
-先讀該檢查旁邊的原因，修正後重新執行正式 Verify。舊輸出可以協助追查歷史，但不能
+先讀該檢查旁邊的原因，修正後重新執行正式驗證。舊輸出可以協助追查歷史，但不能
 補進新的執行。
 
 ## 獨立檢查沒有證據 {#independent-check-missing}
 
-如果政策啟用了審閱者案例，每條選定規則都需要一筆實際執行的 reviewer-controlled
-case。補上案例、重新審閱完整契約，再 Reseal。若團隊確定不使用這道檢查，應明確修改
-政策並 Reseal；不能拿別的檢查代替。
+如果政策啟用了審閱者案例，每條選定規則都需要一筆實際執行的審閱者案例。補上案例、
+重新審閱完整契約，再次封存。若團隊確定不使用這道檢查，應明確修改政策並重新封存；
+不能拿別的檢查代替。
 
 Mutation Testing 沒有可用結果時，先確認 Public Acceptance 是否通過，再讀 managed
-producer 的原因。ToppleCat 使用固定的 PIT profile 與當次報告；專案自己的 PIT task
+外部工具的原因。ToppleCat 使用固定的 PIT 設定與當次報告；專案自己的 PIT 工作
 或舊報告不能取代。
 
 ## 契約完整性失敗 {#contract-integrity-fails}
 
 公開驗收內容、Gradle logic、semantic definition 或 verification policy 已經和
-Mechanical Seal 不一致。若變更是預期的，先 Restore reviewer custody，執行 Check 與
-Review，再 Reseal 完整契約；若不是預期變更，就復原契約。
+Mechanical Seal 不一致。若變更是預期的，先還原審閱者資料，執行檢查與審閱，再重新
+封存完整契約；若不是預期變更，就復原契約。
 
-Verify 不會自行建立缺少的 Seal，也不會默默批准新的 contract bytes。
+正式驗證不會自行建立缺少的封印，也不會默默批准新的契約內容。
 
 ## 安全的下一步 {#safe-next-action}
 
@@ -92,5 +92,5 @@ Verify 不會自行建立缺少的 Seal，也不會默默批准新的 contract b
 實際跑了什麼，並提出公開範圍內的修正。不要把私人 Verification Report 或審閱者控制
 的值交給它。
 
-Reviewer 應先讀白話原因，有需要再展開技術證據。無法解釋的狀態本身
+審閱者應先讀白話原因，有需要再展開技術證據。無法解釋的狀態本身
 就是報告問題，不要靠猜測理解 `FAIL` 或 `INCOMPLETE`。

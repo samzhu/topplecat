@@ -1,6 +1,6 @@
 ---
-title: Verify a delivery
-description: Run ToppleCat after an AI agent says done, then understand what passed, what failed, and what still needs a human decision.
+title: How ToppleCat verifies a delivery
+description: Learn how ToppleCat rechecks AI-delivered software and what PASS, FAIL, or insufficient evidence means.
 page_id: verification-and-evidence
 language_code: en
 language_name: English
@@ -15,11 +15,15 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Verify a delivery and read the result
+# How ToppleCat verifies a delivery
 
-Green tests are useful while an agent is coding. They are not the final claim.
-Formal Verify starts a fresh run against the sealed agreement and asks several
-different questions before it can return `PASS`.
+ToppleCat does not collapse acceptance into one vague score. It separates the
+questions: Did the public examples pass? Does another legal case fail? Were the
+expected results actually compared? Can the original acceptance work notice a
+temporary change to the program?
+
+Each question gets its own current result. The delivery earns `PASS` only when
+every required check has trustworthy evidence and passes.
 
 ## What happens to the checkout delivery {#delivery-example}
 
@@ -34,7 +38,7 @@ claimed that the original program already contained that temporary change. The
 Verification Report states what happened, which rule the observation belongs
 to, and why the current run cannot earn `PASS`.
 
-## Read the report as questions
+## Questions the report answers
 
 The report keeps the checks separate because they answer different questions:
 
@@ -119,4 +123,4 @@ implementation. The human Reviewer keeps the private report and decides whether
 the evidence is enough to accept the delivery.
 
 If a result is unexpected, start with [Troubleshooting](troubleshooting.md#symptom-map).
-For the trust and information flow, read [How ToppleCat works](architecture.md#execution-flow).
+For the trust and information flow, read [From rules to results](architecture.md#execution-flow).

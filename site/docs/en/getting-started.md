@@ -136,5 +136,5 @@ complete. A human reads what ran and what happened, then decides whether to
 accept the delivery.
 
 Next, read [Turn rules into checks](authoring-contracts.md#contract-example) if
-you are preparing a project, or [Verify a delivery](verification-and-evidence.md#delivery-example)
+you are preparing a project, or [How ToppleCat verifies a delivery](verification-and-evidence.md#delivery-example)
 if you need to interpret the report.

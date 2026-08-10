@@ -8,12 +8,14 @@
 
 <p align="center"><a href="README.zh-TW.md">繁體中文</a> · <a href="LICENSE">Apache-2.0</a></p>
 
-ToppleCat is a Java/JUnit delegation-verification gate for teams that ask AI
-coding agents to implement a selected Spec while a human remains responsible
-for acceptance. After the agent says the work is done, ToppleCat runs the
-sealed executable acceptance contract. It records a current-run `PASS` only
-when every required Gate passes, then gives the human Reviewer the evidence
-behind that verdict.
+ToppleCat is an open-source verification tool for Java/JUnit teams that let AI
+coding agents implement features but keep acceptance with a person. After the
+agent says done, ToppleCat rechecks the human-confirmed business rules from
+several independent angles and reports what happened in this run.
+
+ToppleCat calls those runnable rules the Executable Contract. It records a
+current-run `PASS` only when every required Gate passes, then gives the person
+responsible for acceptance the evidence behind that result.
 
 Ordinary Java acceptance tests and typed JSON or YAML case rows are the source
 of truth. Generated JSON and HTML explain what was checked; they never become a

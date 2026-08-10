@@ -1,6 +1,6 @@
 ---
-title: Documentation home
-description: See how ToppleCat checks an AI coding agent's done claim and gives a human fresh evidence before accepting a Java delivery.
+title: "What is ToppleCat?"
+description: "Meet ToppleCat from the beginning: why it rechecks AI-delivered Java, what it tests, and which decisions still belong to people."
 page_id: home
 language_code: en
 language_name: English
@@ -15,71 +15,148 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# Make an AI delivery earn its PASS {#documentation-home}
+# What is ToppleCat? {#documentation-home}
 
-An AI coding agent says the change is done. The public tests are green. What do
-you actually know?
+ToppleCat is an open-source verification tool for Java/JUnit projects. When an
+AI coding agent says a feature is finished, ToppleCat does not take that claim
+at face value. It rechecks the delivery against business rules that a person
+confirmed beforehand and records what happened in this run.
 
-You know that the examples you wrote passed. You do not yet know whether the
-agent implemented the rule or merely found a shortcut through those examples.
-ToppleCat gives the human responsible for the delivery a repeatable way to
-check the difference. It locks the agreed Java/JUnit acceptance work, runs
-fresh independent checks after the done claim, and explains why the delivery
-did or did not earn `PASS`.
+It is not another AI that writes code. Think of it as the acceptance check at
+the end of an AI delivery: it gives the result marked `PASS` a careful push to
+see whether it stands up or only looked convincing against the public examples.
 
-## Start here {#start-here}
+## The problem it addresses {#problem}
 
-Suppose a checkout rule says a coupon subtracts 100 from the order total. A
-public example proves that one checkout worked. A narrow implementation could
-recognize only that exact input and still make the test green.
+Suppose the rule says that coupon `SAVE100` subtracts 100 at checkout. The AI
+finishes the feature, and the public test confirms `1,000 → 900`. That looks
+done, but the implementation might simply recognize those numbers. A different
+legal order could still fail.
 
-The executable sample in this repository demonstrates that failure on purpose.
-ToppleCat reruns the public rule, adds independently chosen reviewer checks, and
-asks whether the public acceptance work notices temporary changes to production
-behaviour. The narrow implementation is rejected; the corrected implementation
-earns a fresh `PASS`.
+Ordinary tests remain important. The difficulty is that the AI saw the public
+rules and examples while it was coding. Reusing only that same material at
+acceptance time cannot tell you whether the rule was implemented or the known
+answers were merely satisfied.
 
-Choose the route that matches what you need:
+ToppleCat keeps the public acceptance work and challenges the delivery from
+several independent angles. When it finds a problem, the report identifies the
+rule and the kind of check that stopped the run. The delivery earns `PASS` only
+when every required check has trustworthy current results and passes.
 
-- **Quick proof:** [run the sample and watch ToppleCat reject a bad
-  delivery](getting-started.md#sample-workflow).
-- **Adopt it in a project:** [turn your own rules into executable
-  checks](authoring-contracts.md#contract-example), then [verify the agent's
-  delivery](verification-and-evidence.md#delivery-example).
+## What ToppleCat checks {#checks}
 
-The business rules still come from people. ToppleCat can test the rules that
-were written down; it cannot discover a discount, exception, or approval policy
-that nobody specified.
+Start with the question each check answers. The right column gives the exact
+name used in the documentation and reports.
 
-## Choose your task {#choose-your-task}
-
-| What you need | Where to go |
+| What you want to know | ToppleCat check |
 | --- | --- |
-| See the product catch a convincing but wrong implementation | [Getting started](getting-started.md) |
-| Tell ToppleCat what “correct” means for my feature | [Turn rules into checks](authoring-contracts.md) |
-| Decide what a `PASS`, `FAIL`, or incomplete run tells me | [Verify a delivery](verification-and-evidence.md) |
-| Fix a setup or verification problem | [Troubleshooting](troubleshooting.md) |
-| Decide whether ToppleCat fits our workflow | [What ToppleCat does](product-definition.md) |
-| Understand the trust and information boundaries | [How ToppleCat works](architecture.md) |
-| Look up an exact ToppleCat term | [Glossary](glossary.md) |
-| Check what version 0.1.0 supports | [What's in 0.1.0](release-notes.md) |
+| Do the public examples that the AI could see still pass? | Public Acceptance |
+| Does another legal example, chosen outside the AI handoff, pass the same rule? | Hidden Tests |
+| Did the test compare the expected result, rather than merely read it? | Expected Result Check |
+| Can bounded generated inputs find a counterexample to an approved rule? | Property-Based Testing |
+| Does the original acceptance method notice a temporary change in program behaviour? | Mutation Testing |
+| Did the accepted rules or verification settings change after review? | Contract Integrity |
 
-## Let an AI help you read
+These checks stay independent. Trying another example, generating many inputs,
+and temporarily changing code expose different failure modes. One passing
+result cannot replace missing evidence from another.
 
-Every page has a **Copy Markdown** button. Give that exact page to an AI and ask
-it to explain the idea in your domain, point your developer to the relevant
-commands, or carry out the public setup in a Java project. The Markdown is the
-same human-authored content shown on the page; it is not an automatic
-translation or a hidden API.
+## How one delivery flows {#start-here}
 
-Keep two decisions with a person: whether the business rules are complete, and
-whether the evidence is sufficient to accept the delivery.
+```text
+people state what correct means
+    → review the prepared rules, examples, and additional checks
+    → the AI implements from public information and uses ordinary tests
+    → ToppleCat reruns the work and adds independent checks
+    → a person reads the current result and decides whether to accept it
+```
 
-## About these docs
+ToppleCat calls the executable form of “what correct means” the Executable
+Contract. The name is formal; the content is ordinary Java/JUnit methods plus
+JSON or YAML examples with inputs and expected results.
 
-This site publishes current English and Traditional Chinese guidance. Actual
-delivery reports and reviewer-controlled material stay private. For the exact
-ownership boundary, read [What ToppleCat does](product-definition.md#responsibility-boundary).
+A person reviews that contract before implementation. After the AI finishes,
+ToppleCat runs the same public agreement again rather than introducing a second
+set of public rules. See [From rules to results](architecture.md#execution-flow)
+for the complete flow.
 
-For the project story and the open-source source tree, return to the
-[ToppleCat project page](/) or [GitHub](https://github.com/samzhu/topplecat).
+## The two reports you will see {#reports}
+
+Both reports stay inside your project. They are not published on this website
+and are not given to the implementation AI.
+
+### Before implementation: Spec Review
+
+This page lets the person responsible for acceptance answer: Which business
+rules did we select? Which public and additional examples are prepared? What
+will actually run later? It is review material, not an execution result.
+
+### After the AI says done: Verification Report
+
+This page starts with whether the current run passed, found a problem, or lacked
+enough evidence. It then shows each rule and each check. Inputs,
+expected-versus-actual differences, and deeper technical evidence are available
+when someone needs to investigate.
+
+`PASS` means every required check passed for the selected scope in this run. It
+does not mean ToppleCat approved the delivery for your organization or proved
+that nobody omitted a business rule.
+
+## Who it is for {#audience}
+
+ToppleCat fits teams that use Java/JUnit, delegate some implementation to AI,
+and keep the acceptance decision with a person.
+
+The report reader does not have to write Java. They may be a developer, product
+owner, tester, or another person who understands the expected business result
+and is accountable for the delivery. A developer or AI can help with technical
+setup; people still decide whether the rules are complete and the evidence is
+enough.
+
+If you are evaluating the fit, read [When ToppleCat is useful](product-definition.md#use-moment).
+
+## Five terms worth knowing {#terms}
+
+- **Acceptance Condition:** one human-selected business rule with an observable
+  result.
+- **Executable Contract:** the Java/JUnit checks and case data that make those
+  rules runnable.
+- **Reviewer:** the person who reads the prepared rules and current report, then
+  decides what happens to the delivery.
+- **Independent Safeguard:** a check that answers one verification question and
+  cannot be replaced by another result.
+- **Current-run Evidence:** the result of this formal run; an older report cannot
+  fill a gap in it.
+
+You do not need to guess the other capitalized terms. Use the
+[Glossary](glossary.md#executable-contract).
+
+## Choose your next step {#choose-your-task}
+
+| What you want to do | Next page |
+| --- | --- |
+| Watch ToppleCat catch a feature that looks finished but is wrong | [Run the reproducible sample](getting-started.md#sample-workflow) |
+| Decide whether it fits the way your team works | [When ToppleCat is useful](product-definition.md) |
+| Understand every check and the meaning of `PASS` or `FAIL` | [How ToppleCat verifies a delivery](verification-and-evidence.md) |
+| Follow the full flow and private information boundaries | [From rules to results](architecture.md) |
+| Connect your own business rules to Java/JUnit | [Turn rules into executable checks](authoring-contracts.md) |
+| Fix an installation or verification problem | [Troubleshooting](troubleshooting.md) |
+| Check the current version and environment requirements | [What's in 0.1.0](release-notes.md) |
+
+## Let an AI help you read or install it {#ai-help}
+
+Every page has a **Copy Markdown** button. Copy the page and give it to an AI.
+You can ask it to:
+
+- explain ToppleCat in your industry or business context;
+- tell a developer what the project must prepare; or
+- install the plugin in a Java project and create checks from public rules that
+  a person has already confirmed.
+
+Do not give the implementation AI private reports, reviewer-chosen cases, or
+other private values. Do not ask it to guess business requirements that were
+never written down.
+
+To see the complete loop, [run the reproducible sample](getting-started.md#sample-workflow).
+For the project story, return to the [ToppleCat project page](/); the source is
+on [GitHub](https://github.com/samzhu/topplecat).

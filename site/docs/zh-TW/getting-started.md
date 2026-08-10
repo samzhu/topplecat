@@ -17,7 +17,7 @@ copied_label: Copied
 
 # 看 ToppleCat 攔下一個錯誤交付
 
-如果你還不確定 ToppleCat 值不值得用，先跑範例，不必先讀完設定手冊。repository
+如果你還不確定 ToppleCat 值不值得用，先跑範例，不必先讀完設定手冊。專案原始碼
 內有一個故意寫得太狹隘的結帳服務。它能通過公開測試，卻會被審閱者另外準備的檢查
 抓到。相同腳本接著換上修正版，再跑出通過結果。
 
@@ -40,15 +40,15 @@ void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
 ```
 
 JSON 或 YAML 案例列提供一台具體購物車，以及預期收到的收據。這個方法和案例列合在
-一起，就是公開的可執行契約。實作 agent 可以讀它，也可以在開發時執行
+一起，就是公開的可執行契約。實作 AI 可以讀它，也可以在開發時執行
 `./gradlew test`。
 
-正式驗證時，ToppleCat 會用審閱者另外選出的案例重跑同一個公開方法。agent 不需要先
+正式驗證時，ToppleCat 會用審閱者另外選出的案例重跑同一個公開方法。AI 不需要先
 知道那些案例，仍然可以照公開規則完成實作。
 
 ## 執行可重現範例 {#sample-workflow}
 
-clone repository 後執行：
+clone 專案後執行：
 
 ```bash
 bash samples/junit-cart-orders/demo.sh
@@ -62,7 +62,7 @@ bash samples/junit-cart-orders/demo.sh
 
 任何一個結果不符預期，腳本都會失敗。程式、公開契約與清理流程都在
 [JUnit cart-orders sample](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)，
-repository 的 release gate 也會執行這條路徑。
+ToppleCat 自己的發布驗證也會執行這條路徑。
 
 ## 加到自己的專案
 
@@ -84,7 +84,7 @@ tasks.test { useJUnitPlatform() }
 ```
 
 公開驗收方法放在 `src/test/java`，公開案例列放在
-`src/test/resources/topplecat/cases/`。把工作交給實作 agent 前，由負責的人確認選定
+`src/test/resources/topplecat/cases/`。把工作交給實作 AI 前，由負責的人確認選定
 規格和準備好的契約，再將完整契約封存：
 
 ```bash
@@ -93,25 +93,25 @@ tasks.test { useJUnitPlatform() }
 ./gradlew toppleCatSeal
 ```
 
-接下來，實作 agent 只需要公開專案，並用一般的 `./gradlew test` 取得開發回饋。
+接下來，實作 AI 只需要公開專案，並用一般的 `./gradlew test` 取得開發回饋。
 測試綠燈有幫助，但還不是正式的交付判定。
 
-你可以把本頁 Markdown 交給 coding agent，請它安裝 plugin，並依照你已核准的規則
+你可以把本頁 Markdown 交給 coding agent，請它安裝 plugin，並依照你已確認的規則
 建立公開契約。不要叫它猜沒寫出的業務需求，也不要讓它接觸審閱者控制的資料。
 
 ## 驗證交付結果 {#formal-verify}
 
-agent 說工作完成後，執行：
+AI 說工作完成後，執行：
 
 ```bash
 ./gradlew test
 ./gradlew toppleCatVerify
 ```
 
-`toppleCatVerify` 會重跑公開契約、執行每一道已啟用的獨立檢查，並產生只給 Reviewer
+`toppleCatVerify` 會重跑公開契約、執行每一道已啟用的獨立檢查，並產生只給審閱者
 看的 Verification Report。機器可讀的結論在 `build/topplecat/evidence.json`。
 
-Reviewer 若只想快速看這次交付，可以指定 Spec 或 AC ID；報告會清楚標示範圍。CI
+審閱者若只想快速看這次交付，可以指定 Spec 或 AC ID；報告會清楚標示範圍。CI
 應該使用不帶範圍的 `toppleCatVerify`，檢查完整契約。
 
 ## 根據證據做決定 {#human-decision}
@@ -123,4 +123,4 @@ Reviewer 若只想快速看這次交付，可以指定 Spec 或 AC ID；報告�
 是否接受交付。
 
 準備導入專案時，接著讀[把規則寫成可執行檢查](authoring-contracts.md#contract-example)。
-要解讀報告時，讀[驗證交付並讀懂結果](verification-and-evidence.md#delivery-example)。
+要解讀報告時，讀[ToppleCat 如何檢查交付](verification-and-evidence.md#delivery-example)。

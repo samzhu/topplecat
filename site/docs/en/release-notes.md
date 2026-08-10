@@ -17,8 +17,11 @@ copied_label: Copied
 
 # What's in ToppleCat 0.1.0
 
-This page answers a practical question: what can you rely on in the current
-release? For the full historical record, use the repository's
+If ToppleCat is new to you, start with [What is ToppleCat?](index.md#documentation-home).
+This page is for people preparing an adoption or upgrade: it lists the current
+capabilities, environment requirements, and limits.
+
+For the full historical record, use the repository's
 [0.1.0 release notes](https://github.com/samzhu/topplecat/blob/main/docs/releases/0.1.0.md).
 
 ## Current release {#current-release}
@@ -43,14 +46,21 @@ required Gate passes in that run.
 
 ## Reports and languages
 
-Spec Review and Verification Report are private, self-contained HTML bundles.
-English is the default. Add `--language zh-TW` to the Review or Verify command
-when the Reviewer wants ToppleCat-owned interface text in Traditional Chinese.
-Authored business prose, IDs, values, and producer outcomes remain unchanged.
+ToppleCat creates two private reports inside your project. Spec Review lets a
+person confirm what will be checked. Verification Report explains the result
+of the current run after the AI finishes. Both are HTML pages that work
+offline; their content is not sent to this public website or an external
+service.
 
-A Reviewer can request a faster formal report for selected Spec files or
-repeated AC IDs. The report labels that scope, and a scoped `PASS` does not
-claim that the complete project passed.
+Headings, buttons, and ToppleCat explanations are in English by default. Add
+`--language zh-TW` to the Review or Verify command to show that interface text
+in Traditional Chinese. Your business rules, case IDs, inputs, expected values,
+and outcomes recorded by external test tools are never translated or rewritten.
+
+For a faster check of a just-finished feature, select one or more Spec files or
+list one or more AC IDs; do not combine the two forms. The report shows exactly
+which rules ran. A scoped `PASS` means only those listed rules passed, not the
+whole project. CI should use the complete verification command without a scope.
 
 ## Documentation surface {#documentation-surface}
 
@@ -58,9 +68,9 @@ The public documentation is available in English and human-authored Traditional
 Chinese. Learning pages lead with the delivery problem and executable sample;
 reference pages retain exact commands, terms, and boundaries.
 
-Every page has a same-topic Markdown resource for people who want to give the
-content to an AI. These small page resources and language manifests are a
-reading convenience, not a docs API or a whole-site `llms-full` bundle.
+Every page has **Copy Markdown** so you can give that page to an AI for an
+explanation or public setup help. The site does not translate pages at runtime
+or make private reports available to an AI.
 
 ## Limits and upgrade notes {#upgrade-notes}
 
@@ -69,12 +79,13 @@ reading convenience, not a docs API or a whole-site `llms-full` bundle.
   the contract for the current release.
 - Formal Mutation Testing uses ToppleCat's fixed managed PIT profile. A
   project's custom PIT task remains separate.
-- Selected Verify accepts Spec files or AC IDs, never both together. Sealing
-  always covers the complete contract.
-- Reviewer custody is plaintext mechanical storage, not encryption or process
-  isolation.
+- Scoped verification accepts Spec files or AC IDs, never both together.
+  Sealing always covers the complete contract.
+- Reviewer material is kept in local plaintext storage. This is not encryption
+  or process isolation.
 - `PASS` is evidence for the checked scope. It does not prove that every
   business rule was specified or grant organizational approval.
 
 To try the supported path, [run the executable sample](getting-started.md#sample-workflow).
-To understand a result, read [Verify a delivery](verification-and-evidence.md#gates-and-verdicts).
+To understand a result, read
+[How ToppleCat verifies a delivery](verification-and-evidence.md#gates-and-verdicts).

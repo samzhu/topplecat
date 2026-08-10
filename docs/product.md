@@ -123,11 +123,16 @@ their ownership of the Spec, plan, or task state.
 
 The current explanation is published in English and Traditional Chinese at the
 [official documentation site](https://topplecat.samzhu.dev/docs/). It serves
-Reviewers and adopters with different technical backgrounds: learning pages
-start with the human delivery problem and a reproducible outcome, then introduce
-formal terms and implementation details when the reader needs them. Readers can
-take a quick sample-backed proof path or continue into project adoption,
-verification, troubleshooting, and exact reference material.
+first-time visitors, Reviewers, and adopters with different technical
+backgrounds. Before an installation command, Documentation Home must let a
+reader answer what ToppleCat is, which AI-delivery problem it addresses, what
+it checks, how one delivery flows, which private reports a human reads, and
+which decisions stay with people. Formal terms follow a concrete checkout
+example and plain questions instead of carrying the introduction themselves.
+
+Readers can then take a quick sample-backed proof path, continue into project
+adoption, ask an AI to help with public setup, or use the verification,
+troubleshooting, and exact reference pages.
 
 Each page is a static projection of the current Product, Architecture, guides,
 glossary, and release notes, with an exact page-level Markdown sibling that a

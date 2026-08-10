@@ -1,6 +1,6 @@
 ---
-title: ToppleCat 解決什麼問題
-description: 評估 ToppleCat 是否適合把實作交給 AI、但仍由人負責驗收的 Java 團隊。
+title: ToppleCat 適合什麼情境
+description: 評估 ToppleCat 是否適合讓 AI 實作 Java 功能、但仍由人負責驗收的團隊。
 page_id: product-definition
 language_code: zh-TW
 language_name: 繁體中文
@@ -15,62 +15,66 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# ToppleCat 解決什麼問題
+# ToppleCat 適合什麼情境
 
-ToppleCat 處理一個很具體的時刻：團隊把選定功能交給 AI coding agent，agent 說已經
-完成，接下來仍要由人決定是否接受交付。
+如果團隊讓 AI 寫 Java 功能，但不想只靠 AI 已經看過的測試來驗收，ToppleCat 就是為
+這個空缺設計的。
 
-如果沒有另一道驗證，這個決定往往只依賴 agent 開發時就看過的公開例子。ToppleCat
-保留那些例子，再加入彼此獨立的檢查，讓負責決定的人拿到本次執行的新證據。
+它把人事先確認的規則固定下來。AI 說完成後，ToppleCat 重新執行公開範例，加入其他
+獨立檢查，再把本次結果交給負責驗收的人。工具負責留下證據，人負責做決定。
 
 ## 什麼時候適合使用 {#use-moment}
 
-假設產品負責人定義優惠券規則，開發者把它寫成公開的 Java/JUnit 驗收內容。handoff
-前，負責的人先確認規則、例子，以及之後會執行哪些額外檢查。agent 宣稱完成後，
-ToppleCat 驗證這份封存過的約定。
+假設產品負責人定義優惠券規則，工程師或 AI 把規則接到 Java/JUnit 檢查。AI 開始實作
+前，團隊先看過規則、範例，以及之後會加入哪些檢查。AI 說完成後，ToppleCat 用同一份
+約定重新驗證。
 
-Reviewer 不一定要懂 Java。公開整合可以由開發者或 coding agent 準備。Reviewer 可以
-是開發者、產品負責人、測試者，或任何理解預期業務結果、能閱讀白話報告並對交付負責
-的人。
-
-以下情況很適合 ToppleCat：
+符合以下情況時，ToppleCat 最有幫助：
 
 - 專案使用 Java 與 JUnit；
-- 選定工作會交給 AI agent 實作；
-- 團隊能在 handoff 前寫下可觀察的規則與例子；
-- 接受或 merge 前，希望取得這次執行的證據。
+- 團隊把選定功能交給 AI coding agent 實作；
+- 人可以在實作前寫下可觀察的規則與範例；
+- 接受或合併程式前，希望看到這次執行留下的證據。
+
+負責驗收的人不一定要會寫 Java。他可以是開發者、產品負責人、測試者，或其他理解
+預期業務結果並對交付負責的人。工程接線可以請開發者或 AI 完成。
 
 ## 開發流程會多出什麼
 
-實作前，人選定的規則會變成可執行契約。Reviewer 確認真正會被檢查的內容，再封存
-完整契約與驗證政策。
+### AI 開始前
 
-agent 只使用公開專案與一般測試回饋。它說完成後，formal Verify 執行封存契約與每道
-已啟用的獨立防線。Reviewer 閱讀結果，再決定下一步。
+人先選定這次要做的規則，並把預期行為寫成可執行檢查。Spec Review 讓負責驗收的人
+確認之後到底會檢查什麼。確認後，ToppleCat 會記住完整契約與驗證設定的內容。
 
-ToppleCat 只有在本次執行的每個必要 Gate 都通過時，才記錄 `PASS`。它不會把
-`PASS` 自動變成核准。
+### AI 實作時
+
+AI 只會看到公開規則、公開範例與一般專案測試。它仍可用 `./gradlew test` 快速取得
+開發回饋；審閱者另外準備的資料不會交給它。
+
+### AI 說完成後
+
+ToppleCat 先確認審閱過的內容沒有改變，再執行公開與額外檢查。Verification Report
+會說明每條規則發生什麼。只有本次執行的每一道必要檢查都通過，才會記錄 `PASS`。
+
+`PASS` 不是自動核准。負責驗收的人仍要判斷規則是否完整，以及這些證據是否足夠。
 
 ## 責任邊界 {#responsibility-boundary}
 
-| ToppleCat 負責 | 人、團隊、專案或外部流程負責 |
+| ToppleCat 負責 | 人、團隊或既有開發流程負責 |
 | --- | --- |
-| 把選定規則綁到一般的可執行驗收工作 | 選定 Spec，並確認規則與例子完整 |
-| 察覺完整契約或驗證政策在審閱後被改動 | 決定由誰審閱、核准或 sign-off |
-| 執行新的正式驗證，並讓各項檢查彼此獨立 | 決定命令在本機、CI 或其他地方執行 |
-| 產生私人 Reviewer reports 與安全的 agent feedback | 管理任務、交付歷史、pull request 與 release |
-| 使用固定的 managed mutation profile 與精確方法歸屬 | 一般 unit/QA tests、自訂 PIT、效能與安全工作 |
+| 把選定規則連到可執行的 Java/JUnit 驗收內容 | 選定要做的功能，並把規則與範例寫完整 |
+| 察覺審閱後的契約或驗證設定被改動 | 決定由誰審閱、核准或簽署交付 |
+| 重新驗證，讓不同檢查各自留下結果 | 決定在本機、CI 或其他環境執行 |
+| 產生私人報告，以及不洩漏審閱資料的 AI 回饋 | 管理任務、交付歷史、pull request 與 release |
+| 執行 ToppleCat 固定的 mutation 檢查方式 | 一般單元／QA 測試、效能與安全檢查 |
 
-這個分工是刻意的。ToppleCat 只報告已檢查契約與當次證據能支持的結論，不會從缺少的
-需求自行推論人的意圖。
+## ToppleCat 不會替你做什麼 {#what-topplecat-does-not-own}
 
-## ToppleCat 不負責什麼 {#what-topplecat-does-not-own}
+ToppleCat 不會管理任務或規格版本，也不會替組織核准交付。它不是 CI 服務、通用測試
+框架或安全沙箱。本機保管審閱資料的機制用來避免交付時混入私人內容，不是加密。
 
-ToppleCat 不是 task manager、Spec manager、approval system、CI service、通用測試
-框架或 security sandbox。本機的 reviewer custody 是機械式 handoff 防線，不是加密。
+它最無法代替人的地方，是回答：「我們有沒有漏掉重要業務規則？」契約裡沒有寫的 VIP
+折扣、退款例外或法規要求，ToppleCat 不會自己猜出來。
 
-它也無法回答最上游、最重要的問題：「我們是否已經寫下所有必要業務規則？」這件事
-仍由人負責。
-
-如果這符合你的使用情境，先[執行可重現範例](getting-started.md#sample-workflow)。
-需要技術信任邊界時，再讀[系統如何運作](architecture.md#information-boundary)。
+如果這正是你的使用情境，可以先[執行可重現範例](getting-started.md#sample-workflow)。
+想看每一項檢查，請讀[ToppleCat 如何檢查交付](verification-and-evidence.md#delivery-example)。

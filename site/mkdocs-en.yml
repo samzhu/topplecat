@@ -1,5 +1,5 @@
 site_name: ToppleCat documentation
-site_description: Learn how ToppleCat checks an AI coding agent's done claim and gives a human fresh evidence before accepting a Java delivery.
+site_description: "Meet ToppleCat from the beginning: how it rechecks AI-delivered Java, what it tests, and which decisions still belong to people."
 site_url: !ENV [DOCS_SITE_URL, https://topplecat.samzhu.dev/docs]
 docs_dir: docs/en
 site_dir: dist/docs
@@ -40,16 +40,15 @@ extra_css:
 extra_javascript:
   - assets/javascripts/topplecat-docs.js
 nav:
-  - Learn by doing:
-      - Why ToppleCat: index.md
-      - See it catch a bad delivery: getting-started.md
-  - Use ToppleCat:
-      - Turn rules into checks: authoring-contracts.md
-      - Verify a delivery: verification-and-evidence.md
-  - Understand:
-      - What ToppleCat does: product-definition.md
-      - How ToppleCat works: architecture.md
+  - Meet ToppleCat:
+      - What is ToppleCat?: index.md
+      - When it is useful: product-definition.md
+      - How it verifies a delivery: verification-and-evidence.md
+      - From rules to results: architecture.md
       - Glossary: glossary.md
+  - Start using it:
+      - Run the sample: getting-started.md
+      - Turn rules into checks: authoring-contracts.md
   - Get unstuck:
       - Troubleshooting: troubleshooting.md
   - Reference:
