@@ -116,7 +116,7 @@ ToppleCat 適合使用 Java/JUnit、把部分實作交給 AI，並且希望由�
 | 先看它抓到一個表面正常、實際有錯的功能 | [執行可重現範例](getting-started.md#sample-workflow) |
 | 評估它是否適合團隊目前的開發方式 | [ToppleCat 適合什麼情境](product-definition.md) |
 | 了解每項檢查與 `PASS`、`FAIL` 的意思 | [ToppleCat 如何檢查交付](verification-and-evidence.md) |
-| 了解完整流程、私人資料與系統邊界 | [從規則到結果](architecture.md) |
+| 了解完整流程、審閱者專用內容與系統邊界 | [從規則到結果](architecture.md) |
 | 把自己的業務規則接到 Java/JUnit | [把規則寫成可執行檢查](authoring-contracts.md) |
 | 解決安裝或驗證問題 | [排除問題](troubleshooting.md) |
 | 確認目前版本與環境需求 | [0.1.0 版本說明](release-notes.md) |

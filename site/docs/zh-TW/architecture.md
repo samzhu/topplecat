@@ -18,7 +18,7 @@ copied_label: Copied
 # 從規則到結果
 
 這一頁把完整流程串起來：人先寫下怎樣才算做對，AI 依公開內容實作，ToppleCat 再用
-同一份約定重新驗證。後半段才說明技術模組與私人資料放在哪裡。
+同一份約定重新驗證。後半段才說明技術模組與審閱者專用內容如何保管。
 
 若只想先看效果，可以直接[執行範例](getting-started.md#sample-workflow)。
 
@@ -79,7 +79,7 @@ Mutation Testing 比較特殊：公開驗收要先通過，才有可信的原始
 正式的 Mutation Testing 使用 ToppleCat 固定的 PIT 設定，並把 PIT 的觀察結果連回
 精確的公開驗收方法。專案自己設定的 PIT 工作不會混入 ToppleCat 證據。
 
-## 私人資料放在哪裡 {#information-boundary}
+## 審閱者專用內容如何保管 {#information-boundary}
 
 `toppleCatSeal` 會把審閱者另外準備的原始碼移到本機保管區，並記錄完整契約與驗證設定
 的內容。之後若有人更動這些內容，ToppleCat 可以察覺。
