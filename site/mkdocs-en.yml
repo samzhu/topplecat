@@ -35,6 +35,7 @@ plugins: []
 extra:
   site_origin: !ENV [PUBLIC_ORIGIN, https://topplecat.samzhu.dev]
   base_path: !ENV [PAGES_BASE_PATH, ""]
+  homepage: !ENV [PROJECT_HOMEPAGE, /]
 extra_css:
   - assets/stylesheets/topplecat-docs.css
 extra_javascript:

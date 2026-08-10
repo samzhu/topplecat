@@ -129,14 +129,21 @@ def fetch(base_url: str, path: str) -> tuple[int, str, str]:
 def check(root: Path, base: str, base_url: str | None = None) -> list[str]:
     failures: list[str] = []
     artifact_files = [path for path in root.rglob("*") if path.is_file()]
+    highlighted_blocks = 0
     for path in artifact_files:
         relative = path.relative_to(root).as_posix()
         if any(denied in relative for denied in DENIED_PATHS):
             failures.append(f"denied artifact path: {relative}")
         content = path.read_text(encoding="utf-8", errors="ignore")
+        if path.suffix == ".html":
+            highlighted_blocks += content.count('data-topplecat-highlight="shiki"')
+            if re.search(r'<pre><code class="language-[^"]+">', content):
+                failures.append(f"unhighlighted fenced code block: {relative}")
         for marker in DENIED_MARKERS:
             if marker in content:
                 failures.append(f"denied artifact marker {marker!r}: {relative}")
+    if highlighted_blocks < 1:
+        failures.append("artifact has no build-time Shiki syntax highlighting")
 
     if not base_url:
         base_url = ""
@@ -180,6 +187,18 @@ def check(root: Path, base: str, base_url: str | None = None) -> list[str]:
                 failures.append(f"{html_path}: wrong paired hreflang")
             if not page.attrs.get("h1"):
                 failures.append(f"{html_path}: missing visible heading")
+            expected_homepage = f"{base}/" if base else "/"
+            for logo_class in ("md-header__button", "md-nav__button"):
+                logo_links = [
+                    link
+                    for link in page.links
+                    if logo_class in link.get("class", "").split()
+                    and "md-logo" in link.get("class", "").split()
+                ]
+                if len(logo_links) != 1 or logo_links[0].get("href") != expected_homepage:
+                    failures.append(
+                        f"{html_path}: {logo_class} brand logo does not link to product homepage"
+                    )
             copy_href = f"data-copy-markdown=\"{('index.md' if page_id == 'home' else '../' + page_id + '.md')}\""
             if "topplecat-copy-button" not in html or copy_href not in html:
                 failures.append(f"{html_path}: missing page-level Copy Markdown control")
@@ -266,6 +285,18 @@ def negative_tests(root: Path, base: str) -> list[str]:
     scenarios = (
         ("missing translation", "docs/zh-TW/getting-started/index.html", lambda p: p.unlink()),
         ("removed anchor", "docs/architecture/index.html", lambda p: p.write_text(p.read_text(encoding="utf-8").replace('id="four-modules"', 'id="removed"'), encoding="utf-8")),
+        (
+            "wrong brand homepage",
+            "docs/index.html",
+            lambda p: p.write_text(
+                p.read_text(encoding="utf-8").replace(
+                    'href="/" title="ToppleCat documentation" class="md-header__button md-logo"',
+                    'href="./" title="ToppleCat documentation" class="md-header__button md-logo"',
+                    1,
+                ),
+                encoding="utf-8",
+            ),
+        ),
         ("broken manifest target", "docs/llms.txt", lambda p: p.write_text(p.read_text(encoding="utf-8") + "\n- [broken](https://topplecat.samzhu.dev/docs/missing.md)\n", encoding="utf-8")),
         ("denied marker", "docs/index.md", lambda p: p.write_text(p.read_text(encoding="utf-8") + "\nReviewerBoundary\n", encoding="utf-8")),
     )
@@ -304,7 +335,7 @@ def main() -> int:
         return 1
     print(f"Site artifact validation PASS: {len(PAGE_IDS) * 2} bilingual pages, served from {root}")
     if args.self_test:
-        print("Site artifact negative tests PASS: missing pair, anchor, manifest target, and denied marker rejected")
+        print("Site artifact negative tests PASS: missing pair, anchor, brand homepage, manifest target, and denied marker rejected")
     return 0
 
 

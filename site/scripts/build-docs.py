@@ -42,6 +42,7 @@ def run_mkdocs(config: str, docs_url: str) -> None:
     env["DOCS_SITE_URL"] = docs_url
     env["PUBLIC_ORIGIN"] = ORIGIN
     env["PAGES_BASE_PATH"] = BASE
+    env["PROJECT_HOMEPAGE"] = f"{BASE}/" if BASE else "/"
     subprocess.run(
         [sys.executable, "-m", "mkdocs", "build", "--config-file", config, "--clean"],
         cwd=SITE,
@@ -53,6 +54,10 @@ def run_mkdocs(config: str, docs_url: str) -> None:
 def copy_markdown(source_root: Path, output_root: Path) -> None:
     for source in source_root.glob("*.md"):
         shutil.copy2(source, output_root / source.name)
+
+
+def highlight_code() -> None:
+    subprocess.run(["node", "scripts/highlight-docs.mjs"], cwd=SITE, check=True)
 
 
 def write_discovery() -> None:
@@ -106,6 +111,7 @@ def main() -> None:
     (DIST / "docs").mkdir(parents=True, exist_ok=True)
     run_mkdocs("mkdocs-en.yml", public_url("docs"))
     run_mkdocs("mkdocs-zh-TW.yml", public_url("docs/zh-TW"))
+    highlight_code()
     copy_markdown(SITE / "docs/en", DIST / "docs")
     copy_markdown(SITE / "docs/zh-TW", DIST / "docs/zh-TW")
     write_discovery()

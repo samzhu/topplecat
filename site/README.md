@@ -76,6 +76,9 @@ The canonical project homepage remains `/`. The combined artifact adds
 ordinary links and the complete HTML sitemap as primary discovery. Page-level
 Markdown and the language manifests are deliberately small; there is no site
 search, version selector, `llms-full`, Javadoc, RAG/chatbot, MCP, or docs API.
+The brand logo in the documentation header and mobile drawer returns to the
+project homepage at the artifact root; documentation navigation owns links to
+the English or Traditional Chinese documentation home.
 
 ## Documentation content model
 
@@ -101,3 +104,7 @@ Traditional Chinese is written as natural prose rather than a word-for-word
 technical mirror. Page-level Markdown may be handed to an AI for explanation or
 public implementation help. It does not let the AI choose missing business
 rules, inspect reviewer-controlled material, or make the delivery decision.
+
+Shiki highlights fenced Java, Kotlin, YAML, shell, and text examples during the
+documentation build with the ToppleCat dark code theme. The final HTML contains
+the token colors and remains fully readable without client-side JavaScript.

@@ -34,6 +34,8 @@ four Java modules. Human-authored Markdown under `site/docs/en/` and
 artifact alongside the Vite project page. The artifact verifier checks the
 combined output for page pairing, metadata, links, page-level Markdown,
 discovery files, and denied information categories before deployment.
+Fenced examples receive ToppleCat-themed Shiki token colors during the build;
+the published HTML does not need client-side highlighting to remain readable.
 
 This publication path is not a fifth ToppleCat product module. It does not
 publish Javadoc, site search, versioned sites, actual delivery reports, or
