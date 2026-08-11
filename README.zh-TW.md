@@ -21,9 +21,10 @@ ToppleCat 把這些可以執行的規則稱為「可執行契約」。只有本�
 結帳 Spec 規定訂單滿 1,000 元折扣 100 元。公開案例檢查
 `1,000 -> 900`，但實作也可能把 `900` 寫死而照樣通過。
 
-Reviewer 可以在把工作交給 AI 前準備更多獨立證據：
+Reviewer 可以在把工作交給 AI 前準備更多檢查：
 
-- reviewer-owned 案例，例如 `2,000 -> 1,900` 或 `999 -> 不折扣`；
+- 審閱者控制的型別案例資料列（Hidden Tests），例如 `2,000 -> 1,900` 或
+  `999 -> 不折扣`；
 - 「應付金額永遠不為負數」這類 Property；以及
 - Managed Mutation Testing，檢查公開 Acceptance Method 能否發現邊界或
   算術被改壞。
@@ -59,7 +60,7 @@ ToppleCat 提供命令、證據與報告；團隊自行決定由誰執行，以�
 
 | Safeguard | 問題 | Gate |
 | --- | --- | --- |
-| **Hidden Tests** | reviewer 獨立選擇的例子，能否通過同一個公開 Acceptance Method？ | `REVIEWER_JUNIT` |
+| **Hidden Tests** | 審閱者控制的型別案例資料列，能否通過同一個公開 Acceptance Method？ | `REVIEWER_JUNIT` |
 | **Property-Based Testing** | 人類核准的不變量，能否通過有界的產生輸入？ | `PROPERTY` |
 | **Mutation Testing** | 每個精確的公開 Acceptance Method，能否發現自己執行到的 managed-profile mutants？ | `MUTATION` |
 
@@ -148,6 +149,7 @@ verdict、PIT 結果等 canonical 值都會維持原樣。
 Acceptance、Hidden Tests、Property-Based Testing、Mutation Testing 與 Contract
 Integrity 五條完全合成的路徑。每次 `./demo.sh <lesson>` 後，都能在
 `build/topplecat/demo-reports/<lesson>/index.html` 開啟該次的本機合成 HTML 驗證報告。
+範例 README 會說明每條路徑要先看哪一道 Gate，以及預期的失敗代表什麼。
 
 ## 最小驗收契約
 

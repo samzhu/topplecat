@@ -30,7 +30,8 @@ The public example checks `1,000 -> 900`, but an implementation could hard-code
 A Reviewer can prepare additional evidence before handing the work to the
 agent:
 
-- a reviewer-owned case such as `2,000 -> 1,900` or `999 -> no discount`;
+- reviewer-controlled Typed Case Rows (Hidden Tests), such as
+  `2,000 -> 1,900` or `999 -> no discount`;
 - a Property such as “the payable total is never negative”; and
 - managed Mutation Testing that asks whether the public Acceptance Method
   notices a changed boundary or arithmetic operation.
@@ -70,7 +71,7 @@ them and whether they run locally, in CI, or in another workflow.
 
 | Safeguard | Question | Gate |
 | --- | --- | --- |
-| **Hidden Tests** | Do independently chosen reviewer examples pass the same public Acceptance Method? | `REVIEWER_JUNIT` |
+| **Hidden Tests** | Do reviewer-controlled Typed Case Rows pass the same public Acceptance Method? | `REVIEWER_JUNIT` |
 | **Property-Based Testing** | Does a human-approved invariant survive bounded generated inputs? | `PROPERTY` |
 | **Mutation Testing** | Does each exact public Acceptance Method detect the managed-profile mutants it covered? | `MUTATION` |
 
@@ -174,6 +175,8 @@ project](samples/junit-cart-orders) provides five synthetic routes: Public
 Acceptance, Hidden Tests, Property-Based Testing, Mutation Testing, and
 Contract Integrity. Each `./demo.sh <lesson>` run keeps its local synthetic
 HTML Verification Report at `build/topplecat/demo-reports/<lesson>/index.html`.
+The sample README says which Gate to look for and what its expected failure
+means.
 
 ## A minimal acceptance contract
 
