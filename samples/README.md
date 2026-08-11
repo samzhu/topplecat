@@ -17,6 +17,8 @@ bash samples/spring-boot-cart-orders/demo.sh
 ```
 
 The JUnit project uses its own Gradle Wrapper and released Maven Central 0.1.0
-artifacts. Its `demo.sh --help` lists five synthetic lessons; each runs in a
-temporary copy, proves a baseline, then demonstrates one independent Gate.
-The Spring Boot script remains a contributor-oriented demo.
+artifacts. Its `demo.sh --help` lists five synthetic lessons. Each route runs
+the appropriate formal verification, then keeps that route's synthetic local
+Verification Report at `build/topplecat/demo-reports/<lesson>/index.html` for
+the learner to inspect. The Spring Boot script remains a contributor-oriented
+demo.

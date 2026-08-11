@@ -143,8 +143,11 @@ Reviewer HTML 預設使用英文。要以繁體中文閱讀 ToppleCat 自己的�
 `--language zh-TW`。這只影響該次執行的 HTML；作者寫下的文字與 AC ID、Gate 名稱、
 verdict、PIT 結果等 canonical 值都會維持原樣。
 
-從[快速開始指南](docs/guide/getting-started.md)開始，或直接執行
-[JUnit 範例](samples/junit-cart-orders)。
+從[快速開始指南](docs/guide/getting-started.md)開始。若想實際了解每項保障會抓到什麼
+問題，可選擇執行 [JUnit cart-orders 學習專案](samples/junit-cart-orders)：它有 Public
+Acceptance、Hidden Tests、Property-Based Testing、Mutation Testing 與 Contract
+Integrity 五條完全合成的路徑。每次 `./demo.sh <lesson>` 後，都能在
+`build/topplecat/demo-reports/<lesson>/index.html` 開啟該次的本機合成 HTML 驗證報告。
 
 ## 最小驗收契約
 

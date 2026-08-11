@@ -16,6 +16,9 @@ fi
 
 junit_state_root="$release_state_root/junit-cart-orders"
 spring_state_root="$release_state_root/spring-boot-cart-orders"
+junit_service="$junit_sample/src/main/java/sample/cartorders/OrderService.java"
+junit_service_backup="$(mktemp)"
+cp "$junit_service" "$junit_service_backup"
 
 restore_sample() {
   local sample="$1"
@@ -38,6 +41,10 @@ cleanup() {
   set +e
   restore_sample "$junit_sample" "$junit_state_root"
   restore_sample "$spring_sample" "$spring_state_root"
+  if [[ -f "$junit_service_backup" ]]; then
+    cp "$junit_service_backup" "$junit_service"
+    rm -f "$junit_service_backup"
+  fi
   if [[ "$release_state_root_owned" == true && -d "$release_state_root" ]]; then
     rm -rf "$release_state_root"
   fi
@@ -96,8 +103,20 @@ bash "$root/samples/junit-cart-orders/demo.sh" all
 TOPPLECAT_STATE_ROOT="$spring_state_root" bash "$root/samples/spring-boot-cart-orders/demo.sh"
 TOPPLECAT_STATE_ROOT="$release_state_root/mutation-gate" bash "$root/integration-tests/mutation-gate/verify.sh"
 
-# The learning lessons use temporary copies, so generate one stable baseline
-# evidence bundle for the release-boundary checks below.
+# The checked-in learning service intentionally has a synthetic shortcut. Make
+# a temporary correct copy in place only for this release-gate baseline, then
+# restore it through the EXIT trap after the custody checks below.
+python3 - "$junit_service" <<'PY'
+import pathlib, sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+wrong = 'int discount = "SAVE100".equals(cart.coupon()) ? cart.subtotal() / 5 : 0;'
+correct = 'int discount = "SAVE100".equals(cart.coupon()) ? 100 : 0;'
+if wrong not in text:
+    raise SystemExit(f"Release gate cannot find the synthetic shortcut in {path}")
+path.write_text(text.replace(wrong, correct, 1))
+PY
 run_sample "$junit_sample" "$junit_state_root" toppleCatSeal toppleCatVerify
 
 assert_artifact_version "$junit_sample/build.gradle.kts" "0.1.0"

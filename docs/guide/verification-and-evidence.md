@@ -231,6 +231,11 @@ matrix. It also shows disabled safeguards as `DISABLED`. Spec Review may show
 non-blocking expected-output quality advisories. There is no public HTML report
 for an actual delivery; the separate project page may instead use clearly
 labelled, fully synthetic red-team demonstrations for human product education.
+The optional JUnit cart-orders learning project is different: every route uses
+only synthetic teaching material and retains its local report under
+`build/topplecat/demo-reports/<lesson>/index.html`. It is not published by the
+site or a report from an actual delivery.
+
 `agent-feedback.json` never exposes reviewer case IDs, values, source names or
 paths, Property trial material, tokens, attachments, raw private failures, or
 quality-advisory output.

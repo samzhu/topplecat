@@ -1,24 +1,25 @@
 # How the cart-orders lessons work
 
 `junit-cart-orders` is one self-contained teaching project. Start with its
-README, then choose one lesson with `./demo.sh <name>`. The command creates a
-temporary copy, so your checked-out source stays a correct example.
+README, then choose one lesson with `./demo.sh <name>`. The checked-in service
+contains a synthetic 20% shortcut that Hidden Tests reject; other lessons use a
+temporary copy for their specific synthetic delivery.
 
 Every lesson follows the same shape:
 
-1. Seal and verify the correct Executable Contract.
-2. Apply one public, synthetic teaching change.
-3. Run formal Verify again and confirm the intended Gate outcome.
-4. Remove the temporary project and Reviewer Custody.
+1. Prepare a sealed synthetic contract.
+2. Run the selected synthetic delivery through formal Verify.
+3. Confirm the intended Gate outcome.
+4. Open `build/topplecat/demo-reports/<lesson>/index.html` to read its local
+   Verification Report.
+5. Remove the temporary project and Reviewer Custody.
 
 The public [CouponAcceptanceTest](src/test/java/sample/cartorders/CouponAcceptanceTest.java)
 is the SDK reference. An Acceptance Method binds an AC to `ToppleCase`, writes
 a Given/When/Then `ToppleScenario`, and delegates business vocabulary to a
 reusable `ToppleStage`. Its final `verify()` call compares the complete expected
-receipt. The root-level `OrderService.public-acceptance.java`,
-`OrderService.hidden-tests.java`, and
-`coupon-hidden.property-based-testing.yaml` are the three readable deviations
-that the corresponding lessons apply in a temporary copy.
+receipt. The report is the learning surface: it shows the failure-first result
+and the corresponding Gate for that synthetic delivery.
 
 ## What each lesson proves
 

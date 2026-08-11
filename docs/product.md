@@ -132,9 +132,10 @@ example and plain questions instead of carrying the introduction themselves.
 
 Readers can first learn the Java/JUnit SDK directly in the Authoring guide,
 then optionally run the synthetic five-safeguard cart-orders learning project,
-continue into project adoption, ask an AI to help with public setup, or use the
-verification, troubleshooting, and exact reference pages. The learning project
-is evidence-oriented teaching material, not a required installation step or a
+open the local HTML Verification Report retained for each route, continue into
+project adoption, ask an AI to help with public setup, or use the verification,
+troubleshooting, and exact reference pages. The learning project is
+evidence-oriented teaching material, not a required installation step or a
 delivery decision surface.
 
 Each page is a static projection of the current Product, Architecture, guides,

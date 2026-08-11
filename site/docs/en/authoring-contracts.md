@@ -56,7 +56,9 @@ The `CouponStage` methods perform the real setup, service calls, and assertions.
 Want a complete, runnable version of this pattern? The optional
 [JUnit cart-orders learning project](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)
 uses the released 0.1.0 artifacts and lets you choose five synthetic safeguard
-lessons. You do not need to run it before following this guide.
+lessons. Each one leaves a local HTML Verification Report for that lesson under
+`build/topplecat/demo-reports/`. You do not need to run it before following
+this guide.
 
 The exact method contract matters: `ToppleCase` comes first, followed by one
 `ToppleScenario` and one or more distinct concrete Stage types. Stages must be

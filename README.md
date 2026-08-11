@@ -167,9 +167,13 @@ Traditional Chinese, add `--language zh-TW` to `toppleCatReview` or
 only to that invocation's HTML; authored text and canonical values such as AC
 IDs, Gate names, verdicts, and PIT outcomes stay exactly as recorded.
 
-Start with the [official technical documentation](https://topplecat.samzhu.dev/docs/),
-the [getting-started guide](docs/guide/getting-started.md), or run the
-[JUnit sample](samples/junit-cart-orders).
+Start with the [official technical documentation](https://topplecat.samzhu.dev/docs/)
+or the [getting-started guide](docs/guide/getting-started.md). To see what
+each safeguard catches, the optional [JUnit cart-orders learning
+project](samples/junit-cart-orders) provides five synthetic routes: Public
+Acceptance, Hidden Tests, Property-Based Testing, Mutation Testing, and
+Contract Integrity. Each `./demo.sh <lesson>` run keeps its local synthetic
+HTML Verification Report at `build/topplecat/demo-reports/<lesson>/index.html`.
 
 ## A minimal acceptance contract
 

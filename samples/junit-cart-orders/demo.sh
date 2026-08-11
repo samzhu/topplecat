@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A synthetic, repeatable ToppleCat learning project. It never changes the checkout.
+# A synthetic, repeatable ToppleCat learning project. It never changes checked-in source.
 set -euo pipefail
 
 sample="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,7 +29,7 @@ esac
 
 run_lesson() {
   local lesson="$1"
-  local work state service public_cases acceptance build_file
+  local work state service public_cases acceptance build_file report_dir
   work="$(mktemp -d)"
   state="$(mktemp -d)"
   trap 'rm -rf "$work" "$state"' RETURN
@@ -39,38 +39,38 @@ run_lesson() {
   public_cases="$work/src/test/resources/topplecat/cases/coupon-public.json"
   acceptance="$work/src/test/java/sample/cartorders/CouponAcceptanceTest.java"
   build_file="$work/build.gradle.kts"
-
-  if [[ "$lesson" == "property-based-testing" ]]; then
-    cp "$work/coupon-hidden.property-based-testing.yaml" \
-      "$work/src/hiddenTest/resources/topplecat/cases/coupon-hidden.yaml"
-  fi
+  report_dir="$sample/build/topplecat/demo-reports/$lesson"
 
   printf '\n== %s: synthetic teaching material ==\n' "$lesson"
-  echo "Baseline: the released 0.1.0 contract must pass before the lesson changes one thing."
-  (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal toppleCatVerify)
-
   case "$lesson" in
     public-acceptance)
-      echo "Deviation: SAVE100 now returns no discount; public examples observe it."
-      cp "$work/OrderService.public-acceptance.java" "$service"
+      echo "Synthetic delivery: SAVE100 now returns no discount; public examples observe it."
+      set_fixed_discount "$service"
+      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal)
+      replace_text "$service" 'int discount = "SAVE100".equals(cart.coupon()) ? 100 : 0;' 'int discount = 0;'
       expect_gate "$work" "$state" JUNIT
       echo "Supports: public examples caught this stated result. Cannot prove omitted rules do not exist."
       ;;
     hidden-tests)
-      echo "Deviation: a 20% shortcut still passes the visible 500 example."
-      cp "$work/OrderService.hidden-tests.java" "$service"
+      echo "Synthetic delivery: the checked-in 20% shortcut still passes the visible 500 example."
+      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal)
       expect_gate "$work" "$state" REVIEWER_JUNIT
       echo "Supports: independent examples challenged the same public rule. It adds no private rule."
       ;;
     property-based-testing)
-      echo "Deviation: the 20% shortcut passes the teaching rows but violates the fixed-discount invariant."
-      cp "$work/OrderService.hidden-tests.java" "$service"
+      echo "Synthetic delivery: a shortcut handles only the known example subtotals."
+      echo "It passes Typed Case Rows but violates the fixed-discount invariant for generated carts."
+      set_fixed_discount "$service"
+      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal)
+      replace_text "$service" 'int discount = "SAVE100".equals(cart.coupon()) ? 100 : 0;' 'int discount = "SAVE100".equals(cart.coupon()) && (cart.subtotal() == 500 || cart.subtotal() == 800 || cart.subtotal() == 1200) ? 100 : 0;'
       expect_gate "$work" "$state" PROPERTY
       echo "Supports: generated trials found an invariant violation. It is not proof of every input."
       ;;
     mutation-testing)
-      echo "Deviation: the public acceptance method observes only that a receipt exists."
+      echo "Synthetic delivery: the public acceptance method observes only that a receipt exists."
       echo "Managed PIT now changes production behavior and finds an attributed survivor."
+      set_fixed_discount "$service"
+      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal toppleCatVerify)
       python3 - "$build_file" "$acceptance" <<'PY'
 import pathlib, sys
 build = pathlib.Path(sys.argv[1])
@@ -85,7 +85,9 @@ PY
       echo "Supports: this acceptance method missed an attributed production change. It does not score all quality."
       ;;
     contract-integrity)
-      echo "Deviation: a public expected value changes after the Mechanical Seal."
+      echo "Synthetic delivery: a public expected value changes after the Mechanical Seal."
+      set_fixed_discount "$service"
+      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal)
       python3 - "$public_cases" <<'PY'
 import pathlib, sys
 path = pathlib.Path(sys.argv[1])
@@ -95,6 +97,37 @@ PY
       echo "Supports: Verify refused a changed contract. A Seal is not human approval."
       ;;
   esac
+
+  retain_report "$work" "$report_dir"
+  printf 'Read the synthetic Verification Report: %s\n' "$report_dir/index.html"
+}
+
+set_fixed_discount() {
+  replace_text "$1" 'int discount = "SAVE100".equals(cart.coupon()) ? cart.subtotal() / 5 : 0;' 'int discount = "SAVE100".equals(cart.coupon()) ? 100 : 0;'
+}
+
+retain_report() {
+  local work="$1" report_dir="$2" source="$work/build/topplecat/reports/verification"
+  if [[ ! -f "$source/index.html" ]]; then
+    echo "Lesson failed: Verify did not write a Verification Report." >&2
+    return 1
+  fi
+  rm -rf "$report_dir"
+  mkdir -p "$(dirname "$report_dir")"
+  cp -R "$source" "$report_dir"
+}
+
+replace_text() {
+  local file="$1" expected="$2" replacement="$3"
+  python3 - "$file" "$expected" "$replacement" <<'PY'
+import pathlib, sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+if sys.argv[2] not in text:
+    raise SystemExit(f"Synthetic lesson cannot find expected source in {path}")
+path.write_text(text.replace(sys.argv[2], sys.argv[3], 1))
+PY
 }
 
 expect_gate() {

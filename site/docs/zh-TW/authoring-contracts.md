@@ -53,7 +53,8 @@ void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
 
 想看能實際執行的完整寫法，可以選擇閱讀
 [JUnit cart-orders 學習專案](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)。
-它使用已發布的 0.1.0，並提供五項完全合成的保障課程；不需要先執行範例才能照著本頁撰寫。
+它使用已發布的 0.1.0，並提供五項完全合成的保障課程；每一項完成後都會留下該課程的本機
+HTML 驗證報告於 `build/topplecat/demo-reports/`。不需要先執行範例才能照著本頁撰寫。
 
 方法格式有明確限制：`ToppleCase` 必須放第一個，後面是一個 `ToppleScenario`，再
 接一個或多個不同的具體 Stage。Stage 不能是 final，並且要有可存取的無參數

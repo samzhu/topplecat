@@ -39,8 +39,11 @@ the published HTML does not need client-side highlighting to remain readable.
 
 The repository's executable learning projects are separate Maven Central
 consumers. Their runners make temporary copies and temporary Reviewer Custody
-for synthetic lesson deviations; generated evidence and reports never become
-checked-in source or part of the Pages artifact.
+for synthetic lesson deviations. The JUnit learning project copies each
+completed, fully synthetic Verification Report to its ignored local
+`build/topplecat/demo-reports/<lesson>/index.html` so a learner can inspect the
+result. Generated evidence and reports never become checked-in source or part
+of the Pages artifact.
 
 This publication path is not a fifth ToppleCat product module. It does not
 publish Javadoc, site search, versioned sites, actual delivery reports, or

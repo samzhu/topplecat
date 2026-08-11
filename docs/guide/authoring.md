@@ -49,7 +49,9 @@ labels, never the Step sentence, placeholder, underlying phase, or Step order.
 The [JUnit cart-orders learning project](../../samples/junit-cart-orders/) is
 an optional, runnable copy of this SDK pattern. It consumes the released 0.1.0
 artifacts from Maven Central and provides five clearly labelled synthetic
-lessons; readers do not need to run it to author their own contract.
+lessons. Each route leaves its local HTML Verification Report under
+`build/topplecat/demo-reports/` for inspection; readers do not need to run it
+to author their own contract.
 
 Public rows are JSON or YAML under `src/test/resources/topplecat/cases/`.
 Reviewer-owned rows use the same schema under
