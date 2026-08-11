@@ -18,12 +18,12 @@ Reviewer HTML. The same rule applies to the required JUnit `@DisplayName` on a
 `@ToppleProperty`: it is the Property title, never text to be translated.
 
 ```java
-@ToppleAcceptanceTest("AC-ORDER-CREATE")
-@DisplayName("Create an accepted order")
-void createsOrder(ToppleCase c, ToppleScenario scenario, OrderStage order) {
-    scenario.given(order).an_order_request(c.input("request", OrderRequest.class));
-    scenario.when(order).submits_it();
-    scenario.then(order).confirms_accepted_order(c);
+@ToppleAcceptanceTest("AC-CART-COUPON")
+@DisplayName("SAVE100 reduces the order subtotal")
+void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
+    scenario.given(coupon).a_payable_cart(c.input("cart", Cart.class));
+    scenario.when(coupon).checks_out();
+    scenario.then(coupon).receipt_shows_discount_and_discounted_subtotal(c);
 }
 ```
 
@@ -45,6 +45,11 @@ as `@As("準備可結帳的購物車 {cart.customerId}")` is resolved by the com
 the recorded argument binding; choosing a Traditional Chinese Reviewer report
 only changes the surrounding ToppleCat presentation and its Given/When/Then
 labels, never the Step sentence, placeholder, underlying phase, or Step order.
+
+The [JUnit cart-orders learning project](../../samples/junit-cart-orders/) is
+an optional, runnable copy of this SDK pattern. It consumes the released 0.1.0
+artifacts from Maven Central and provides five clearly labelled synthetic
+lessons; readers do not need to run it to author their own contract.
 
 Public rows are JSON or YAML under `src/test/resources/topplecat/cases/`.
 Reviewer-owned rows use the same schema under

@@ -74,9 +74,9 @@ for removed_type in \
   fi
 done
 bash "$root/scripts/verify-scenario-authoring.sh"
-# Samples expose the repository wrapper locally for the interactive walkthrough.
-"$junit_sample/gradlew" -Ptopplecat.useMavenLocal=true help --task toppleCatReview
-"$spring_sample/gradlew" -Ptopplecat.useMavenLocal=true help --task toppleCatReview
+# Verify the documented tasks from each sample project, not from this repository root.
+run_sample "$junit_sample" "$junit_state_root" help --task toppleCatReview
+run_sample "$spring_sample" "$spring_state_root" help --task toppleCatReview
 run_sample "$junit_sample" "$junit_state_root" help --task toppleCatInit
 
 # Keep sample runs against candidate artifacts.
@@ -92,9 +92,13 @@ assert_artifact_version() {
 run_sample "$junit_sample" "$junit_state_root" help --task toppleCatSeal
 run_sample "$spring_sample" "$spring_state_root" help --task toppleCatSeal
 echo "Release verification: running red-team attacks. Each attack must be rejected; expected rejections are labelled below."
-TOPPLECAT_STATE_ROOT="$junit_state_root" bash "$root/samples/junit-cart-orders/demo.sh"
+bash "$root/samples/junit-cart-orders/demo.sh" all
 TOPPLECAT_STATE_ROOT="$spring_state_root" bash "$root/samples/spring-boot-cart-orders/demo.sh"
 TOPPLECAT_STATE_ROOT="$release_state_root/mutation-gate" bash "$root/integration-tests/mutation-gate/verify.sh"
+
+# The learning lessons use temporary copies, so generate one stable baseline
+# evidence bundle for the release-boundary checks below.
+run_sample "$junit_sample" "$junit_state_root" toppleCatSeal toppleCatVerify
 
 assert_artifact_version "$junit_sample/build.gradle.kts" "0.1.0"
 assert_artifact_version "$spring_sample/build.gradle.kts" "0.1.0"
@@ -194,7 +198,7 @@ if ! grep -Fq 'coupon-hidden-800' "$junit_review"; then
   echo "Spec Review did not include the reviewer case" >&2
   exit 1
 fi
-if ! grep -Fq '套用優惠券並建立訂單' "$junit_review" || ! grep -Fq 'sourceCode' "$junit_review"; then
+if ! grep -Fq 'SAVE100 reduces the order subtotal' "$junit_review" || ! grep -Fq 'sourceCode' "$junit_review"; then
   echo "Spec Review is missing static Scenario context or Acceptance Method source" >&2
   exit 1
 fi

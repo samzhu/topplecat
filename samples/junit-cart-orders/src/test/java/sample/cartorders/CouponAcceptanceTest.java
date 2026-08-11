@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 
 class CouponAcceptanceTest {
   @ToppleProperty("AC-CART-COUPON")
+  @DisplayName("SAVE100 applies a fixed 100 discount to every payable cart")
   void save100HasTheApprovedFixedDiscountForAPayableCart(PropertyTrials trial) {
     trial
         .forAll(Generators.integers(100, 2_000))
@@ -31,7 +32,7 @@ class CouponAcceptanceTest {
   }
 
   @ToppleAcceptanceTest("AC-CART-COUPON")
-  @DisplayName("套用 SAVE100 折抵訂單小計")
+  @DisplayName("SAVE100 reduces the order subtotal")
   void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
     scenario.given(coupon).a_payable_cart(c.input("cart", Cart.class));
     scenario.when(coupon).checks_out();
@@ -39,7 +40,7 @@ class CouponAcceptanceTest {
   }
 
   @ToppleAcceptanceTest("AC-CART-NO-COUPON")
-  @DisplayName("未使用優惠券時維持原始小計")
+  @DisplayName("An order without a coupon keeps its original subtotal")
   void createsOrderWithoutCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
     scenario.given(coupon).a_payable_cart(c.input("cart", Cart.class));
     scenario.when(coupon).checks_out();
@@ -51,17 +52,17 @@ class CouponAcceptanceTest {
     private Cart cart;
     private OrderReceipt receipt;
 
-    @As("準備可結帳的購物車")
+    @As("Prepare a payable cart")
     void a_payable_cart(Cart cart) {
       this.cart = cart;
     }
 
-    @As("套用優惠券並建立訂單")
+    @As("Check out the cart")
     void checks_out() {
       receipt = orders.createOrder(cart);
     }
 
-    @As("收據顯示折扣與折扣後小計")
+    @As("Show the discount and discounted subtotal on the receipt")
     void receipt_shows_discount_and_discounted_subtotal(ToppleCase c) {
       c.verify("receipt", receipt);
     }

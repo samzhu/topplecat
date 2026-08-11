@@ -40,18 +40,23 @@ Each selected rule, or Acceptance Condition, has one public
 business result:
 
 ```java
-@ToppleAcceptanceTest("AC-ORDER-CREATE")
-@DisplayName("Create an accepted order")
-void createsOrder(ToppleCase c, ToppleScenario scenario, OrderStage order) {
-    scenario.given(order).an_order_request(c.input("request", OrderRequest.class));
-    scenario.when(order).submits_it();
-    scenario.then(order).confirms_accepted_order(c);
+@ToppleAcceptanceTest("AC-CART-COUPON")
+@DisplayName("SAVE100 reduces the order subtotal")
+void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
+    scenario.given(coupon).a_payable_cart(c.input("cart", Cart.class));
+    scenario.when(coupon).checks_out();
+    scenario.then(coupon).receipt_shows_discount_and_discounted_subtotal(c);
 }
 ```
 
 Keep this method short enough to read as a story. `ToppleCase` supplies the
 current example. `ToppleScenario` records the Given, When, and Then sequence.
-The `OrderStage` methods perform the real setup, service calls, and assertions.
+The `CouponStage` methods perform the real setup, service calls, and assertions.
+
+Want a complete, runnable version of this pattern? The optional
+[JUnit cart-orders learning project](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)
+uses the released 0.1.0 artifacts and lets you choose five synthetic safeguard
+lessons. You do not need to run it before following this guide.
 
 The exact method contract matters: `ToppleCase` comes first, followed by one
 `ToppleScenario` and one or more distinct concrete Stage types. Stages must be

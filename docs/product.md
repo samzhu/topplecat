@@ -130,9 +130,12 @@ it checks, how one delivery flows, which private reports a human reads, and
 which decisions stay with people. Formal terms follow a concrete checkout
 example and plain questions instead of carrying the introduction themselves.
 
-Readers can then take a quick sample-backed proof path, continue into project
-adoption, ask an AI to help with public setup, or use the verification,
-troubleshooting, and exact reference pages.
+Readers can first learn the Java/JUnit SDK directly in the Authoring guide,
+then optionally run the synthetic five-safeguard cart-orders learning project,
+continue into project adoption, ask an AI to help with public setup, or use the
+verification, troubleshooting, and exact reference pages. The learning project
+is evidence-oriented teaching material, not a required installation step or a
+delivery decision surface.
 
 Each page is a static projection of the current Product, Architecture, guides,
 glossary, and release notes, with an exact page-level Markdown sibling that a

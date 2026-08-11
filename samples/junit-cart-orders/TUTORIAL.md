@@ -1,39 +1,38 @@
-# JUnit sample walkthrough
+# How the cart-orders lessons work
 
-The demo replaces the order service with a deliberately narrow implementation.
-It still satisfies the visible rows but fails independently selected hidden
-coupon rows. The script then installs the fixed service and verifies again.
+`junit-cart-orders` is one self-contained teaching project. Start with its
+README, then choose one lesson with `./demo.sh <name>`. The command creates a
+temporary copy, so your checked-out source stays a correct example.
 
-## Run it
+Every lesson follows the same shape:
 
-```bash
-bash samples/junit-cart-orders/demo.sh
-```
+1. Seal and verify the correct Executable Contract.
+2. Apply one public, synthetic teaching change.
+3. Run formal Verify again and confirm the intended Gate outcome.
+4. Remove the temporary project and Reviewer Custody.
 
-The demo uses an isolated `topplecat.stateRoot`, publishes this checkout to the
-local Maven cache, runs Check and Seal, expects a failed Verify, then runs a
-passing Verify after the fix. Cleanup restores the service and reviewer source.
+The public [CouponAcceptanceTest](src/test/java/sample/cartorders/CouponAcceptanceTest.java)
+is the SDK reference. An Acceptance Method binds an AC to `ToppleCase`, writes
+a Given/When/Then `ToppleScenario`, and delegates business vocabulary to a
+reusable `ToppleStage`. Its final `verify()` call compares the complete expected
+receipt. The root-level `OrderService.public-acceptance.java`,
+`OrderService.hidden-tests.java`, and
+`coupon-hidden.property-based-testing.yaml` are the three readable deviations
+that the corresponding lessons apply in a temporary copy.
 
-## What to inspect
+## What each lesson proves
 
-The public acceptance class uses `@ToppleAcceptanceTest` and typed rows. Its
-Property runs separately and contributes only to `PROPERTY`. Reviewer rows are
-the only evidence for `REVIEWER_JUNIT`. The receipt is projected and verified
-once with `c.verify("receipt", receipt)`, which keeps Expected Consumption a
-single complete assertion obligation.
+- **Public Acceptance** changes the service so visible Typed Case Rows fail.
+- **Hidden Tests** uses a shortcut that fits visible rows but fails independent
+  synthetic rows for the same public rule.
+- **Property-Based Testing** keeps the example rows compatible but violates the
+  fixed-discount invariant for generated inputs.
+- **Mutation Testing** deliberately makes the Acceptance Method consume the
+  expected receipt without observing the service receipt. Managed PIT then
+  finds attributed production mutations that survive.
+- **Contract Integrity** changes a public expected value after the Mechanical
+  Seal. Verify refuses to trust the changed contract.
 
-After Verify, inspect:
-
-```text
-build/topplecat/evidence.json
-build/topplecat/agent-feedback.json
-build/topplecat/reports/review/index.html
-build/topplecat/reports/verification/index.html
-```
-
-Spec Review is reviewer-only and shows the executable contract before handoff.
-This sample supplies no `--spec` path, so it demonstrates the all-bound-AC
-scope without external Markdown context. When an External Workflow supplies
-`--spec`, Spec Review also shows every complete selected document. The failing
-run must not leak reviewer values into safe feedback. Verification Report is
-reviewer-only and shows the detailed result.
+These are synthetic lessons, not a claim about a real delivery. A passing Gate
+is evidence for the sealed contract in that run; it does not prove the business
+rules are complete or make a human delivery decision.

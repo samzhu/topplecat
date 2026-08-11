@@ -1,8 +1,6 @@
 package sample.cartorders;
 
-/**
- * Deliberately flawed implementation: it memorizes the public 500-dollar case as a 20% discount.
- */
+/** Synthetic lesson variant: a shortcut that only matches the visible 500 cart. */
 public final class OrderService {
   public OrderReceipt createOrder(Cart cart) {
     if (cart.lines().isEmpty()) {

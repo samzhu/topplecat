@@ -38,18 +38,22 @@ ToppleCat 不會替你定義什麼叫訂單成立。它保存人選定的規則�
 `@ToppleAcceptanceTest("AC-...")` 方法。方法名稱要說清楚業務結果：
 
 ```java
-@ToppleAcceptanceTest("AC-ORDER-CREATE")
-@DisplayName("建立一筆已接受的訂單")
-void createsOrder(ToppleCase c, ToppleScenario scenario, OrderStage order) {
-    scenario.given(order).an_order_request(c.input("request", OrderRequest.class));
-    scenario.when(order).submits_it();
-    scenario.then(order).confirms_accepted_order(c);
+@ToppleAcceptanceTest("AC-CART-COUPON")
+@DisplayName("SAVE100 reduces the order subtotal")
+void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
+    scenario.given(coupon).a_payable_cart(c.input("cart", Cart.class));
+    scenario.when(coupon).checks_out();
+    scenario.then(coupon).receipt_shows_discount_and_discounted_subtotal(c);
 }
 ```
 
 這個方法應該短到可以當成一段故事閱讀。`ToppleCase` 提供當次例子，
-`ToppleScenario` 記錄 Given、When、Then 的順序，`OrderStage` 裡的方法負責真正的
+`ToppleScenario` 記錄 Given、When、Then 的順序，`CouponStage` 裡的方法負責真正的
 準備工作、服務呼叫與斷言。
+
+想看能實際執行的完整寫法，可以選擇閱讀
+[JUnit cart-orders 學習專案](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)。
+它使用已發布的 0.1.0，並提供五項完全合成的保障課程；不需要先執行範例才能照著本頁撰寫。
 
 方法格式有明確限制：`ToppleCase` 必須放第一個，後面是一個 `ToppleScenario`，再
 接一個或多個不同的具體 Stage。Stage 不能是 final，並且要有可存取的無參數

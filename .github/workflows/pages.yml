@@ -10,7 +10,9 @@ on:
       - CONTEXT.md
       - docs/**
       - site/**
+      - samples/junit-cart-orders/**
       - scripts/verify-docs.py
+      - scripts/verify-samples.sh
       - scripts/verify-site-artifact.py
       - .github/workflows/pages.yml
 
@@ -52,7 +54,7 @@ jobs:
           GRADLE_CMD: ./gradlew
 
       - name: Exercise the documented JUnit sample workflow
-        run: bash samples/junit-cart-orders/demo.sh
+        run: bash samples/junit-cart-orders/demo.sh all
 
   build:
     name: Build and verify Pages artifact

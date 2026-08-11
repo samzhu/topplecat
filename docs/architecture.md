@@ -37,6 +37,11 @@ discovery files, and denied information categories before deployment.
 Fenced examples receive ToppleCat-themed Shiki token colors during the build;
 the published HTML does not need client-side highlighting to remain readable.
 
+The repository's executable learning projects are separate Maven Central
+consumers. Their runners make temporary copies and temporary Reviewer Custody
+for synthetic lesson deviations; generated evidence and reports never become
+checked-in source or part of the Pages artifact.
+
 This publication path is not a fifth ToppleCat product module. It does not
 publish Javadoc, site search, versioned sites, actual delivery reports, or
 reviewer-owned material.

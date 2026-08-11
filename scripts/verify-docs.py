@@ -123,6 +123,18 @@ CONTEXT_TERMS = (
     "Implementation Agent",
     "External Workflow",
 )
+SAMPLE_ACCEPTANCE_METHOD = '''@ToppleAcceptanceTest("AC-CART-COUPON")
+@DisplayName("SAVE100 reduces the order subtotal")
+void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
+    scenario.given(coupon).a_payable_cart(c.input("cart", Cart.class));
+    scenario.when(coupon).checks_out();
+    scenario.then(coupon).receipt_shows_discount_and_discounted_subtotal(c);
+}'''
+SDK_REFERENCE_DOCUMENTS = (
+    "docs/guide/authoring.md",
+    "site/docs/en/authoring-contracts.md",
+    "site/docs/zh-TW/authoring-contracts.md",
+)
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
 HTML_LINK = re.compile(r"(?:href|src)=[\"']([^\"']+)[\"']", re.IGNORECASE)
 
@@ -403,6 +415,13 @@ def main() -> int:
                     failures.append(
                         f"{release.relative_to(ROOT)}: missing synchronized 0.1.0 change {marker}"
                     )
+
+    for relative in SDK_REFERENCE_DOCUMENTS:
+        document = ROOT / relative
+        if not document.is_file() or SAMPLE_ACCEPTANCE_METHOD not in document.read_text(encoding="utf-8"):
+            failures.append(
+                f"{relative}: SDK Acceptance Method must match the cart-orders learning project"
+            )
 
     if failures:
         print("Documentation validation failed:", file=sys.stderr)

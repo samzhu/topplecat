@@ -1,8 +1,5 @@
 pluginManagement {
     repositories {
-        if (gradle.startParameter.projectProperties["topplecat.useMavenLocal"] == "true") {
-            mavenLocal()
-        }
         gradlePluginPortal()
         mavenCentral()
     }
@@ -10,9 +7,6 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
-        if (gradle.startParameter.projectProperties["topplecat.useMavenLocal"] == "true") {
-            mavenLocal()
-        }
         gradlePluginPortal()
         mavenCentral()
     }
