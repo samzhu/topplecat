@@ -22,7 +22,8 @@ implements from public information, and ToppleCat rechecks the same agreement.
 The second half explains the technical modules and where private information
 stays.
 
-If you only want to see the result, [run the sample](getting-started.md#sample-workflow).
+To set up this flow in your project, start with
+[Getting started](getting-started.md#ai-assisted-authoring).
 
 ## The complete delivery flow {#execution-flow}
 

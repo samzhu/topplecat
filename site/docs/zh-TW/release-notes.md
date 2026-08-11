@@ -59,7 +59,7 @@ AC ID；兩種選法不能混用。報告頂端會列出這次實際檢查的規
 ## 公開文件 {#documentation-surface}
 
 公開文件提供英文與人工撰寫的繁體中文。介紹與教學頁先說明要解決的問題，再提供
-可執行範例；參考頁保留精確命令、名詞與邊界。
+可依步驟導入；參考頁保留精確命令、名詞與邊界。
 
 每頁都有 **Copy Markdown**，方便把目前這一頁交給 AI 解釋，或請 AI 協助公開範圍內
 的安裝工作。網站不會自動翻譯，也不會把私人報告提供給 AI。
@@ -75,5 +75,4 @@ AC ID；兩種選法不能混用。報告頂端會列出這次實際檢查的規
 - `PASS` 是已檢查範圍的證據，不證明所有業務規則都已寫下，也不代表組織核准。
 
 要導入目前版本，請[從 Maven Central 安裝 ToppleCat](getting-started.md#ai-assisted-authoring)。
-repository 範例保留為選用的原始碼驗證示範。要解讀
-結果，請讀[ToppleCat 如何檢查交付](verification-and-evidence.md#gates-and-verdicts)。
+要解讀結果，請讀[ToppleCat 如何檢查交付](verification-and-evidence.md#gates-and-verdicts)。

@@ -30,14 +30,14 @@ import publicAcceptance1280 from "./assets/demonstrations/public-acceptance-1280
 const repositoryUrl = "https://github.com/samzhu/topplecat";
 const docsUrl = `${import.meta.env.BASE_URL}docs/`;
 const verificationGuideUrl =
-  `${repositoryUrl}/blob/main/docs/guide/verification-and-evidence.md`;
+  `${import.meta.env.BASE_URL}docs/verification-and-evidence/`;
 const acceptanceSkillUrl =
   `${repositoryUrl}/tree/main/.agents/skills/topplecat-acceptance`;
 const specKitUrl = "https://github.com/github/spec-kit";
 const superpowersUrl = "https://github.com/obra/superpowers";
 const engineeringSkillsUrl = "https://github.com/mattpocock/skills/tree/main";
 const gettingStartedUrl =
-  `${repositoryUrl}/blob/main/docs/guide/getting-started.md`;
+  `${import.meta.env.BASE_URL}docs/getting-started/`;
 const pluginLine = 'id("io.github.samzhu.topplecat") version "0.1.0"';
 const gradleSetup = `plugins {
     java
@@ -325,11 +325,11 @@ const copyByLocale = {
     install: {
       heading: "Know when a Java feature is actually finished.",
       summary:
-        "Install the plugin and add the acceptance skill to your agent. When the feature is ready, you get a verification result you can inspect. Start with the sample if you want to see the whole loop.",
+        "Install the plugin and add the acceptance skill to your agent. When the feature is ready, you get a verification result you can inspect.",
       workflowKicker: "2. Keep your usual workflow",
       workflowHeading: "Carry on with the tools you already use.",
       workflowBody:
-        "Keep using Spec Kit, Superpowers, Matt Pocock skills, or your own project skills. Add the ToppleCat acceptance skill alongside them. Once you choose acceptance conditions, it helps turn them into Java/JUnit checks that can run.",
+        "ToppleCat works alongside any SDD workflow: keep using Spec Kit, Superpowers, Matt Pocock skills, or your own project skills. Your workflow owns the Spec and delivery decision; the ToppleCat acceptance skill turns chosen conditions into Java/JUnit checks that can run.",
       workflowLinksLabel: "Workflow and skill references",
       setupKicker: "1. Install ToppleCat and the acceptance skill",
       setupBody: "Put this setup in build.gradle.kts, then add the project-local ToppleCat acceptance skill to the skills your agent can use. You need Java 25 and a Gradle version that supports it.",
@@ -337,7 +337,7 @@ const copyByLocale = {
       copied: "Copied",
       verifyKicker: "3. Verify the finished work",
       verifyBody: "After the acceptance contract is ready and the agent has implemented the feature, run the full formal verification command. CI uses that full run; a reviewer can use either Spec files or repeated AC IDs for a quick scoped report, whose PASS covers only the selected ACs.",
-      sample: "Run the sample",
+      verification: "Understand verification",
       install: "Read the full quick start",
       skill: "Read the acceptance skill",
     },
@@ -593,11 +593,11 @@ const copyByLocale = {
     },
     install: {
       heading: "在 Java 專案裡，確認功能真的做完了。",
-      summary: "裝上 plugin，再把 acceptance skill 加進 agent 可用的 skills。功能完成後，你會拿到一份能直接看的驗證結果。想先看完整過程，從範例開始就好。",
+      summary: "裝上 plugin，再把 acceptance skill 加進 agent 可用的 skills。功能完成後，你會拿到一份能直接看的驗證結果。",
       workflowKicker: "2. 照你原本的流程開發",
       workflowHeading: "原本怎麼做，現在就怎麼做。",
       workflowBody:
-        "Spec Kit、Superpowers、Matt Pocock skills，或你自己專案裡的 skills 都照常用。把 ToppleCat acceptance skill 一起放進來；選定驗收條件後，它會幫你把條件變成可以執行的 Java/JUnit 檢查。",
+        "ToppleCat 可以和任何 SDD 工作流一起用。Spec Kit、Superpowers、Matt Pocock skills，或你自己專案裡的 skills 都照常用；工作流負責 Spec 和交付決定，ToppleCat acceptance skill 則把選定的條件寫成可執行的 Java/JUnit 檢查。",
       workflowLinksLabel: "工作流與 skill 參考",
       setupKicker: "1. 安裝 ToppleCat 與 acceptance skill",
       setupBody: "把這份設定放進 build.gradle.kts，再把專案內的 ToppleCat acceptance skill 加進 agent 可用的 skills。需要 Java 25 與支援它的 Gradle 版本。",
@@ -605,7 +605,7 @@ const copyByLocale = {
       copied: "已複製",
       verifyKicker: "3. 驗證這次完成的功能",
       verifyBody: "驗收契約準備好、agent 完成功能後，就執行完整的正式驗證。CI 使用這個全量執行；Reviewer 若想快速看剛完成的範圍，可指定 Spec 或重複指定 AC ID；範圍 PASS 只代表選定的 AC。",
-      sample: "執行範例",
+      verification: "了解驗證怎麼做",
       install: "閱讀完整快速開始",
       skill: "閱讀 acceptance skill",
     },
@@ -1273,8 +1273,8 @@ function App() {
           <pre><code>{reviewerSequence}</code></pre>
         </div>
         <div className="install-actions">
-          <a className="button button-amber" href={`${repositoryUrl}/tree/main/samples/junit-cart-orders`} target="_blank" rel="noreferrer">{copy.install.sample} <Arrow /></a>
-          <a className="button button-dark" href={gettingStartedUrl} target="_blank" rel="noreferrer">{copy.install.install} <Arrow /></a>
+          <a className="button button-amber" href={verificationGuideUrl}>{copy.install.verification} <Arrow /></a>
+          <a className="button button-dark" href={gettingStartedUrl}>{copy.install.install} <Arrow /></a>
           <a className="acceptance-skill-link" href={acceptanceSkillUrl} target="_blank" rel="noreferrer">
             {copy.install.skill} <Arrow />
           </a>

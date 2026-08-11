@@ -113,7 +113,7 @@ ToppleCat 適合使用 Java/JUnit、把部分實作交給 AI，並且希望由�
 
 | 你現在想做什麼 | 下一頁 |
 | --- | --- |
-| 先看它抓到一個表面正常、實際有錯的功能 | [執行可重現範例](getting-started.md#sample-workflow) |
+| 把 ToppleCat 加進現有 Java 專案 | [開始使用](getting-started.md#ai-assisted-authoring) |
 | 評估它是否適合團隊目前的開發方式 | [ToppleCat 適合什麼情境](product-definition.md) |
 | 了解每項檢查與 `PASS`、`FAIL` 的意思 | [ToppleCat 如何檢查交付](verification-and-evidence.md) |
 | 了解完整流程、審閱者專用內容與系統邊界 | [從規則到結果](architecture.md) |
@@ -132,6 +132,6 @@ ToppleCat 適合使用 Java/JUnit、把部分實作交給 AI，並且希望由�
 不要把私人報告、審閱者另外準備的案例或其他私人值交給實作 AI。也不要請 AI 猜測
 沒有寫下的業務需求。
 
-想直接試跑，從[執行可重現範例](getting-started.md#sample-workflow)開始。想看專案故事，
-回到 [ToppleCat 專案首頁](/)；原始碼在
+想開始使用，請讀[開始使用](getting-started.md#ai-assisted-authoring)。想看專案故事，
+回到 [ToppleCat 專案首頁](/)；原始碼與貢獻資料在
 [GitHub](https://github.com/samzhu/topplecat)。

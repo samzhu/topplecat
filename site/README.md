@@ -90,7 +90,7 @@ Plain questions and one checkout example introduce each capability before its
 formal name.
 
 Navigation follows the same order: meet the product, understand its checks and
-flow, then run a sample or adopt it. How-to and troubleshooting pages start
+flow, then install it and prepare the first acceptance checks. How-to and troubleshooting pages start
 from the task or symptom; Product, Architecture, Glossary, and release notes
 remain explicit reference surfaces. Release details explain the user
 consequence before command options or producer vocabulary.

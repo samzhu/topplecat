@@ -20,7 +20,7 @@ copied_label: Copied
 這一頁把完整流程串起來：人先寫下怎樣才算做對，AI 依公開內容實作，ToppleCat 再用
 同一份約定重新驗證。後半段才說明技術模組與審閱者專用內容如何保管。
 
-若只想先看效果，可以直接[執行範例](getting-started.md#sample-workflow)。
+要把這套流程加進專案，先讀[開始使用](getting-started.md#ai-assisted-authoring)。
 
 ## 一次交付的完整流程 {#execution-flow}
 

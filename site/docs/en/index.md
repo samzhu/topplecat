@@ -135,7 +135,7 @@ You do not need to guess the other capitalized terms. Use the
 
 | What you want to do | Next page |
 | --- | --- |
-| Watch ToppleCat catch a feature that looks finished but is wrong | [Run the reproducible sample](getting-started.md#sample-workflow) |
+| Add ToppleCat to an existing Java project | [Getting started](getting-started.md#ai-assisted-authoring) |
 | Decide whether it fits the way your team works | [When ToppleCat is useful](product-definition.md) |
 | Understand every check and the meaning of `PASS` or `FAIL` | [How ToppleCat verifies a delivery](verification-and-evidence.md) |
 | Follow the full flow and private information boundaries | [From rules to results](architecture.md) |
@@ -157,6 +157,6 @@ Do not give the implementation AI private reports, reviewer-chosen cases, or
 other private values. Do not ask it to guess business requirements that were
 never written down.
 
-To see the complete loop, [run the reproducible sample](getting-started.md#sample-workflow).
-For the project story, return to the [ToppleCat project page](/); the source is
-on [GitHub](https://github.com/samzhu/topplecat).
+To start using ToppleCat, read [Getting started](getting-started.md#ai-assisted-authoring).
+For the project story, return to the [ToppleCat project page](/). Source code
+and contributor material are on [GitHub](https://github.com/samzhu/topplecat).

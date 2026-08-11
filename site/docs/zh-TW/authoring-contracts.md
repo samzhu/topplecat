@@ -97,7 +97,7 @@ AI 可以依照人已確認的規則，完成 Java 接線和案例檔案。把�
 規則與例子是否完整，仍由人決定。契約裡沒寫退款例外、VIP 折扣或法規要求，
 ToppleCat 不會自行推論，也不會替組織批准交付。
 
-接著可以[執行範例](getting-started.md#sample-workflow)，或閱讀
-[ToppleCat 如何檢查交付](verification-and-evidence.md#delivery-example)。精確的參數與
+接著閱讀[ToppleCat 如何檢查交付](verification-and-evidence.md#delivery-example)，了解同一份
+公開契約如何變成這次執行的證據。精確的參數與
 輸入產生器規則保留在 repository 的
 [authoring guide](https://github.com/samzhu/topplecat/blob/main/docs/guide/authoring.md)。

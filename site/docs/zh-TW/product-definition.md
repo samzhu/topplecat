@@ -76,5 +76,5 @@ ToppleCat 不會管理任務或規格版本，也不會替組織核准交付。�
 它最無法代替人的地方，是回答：「我們有沒有漏掉重要業務規則？」契約裡沒有寫的 VIP
 折扣、退款例外或法規要求，ToppleCat 不會自己猜出來。
 
-如果這正是你的使用情境，可以先[執行可重現範例](getting-started.md#sample-workflow)。
+如果這正是你的使用情境，可以先[把 ToppleCat 加進 Java 專案](getting-started.md#ai-assisted-authoring)。
 想看每一項檢查，請讀[ToppleCat 如何檢查交付](verification-and-evidence.md#delivery-example)。

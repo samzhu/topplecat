@@ -23,6 +23,10 @@ ToppleCat from source.
 
 ToppleCat requires JDK 25 and a compatible Gradle version.
 
+By the end of this page, you will have installed ToppleCat, given your AI a
+clear way to turn approved rules into runnable checks, and know which command
+verifies a finished delivery.
+
 ## What is being checked {#contract-example}
 
 A checkout rule says that applying `SAVE100` subtracts 100 from the order
@@ -98,70 +102,63 @@ before granting an agent its normal project permissions. The skill does not
 invent a missing business rule. It helps the AI ask about unclear behaviour,
 then binds the rule you chose to Java/JUnit work that ToppleCat can run.
 
-## Optional: run the repository sample {#sample-workflow}
-
-To watch ToppleCat reject a deliberately bad implementation and then accept the
-fixed version, clone the repository and run:
-
-```bash
-bash samples/junit-cart-orders/demo.sh
-```
-
-This script is a self-test for the ToppleCat repository. It first publishes the
-current checkout to the local Maven cache so the demo exercises that source. It
-then seals the sample contract, confirms that the deliberately bad checkout
-service is rejected, installs the fixed service, and verifies again.
-
-Consumers of the Maven Central release do not run the local publication step.
-The [JUnit cart-orders sample](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)
-contains the source and cleanup logic, and the ToppleCat release gate runs the
-same path.
-
 ## Prepare one delivery with an AI {#prepare-with-an-ai}
 
-The checkout sample has one simple rule: a payable cart using `SAVE100` gets
-100 off. The public example names one qualifying cart and the receipt it should
-receive. A Reviewer can choose another cart from that same published rule to
-check that the code did not merely recognize the visible example. That extra
-case is not a secret requirement, and the implementation agent does not see
-it.
+ToppleCat works alongside any SDD workflow. Keep using the way your team already
+discusses a change, records its Spec, plans work, and asks AI to implement it.
+That workflow owns the product decision and delivery history. ToppleCat starts
+after you have chosen the Acceptance Conditions: it turns them into Java/JUnit
+checks, then independently verifies the AI's finished-work claim.
 
-### In the Codex conversation
+This page uses [Matt Pocock's skills](https://github.com/mattpocock/skills/tree/main/skills)
+as one concrete workflow. You can use another SDD workflow and follow the same
+ToppleCat steps.
 
-Use these two skills in the same conversation:
+### First, install the skills
+
+For Codex or another coding agent, install Matt Pocock's skills in the project:
+
+```text
+npx skills@latest add mattpocock/skills
+```
+
+Choose `setup-matt-pocock-skills`, `to-spec`, `to-tickets`, and `implement` in
+the installer. `implement` finishes its work with `code-review`, so you do not
+need to make code review a separate ToppleCat step.
+
+Then run this once in each repository:
+
+```text
+$setup-matt-pocock-skills
+```
+
+It asks where the project tracks work and keeps its domain notes. Install the
+ToppleCat authoring skill from the preceding section as well. With both sets of
+skills installed, you are ready to prepare a delivery.
+
+### Write the rule and executable check in one conversation
+
+For example, say a payable cart using `SAVE100` gets 100 off. Use these two
+skills in the same conversation:
 
 ```text
 $to-spec + $topplecat-acceptance
 ```
 
 `$to-spec` writes the rules already agreed in the conversation into a Spec.
-`$topplecat-acceptance` turns every Acceptance Condition (AC) in that Spec into
-one Java/JUnit acceptance method and its examples. It prepares a public handoff
-for the implementation agent and a separate Reviewer handoff for the additional
-checks.
+`$topplecat-acceptance` turns each selected Acceptance Condition (AC) into a
+Java/JUnit acceptance method and examples that ToppleCat can run. It prepares
+public material for the implementation agent and separate material for the
+Reviewer.
 
 If the rule could mean two different things, stop there and answer the
 question. For example, say whether a coupon applies to a cart containing an
 excluded item. The skill must not choose that behaviour for you.
 
-You now have a written rule, public Java acceptance code, public case data, and
-reviewer-owned examples derived from the same rule. The next step is to read
-what the Java code will actually check.
+You now have a written rule, public Java acceptance code, and public case data.
+The next step is to read what the Java code will actually check.
 
-## Use Matt Pocock skills with ToppleCat {#matt-pocock-workflow}
-
-[Matt Pocock's skills](https://github.com/mattpocock/skills/tree/main/skills)
-can keep the wider work moving: they record the Spec, split larger work into
-tickets, and implement the approved work. ToppleCat joins that workflow to
-prepare and protect the acceptance checks. It does not replace the workflow or
-decide what the product should do.
-
-If this is the first time a repository uses Matt Pocock's engineering skills,
-install the skills and run `$setup-matt-pocock-skills` once. That records where
-the repository keeps its work and domain notes. After that setup, use the
-following path for a delivery.
-
-### In the terminal: read the prepared checks
+### In the terminal: review the prepared checks
 
 Run this after the Spec and Java acceptance code are prepared:
 
@@ -180,7 +177,7 @@ main path. If you only want quick feedback on acceptance bindings and case
 data, you can run `./gradlew toppleCatCheck --spec specs/checkout/spec.md`
 directly.
 
-### In the agent conversation: split larger work when needed
+### In the agent conversation: split work only when needed
 
 Use `$to-tickets` when the approved Spec is large enough to need several
 independent pieces of work. It creates small, end-to-end tickets and records
@@ -205,10 +202,10 @@ human decision to accept the finished delivery.
 
 ### In the agent conversation: implement the approved work
 
-Use `$implement` with the Spec or its tickets. The implementation agent works
-against the public acceptance code and ordinary `./gradlew test` feedback. Do
-not give it the private Spec Review, reviewer examples, or reviewer-owned
-source.
+Use `$implement` with the Spec or its tickets. It uses the project's ordinary
+tests during development and ends with `code-review`. The implementation agent
+works only against public acceptance code; do not give it the private Spec
+Review, reviewer examples, or reviewer-owned source.
 
 When the agent says the work is done, move back to the terminal for formal
 verification.

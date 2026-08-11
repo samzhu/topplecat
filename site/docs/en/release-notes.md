@@ -66,8 +66,8 @@ whole project. CI should use the complete verification command without a scope.
 ## Documentation surface {#documentation-surface}
 
 The public documentation is available in English and human-authored Traditional
-Chinese. Learning pages lead with the delivery problem and executable sample;
-reference pages retain exact commands, terms, and boundaries.
+Chinese. Learning pages lead with the delivery problem and a guided adoption
+path; reference pages retain exact commands, terms, and boundaries.
 
 Every page has **Copy Markdown** so you can give that page to an AI for an
 explanation or public setup help. The site does not translate pages at runtime
@@ -88,6 +88,5 @@ or make private reports available to an AI.
   business rule was specified or grant organizational approval.
 
 To adopt the current release, [install ToppleCat from Maven Central](getting-started.md#ai-assisted-authoring).
-The repository sample remains available as an optional source-checkout demo.
 To understand a result, read
 [How ToppleCat verifies a delivery](verification-and-evidence.md#gates-and-verdicts).

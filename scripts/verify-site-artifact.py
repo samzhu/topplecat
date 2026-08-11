@@ -41,7 +41,7 @@ REQUIRED_ANCHORS = {
         "choose-your-task",
         "ai-help",
     },
-    "getting-started": {"contract-example", "sample-workflow", "formal-verify", "human-decision"},
+    "getting-started": {"contract-example", "ai-assisted-authoring", "formal-verify", "human-decision"},
     "authoring-contracts": {"contract-example", "acceptance-method", "typed-case-rows", "human-completeness"},
     "verification-and-evidence": {"delivery-example", "three-evidence-layers", "gates-and-verdicts", "reviewer-boundary"},
     "troubleshooting": {"symptom-map", "public-acceptance", "incomplete-evidence", "safe-next-action"},

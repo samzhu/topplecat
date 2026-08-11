@@ -51,8 +51,25 @@ non-destructive starter to an empty consumer project.
 
 ## Prepare acceptance work with an AI
 
-For AI-assisted authoring, install the repository-local acceptance skill in the
+ToppleCat works with any SDD workflow. That workflow continues to own the Spec,
+work planning, and delivery decision. ToppleCat turns the human-selected
+Acceptance Conditions into Java/JUnit checks, then independently verifies the
+implementation agent's done claim.
+
+This guide uses [Matt Pocock's skills](https://github.com/mattpocock/skills/tree/main/skills)
+as an example. For Codex and other agents, first install those skills in the
 consumer project:
+
+```text
+npx skills@latest add mattpocock/skills
+```
+
+Choose `setup-matt-pocock-skills`, `to-spec`, `to-tickets`, and `implement`.
+Run `$setup-matt-pocock-skills` once per repository to configure its issue
+tracker and domain-document locations. `implement` closes with `code-review`;
+it is not an extra ToppleCat gate.
+
+Then install the repository-local acceptance skill:
 
 ```text
 npx skills@latest add samzhu/topplecat --skill topplecat-acceptance
@@ -64,11 +81,11 @@ acceptance methods, public case rows, and separately prepared reviewer examples.
 It does not select a Spec, manage tickets, infer missing business rules, or
 accept a delivery.
 
-In Codex, use `$to-spec + $topplecat-acceptance` in the same conversation once
-the rules have been discussed. `$to-spec` records the agreed rules in a Spec;
-`$topplecat-acceptance` binds each AC to Java/JUnit acceptance work. If a rule
-is ambiguous, return it to the human or the Spec owner before creating the
-acceptance binding.
+In one Codex conversation, use `$to-spec + $topplecat-acceptance` after the
+rules have been discussed. `$to-spec` records the agreed rules in a Spec;
+`$topplecat-acceptance` binds each selected AC to Java/JUnit acceptance work.
+If a rule is ambiguous, return it to the human or the Spec owner before
+creating the acceptance binding.
 
 ## Create the public acceptance contract
 
@@ -103,11 +120,8 @@ ToppleCat evidence.
 
 ## Read, plan, and seal before implementation
 
-If the repository uses [Matt Pocock's skills](https://github.com/mattpocock/skills/tree/main/skills),
-run `$setup-matt-pocock-skills` once before its first engineering workflow.
-That records the repository's issue tracker and domain documentation. Use
-`$to-tickets` only when a prepared Spec needs several independent work items;
-small work can proceed directly from the Spec.
+Use `$to-tickets` only when a prepared Spec needs several independent work
+items; small work can proceed directly from the Spec.
 
 After the Spec and Java acceptance code are ready, create the private Spec
 Review:
@@ -135,8 +149,9 @@ policy change. Seal is not encryption, process isolation, human approval, or a
 delivery verdict.
 
 The implementation agent receives only public material. Use `$implement` with
-the Spec or its tickets; it can use ordinary `./gradlew test` during development.
-Do not give it the private Spec Review or reviewer-owned source.
+the Spec or its tickets; it uses ordinary `./gradlew test` during development
+and closes with `code-review`. Do not give it the private Spec Review or
+reviewer-owned source.
 
 Reviewer HTML defaults to English. Add `--language zh-TW` to Review or Verify
 when the Reviewer wants Traditional Chinese ToppleCat-owned presentation. This

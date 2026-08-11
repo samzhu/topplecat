@@ -89,5 +89,5 @@ Most importantly, it cannot answer: “Did we forget a business rule that
 matters?” If the contract omits a VIP discount, refund exception, or regulatory
 requirement, ToppleCat will not invent it.
 
-If this matches your use case, [run the reproducible sample](getting-started.md#sample-workflow).
+If this matches your use case, [add ToppleCat to your Java project](getting-started.md#ai-assisted-authoring).
 To see each check, read [How ToppleCat verifies a delivery](verification-and-evidence.md#delivery-example).
