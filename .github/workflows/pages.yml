@@ -53,8 +53,10 @@ jobs:
         env:
           GRADLE_CMD: ./gradlew
 
-      - name: Exercise the documented JUnit sample workflow
+      - name: Exercise the JUnit sample against the local release candidate
         run: bash samples/junit-cart-orders/demo.sh all
+        env:
+          TOPPLECAT_USE_MAVEN_LOCAL: "true"
 
   build:
     name: Build and verify Pages artifact
