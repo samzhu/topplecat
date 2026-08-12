@@ -26,8 +26,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  change-scope:
+    name: Determine change scope
+    runs-on: ubuntu-latest
+    outputs:
+      website_only: ${{ steps.scope.outputs.website_only }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect website-only changes
+        id: scope
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          changed_files="$(git diff --name-only "$BEFORE_SHA" "$HEAD_SHA")"
+          website_only=true
+          while IFS= read -r path; do
+            if [[ -n "$path" && "$path" != site/* ]]; then
+              website_only=false
+              break
+            fi
+          done <<< "$changed_files"
+
+          echo "website_only=$website_only" >> "$GITHUB_OUTPUT"
+
   project-verification:
     name: Verify Java project and executable sample
+    needs: change-scope
+    if: needs.change-scope.outputs.website_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -60,7 +92,10 @@ jobs:
 
   build:
     name: Build and verify Pages artifact
-    needs: project-verification
+    needs:
+      - change-scope
+      - project-verification
+    if: ${{ always() && needs.change-scope.result == 'success' && (needs.project-verification.result == 'success' || needs.project-verification.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

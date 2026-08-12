@@ -10,8 +10,48 @@ permissions:
   contents: read
 
 jobs:
+  change-scope:
+    name: Determine change scope
+    runs-on: ubuntu-latest
+    outputs:
+      website_only: ${{ steps.scope.outputs.website_only }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect website-only changes
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base_sha="$BASE_SHA"
+          else
+            base_sha="$BEFORE_SHA"
+          fi
+
+          changed_files="$(git diff --name-only "$base_sha" "$HEAD_SHA")"
+          website_only=true
+          while IFS= read -r path; do
+            if [[ -n "$path" && "$path" != site/* ]]; then
+              website_only=false
+              break
+            fi
+          done <<< "$changed_files"
+
+          echo "website_only=$website_only" >> "$GITHUB_OUTPUT"
+
   minimum-compatibility:
     name: Minimum compatibility (JDK 21)
+    needs: change-scope
+    if: needs.change-scope.outputs.website_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -44,6 +84,8 @@ jobs:
 
   primary-release:
     name: Primary release gate (JDK 25)
+    needs: change-scope
+    if: needs.change-scope.outputs.website_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -72,6 +114,8 @@ jobs:
 
   consumer-compatibility:
     name: Consumer source/runtime matrix
+    needs: change-scope
+    if: needs.change-scope.outputs.website_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -112,6 +156,8 @@ jobs:
 
   unsupported-runtime:
     name: Unsupported runtime guard (JDK 17)
+    needs: change-scope
+    if: needs.change-scope.outputs.website_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

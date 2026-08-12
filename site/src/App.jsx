@@ -682,7 +682,9 @@ function DemonstrationReportImage({ demonstration, copy, detail = false, classNa
     : "(max-width: 700px) calc(100vw - 76px), 360px";
 
   return (
-    <>
+    <span
+      className={`demonstration-report-gallery${images.length > 1 ? " has-multiple-images" : ""}`}
+    >
       {images.map((image, index) => (
         <img
           key={`${demonstration.id}-${index}`}
@@ -696,7 +698,7 @@ function DemonstrationReportImage({ demonstration, copy, detail = false, classNa
           decoding="async"
         />
       ))}
-    </>
+    </span>
   );
 }
 
