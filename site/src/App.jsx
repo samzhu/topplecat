@@ -171,6 +171,9 @@ const copyByLocale = {
       open: "Open demonstration",
       close: "Close demonstration",
       modalLabel: "Demonstration details",
+      expandImage: "View full-size image",
+      closeImage: "Close full-size image",
+      imageViewerLabel: "Full-size verification report image",
       resultLabel: "Check result",
       problemFound: "Problem found",
       layers: {
@@ -445,6 +448,9 @@ const copyByLocale = {
       open: "開啟示範",
       close: "關閉示範",
       modalLabel: "示範細節",
+      expandImage: "查看完整尺寸圖片",
+      closeImage: "關閉完整尺寸圖片",
+      imageViewerLabel: "完整尺寸驗證報告圖片",
       resultLabel: "檢查結果",
       problemFound: "發現問題",
       layers: {
@@ -673,7 +679,13 @@ const demonstrationReportImages = {
   "contract-integrity": { preview: contractIntegrity640, detail: contractIntegrity1280 },
 };
 
-function DemonstrationReportImage({ demonstration, copy, detail = false, className = "" }) {
+function DemonstrationReportImage({
+  demonstration,
+  copy,
+  detail = false,
+  className = "",
+  onOpenImage,
+}) {
   const images = Array.isArray(demonstrationReportImages[demonstration.id])
     ? demonstrationReportImages[demonstration.id]
     : [demonstrationReportImages[demonstration.id]];
@@ -685,24 +697,42 @@ function DemonstrationReportImage({ demonstration, copy, detail = false, classNa
     <span
       className={`demonstration-report-gallery${images.length > 1 ? " has-multiple-images" : ""}`}
     >
-      {images.map((image, index) => (
-        <img
-          key={`${demonstration.id}-${index}`}
-          className={`demonstration-report-image ${className}`}
-          src={detail ? image.detail : image.preview}
-          srcSet={`${image.preview} 640w, ${image.detail} 1280w`}
-          sizes={sizes}
-          width={detail ? "1280" : "640"}
-          alt={`${copy.excerptLabel}: ${demonstration.title}${images.length > 1 ? ` (${index + 1} of ${images.length})` : ""}`}
-          loading={detail ? "eager" : "lazy"}
-          decoding="async"
-        />
-      ))}
+      {images.map((image, index) => {
+        const alt = `${copy.excerptLabel}: ${demonstration.title}${images.length > 1 ? ` (${index + 1} of ${images.length})` : ""}`;
+        const reportImage = (
+          <img
+            className={`demonstration-report-image ${className}`}
+            src={detail ? image.detail : image.preview}
+            srcSet={`${image.preview} 640w, ${image.detail} 1280w`}
+            sizes={sizes}
+            width={detail ? "1280" : "640"}
+            alt={alt}
+            loading={detail ? "eager" : "lazy"}
+            decoding="async"
+          />
+        );
+
+        return onOpenImage ? (
+          <button
+            key={`${demonstration.id}-${index}`}
+            className="demonstration-report-image-button"
+            type="button"
+            aria-label={`${copy.expandImage}: ${alt}`}
+            onClick={(event) => onOpenImage({ ...image, alt }, event)}
+          >
+            {reportImage}
+          </button>
+        ) : (
+          <span key={`${demonstration.id}-${index}`} className="demonstration-report-image-static">
+            {reportImage}
+          </span>
+        );
+      })}
     </span>
   );
 }
 
-function DemonstrationModal({ demonstration, copy, dialogRef, onClose }) {
+function DemonstrationModal({ demonstration, copy, dialogRef, onClose, onOpenImage }) {
   if (!demonstration) return null;
 
   const titleId = `demonstration-title-${demonstration.id}`;
@@ -741,7 +771,12 @@ function DemonstrationModal({ demonstration, copy, dialogRef, onClose }) {
           </button>
         </div>
         <figure className="demonstration-dialog-evidence">
-          <DemonstrationReportImage demonstration={demonstration} copy={copy} detail />
+          <DemonstrationReportImage
+            demonstration={demonstration}
+            copy={copy}
+            detail
+            onOpenImage={onOpenImage}
+          />
           <figcaption>{copy.excerptLabel}</figcaption>
         </figure>
         <div className="demonstration-dialog-layers">
@@ -771,6 +806,39 @@ function DemonstrationModal({ demonstration, copy, dialogRef, onClose }) {
   );
 }
 
+function EvidenceImageDialog({ image, copy, dialogRef, onClose }) {
+  if (!image) return null;
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="evidence-image-dialog"
+      aria-label={copy.imageViewerLabel}
+      aria-modal="true"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="evidence-image-dialog-panel">
+        <button className="evidence-image-close" type="button" onClick={onClose} data-image-close>
+          {copy.closeImage} <span aria-hidden="true">×</span>
+        </button>
+        <img src={image.detail} width="1280" alt={image.alt} />
+      </div>
+    </dialog>
+  );
+}
+
 function App() {
   const scope = useRef(null);
   const motion = useRef({ gsap: null, Flip: null, gsapPromise: null });
@@ -778,8 +846,11 @@ function App() {
   const [activeAccordion, setActiveAccordion] = useState(0);
   const [copied, setCopied] = useState(false);
   const [activeDemonstration, setActiveDemonstration] = useState(null);
+  const [activeEvidenceImage, setActiveEvidenceImage] = useState(null);
   const demonstrationDialogRef = useRef(null);
   const demonstrationOpenerRef = useRef(null);
+  const evidenceImageDialogRef = useRef(null);
+  const evidenceImageOpenerRef = useRef(null);
   const copy = copyByLocale[locale];
   const primaryDemonstration = copy.demonstrations.stories.find(
     (demonstration) => demonstration.id === "public-acceptance",
@@ -817,6 +888,18 @@ function App() {
       if (dialog.open) dialog.close();
     };
   }, [activeDemonstration]);
+
+  useEffect(() => {
+    if (!activeEvidenceImage || !evidenceImageDialogRef.current) return undefined;
+
+    const dialog = evidenceImageDialogRef.current;
+    if (!dialog.open) dialog.showModal();
+    dialog.querySelector("[data-image-close]")?.focus();
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [activeEvidenceImage]);
 
   useEffect(() => {
     document.documentElement.lang = copy.htmlLang;
@@ -960,7 +1043,22 @@ function App() {
     setActiveDemonstration(demonstration);
   };
 
+  const openEvidenceImage = (image, event) => {
+    evidenceImageOpenerRef.current = event.currentTarget;
+    setActiveEvidenceImage(image);
+  };
+
+  const closeEvidenceImage = () => {
+    const dialog = evidenceImageDialogRef.current;
+    if (dialog?.open) dialog.close();
+    setActiveEvidenceImage(null);
+    window.requestAnimationFrame(() => evidenceImageOpenerRef.current?.focus());
+  };
+
   const closeDemonstration = () => {
+    const imageDialog = evidenceImageDialogRef.current;
+    if (imageDialog?.open) imageDialog.close();
+    setActiveEvidenceImage(null);
     const dialog = demonstrationDialogRef.current;
     if (dialog?.open) dialog.close();
     setActiveDemonstration(null);
@@ -1133,7 +1231,11 @@ function App() {
           </div>
 
           <figure className="demonstration-feature-evidence">
-            <DemonstrationReportImage demonstration={primaryDemonstration} copy={copy.demonstrations} />
+            <DemonstrationReportImage
+              demonstration={primaryDemonstration}
+              copy={copy.demonstrations}
+              onOpenImage={openEvidenceImage}
+            />
             <figcaption>{copy.demonstrations.excerptLabel}</figcaption>
           </figure>
 
@@ -1184,6 +1286,13 @@ function App() {
         copy={copy.demonstrations}
         dialogRef={demonstrationDialogRef}
         onClose={closeDemonstration}
+        onOpenImage={openEvidenceImage}
+      />
+      <EvidenceImageDialog
+        image={activeEvidenceImage}
+        copy={copy.demonstrations}
+        dialogRef={evidenceImageDialogRef}
+        onClose={closeEvidenceImage}
       />
 
       <section className="scenario-section content-width" id="contract">
