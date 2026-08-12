@@ -238,7 +238,7 @@ button { font: inherit; }
 .demonstration-entry:nth-child(2) .demonstration-entry-footer, .demonstration-entry:nth-child(4) .demonstration-entry-footer { color: #9f4e1d; }
 .demonstration-entry:focus-visible, .dialog-close:focus-visible { outline: 3px solid #e8a14a; outline-offset: 3px; }
 
-.demonstration-dialog { width: min(980px, calc(100% - 32px)); max-width: none; max-height: min(900px, calc(100dvh - 32px)); margin: auto; padding: 0; overflow: hidden; border: 1px solid rgba(232, 161, 74, 0.48); color: #f4f0e8; background: #123c39; box-shadow: 0 32px 100px rgba(0, 0, 0, 0.35); }
+.demonstration-dialog { width: min(1280px, calc(100% - 32px)); max-width: none; max-height: min(900px, calc(100dvh - 32px)); margin: auto; padding: 0; overflow: hidden; border: 1px solid rgba(232, 161, 74, 0.48); color: #f4f0e8; background: #123c39; box-shadow: 0 32px 100px rgba(0, 0, 0, 0.35); }
 .demonstration-dialog::backdrop { background: rgba(4, 30, 28, 0.7); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
 .demonstration-dialog[open] .demonstration-dialog-panel { animation: demonstration-dialog-in 260ms var(--ease-drawer) both; }
 @keyframes demonstration-dialog-in { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }

@@ -24,6 +24,8 @@ import mutationTesting640 from "./assets/demonstrations/mutation-testing-640.jpg
 import mutationTesting1280 from "./assets/demonstrations/mutation-testing-1280.jpg";
 import propertyTesting640 from "./assets/demonstrations/property-based-testing-640.jpg";
 import propertyTesting1280 from "./assets/demonstrations/property-based-testing-1280.jpg";
+import publicAcceptanceExecution640 from "./assets/demonstrations/public-acceptance-execution-640.jpg";
+import publicAcceptanceExecution1280 from "./assets/demonstrations/public-acceptance-execution-1280.jpg";
 import publicAcceptance640 from "./assets/demonstrations/public-acceptance-640.jpg";
 import publicAcceptance1280 from "./assets/demonstrations/public-acceptance-1280.jpg";
 
@@ -661,7 +663,10 @@ const cupSources = {
 };
 
 const demonstrationReportImages = {
-  "public-acceptance": { preview: publicAcceptance640, detail: publicAcceptance1280 },
+  "public-acceptance": [
+    { preview: publicAcceptanceExecution640, detail: publicAcceptanceExecution1280 },
+    { preview: publicAcceptance640, detail: publicAcceptance1280 },
+  ],
   "hidden-tests": { preview: hiddenTests640, detail: hiddenTests1280 },
   "property-based-testing": { preview: propertyTesting640, detail: propertyTesting1280 },
   "mutation-testing": { preview: mutationTesting640, detail: mutationTesting1280 },
@@ -669,22 +674,29 @@ const demonstrationReportImages = {
 };
 
 function DemonstrationReportImage({ demonstration, copy, detail = false, className = "" }) {
-  const image = demonstrationReportImages[demonstration.id];
+  const images = Array.isArray(demonstrationReportImages[demonstration.id])
+    ? demonstrationReportImages[demonstration.id]
+    : [demonstrationReportImages[demonstration.id]];
   const sizes = detail
     ? "(max-width: 700px) calc(100vw - 64px), 900px"
     : "(max-width: 700px) calc(100vw - 76px), 360px";
 
   return (
-    <img
-      className={`demonstration-report-image ${className}`}
-      src={detail ? image.detail : image.preview}
-      srcSet={`${image.preview} 640w, ${image.detail} 1280w`}
-      sizes={sizes}
-      width={detail ? "1280" : "640"}
-      alt={`${copy.excerptLabel}: ${demonstration.title}`}
-      loading={detail ? "eager" : "lazy"}
-      decoding="async"
-    />
+    <>
+      {images.map((image, index) => (
+        <img
+          key={`${demonstration.id}-${index}`}
+          className={`demonstration-report-image ${className}`}
+          src={detail ? image.detail : image.preview}
+          srcSet={`${image.preview} 640w, ${image.detail} 1280w`}
+          sizes={sizes}
+          width={detail ? "1280" : "640"}
+          alt={`${copy.excerptLabel}: ${demonstration.title}${images.length > 1 ? ` (${index + 1} of ${images.length})` : ""}`}
+          loading={detail ? "eager" : "lazy"}
+          decoding="async"
+        />
+      ))}
+    </>
   );
 }
 

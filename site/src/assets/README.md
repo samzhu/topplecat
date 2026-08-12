@@ -24,7 +24,7 @@ rather than carrying manual version suffixes.
 | `props/cup-upright-{320,640,960}.avif` / `.webp` | Upright cup used by the PASS frames |
 | `props/cup-tipped-{320,640,960}.avif` / `.webp` | Side-tipped cup and spill used by the FAKE frame |
 | `scene/tabletop.svg` | Full-width wooden tabletop layer |
-| `demonstrations/*-{640,1280}.jpg` | Responsive excerpts from the six clearly labelled, synthetic Verification Report demonstrations for human visitors |
+| `demonstrations/*-{640,1280}.jpg` | Responsive excerpts from the five clearly labelled, synthetic Verification Report demonstrations for human visitors; Public Acceptance has two excerpts |
 
 The preserved sources are intentionally versioned below `original/`:
 
