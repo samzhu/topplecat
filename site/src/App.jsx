@@ -38,14 +38,14 @@ const superpowersUrl = "https://github.com/obra/superpowers";
 const engineeringSkillsUrl = "https://github.com/mattpocock/skills/tree/main";
 const gettingStartedUrl =
   `${import.meta.env.BASE_URL}docs/getting-started/`;
-const pluginLine = 'id("io.github.samzhu.topplecat") version "0.1.0"';
+const pluginLine = 'id("io.github.samzhu.topplecat") version "0.2.0"';
 const gradleSetup = `plugins {
     java
     ${pluginLine}
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.1.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -332,7 +332,7 @@ const copyByLocale = {
         "ToppleCat works alongside any SDD workflow: keep using Spec Kit, Superpowers, Matt Pocock skills, or your own project skills. Your workflow owns the Spec and delivery decision; the ToppleCat acceptance skill turns chosen conditions into Java/JUnit checks that can run.",
       workflowLinksLabel: "Workflow and skill references",
       setupKicker: "1. Install ToppleCat and the acceptance skill",
-      setupBody: "Put this setup in build.gradle.kts, then add the project-local ToppleCat acceptance skill to the skills your agent can use. You need Java 25 and a Gradle version that supports it.",
+      setupBody: "Put this setup in build.gradle.kts, then add the project-local ToppleCat acceptance skill to the skills your agent can use. ToppleCat runs on JDK 21 or 25; its published artifacts target Java 21 and are built on JDK 25. Your consumer source may target Java 17, 21, or 25 when the execution JDK is 21 or 25.",
       copy: "Copy build.gradle.kts",
       copied: "Copied",
       verifyKicker: "3. Verify the finished work",
@@ -600,7 +600,7 @@ const copyByLocale = {
         "ToppleCat 可以和任何 SDD 工作流一起用。Spec Kit、Superpowers、Matt Pocock skills，或你自己專案裡的 skills 都照常用；工作流負責 Spec 和交付決定，ToppleCat acceptance skill 則把選定的條件寫成可執行的 Java/JUnit 檢查。",
       workflowLinksLabel: "工作流與 skill 參考",
       setupKicker: "1. 安裝 ToppleCat 與 acceptance skill",
-      setupBody: "把這份設定放進 build.gradle.kts，再把專案內的 ToppleCat acceptance skill 加進 agent 可用的 skills。需要 Java 25 與支援它的 Gradle 版本。",
+      setupBody: "把這份設定放進 build.gradle.kts，再把專案內的 ToppleCat acceptance skill 加進 agent 可用的 skills。ToppleCat 執行需要 JDK 21 或 25；發布的 artifact 以 Java 21 為 target，並由 JDK 25 建置。使用端 source 可以是 Java 17、21 或 25，但執行 JDK 必須是 21 或 25。",
       copy: "複製 build.gradle.kts",
       copied: "已複製",
       verifyKicker: "3. 驗證這次完成的功能",

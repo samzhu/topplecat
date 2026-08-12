@@ -17,11 +17,23 @@ copied_label: Copied
 
 # Add ToppleCat to a Java project
 
-ToppleCat 0.1.0 is published on Maven Central. Add the Gradle plugin and JUnit
+ToppleCat 0.2.0 is published on Maven Central. Add the Gradle plugin and JUnit
 library directly to an existing project; you do not need to clone or build
 ToppleCat from source.
 
-ToppleCat requires JDK 25 and a compatible Gradle version.
+ToppleCat runtime and Gradle/plugin execution require JDK 21 or 25. The
+published artifacts target Java 21 and the maintainer release build uses JDK
+25. A consumer project may target Java 17, 21, or 25 source when its execution
+JDK is 21 or 25; JDK 17-only ToppleCat execution is unsupported.
+
+The initial support promise does not cover a different Gradle daemon JDK and
+consumer contract compiler JDK. The custom contract compiler uses the daemon's
+system compiler until a separate tested compiler seam expands that promise.
+
+When a newer LTS is added, it enters CI first and the oldest supported runtime
+is deprecated before removal. Removal waits for a documented migration window
+and release boundary; dependency upgrades that raise the Java floor follow the
+same compatibility-change rule.
 
 By the end of this page, you will have installed ToppleCat, given your AI a
 clear way to turn approved rules into runnable checks, and know which command
@@ -79,11 +91,11 @@ Then add the plugin and JUnit dependencies in `build.gradle.kts`:
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.1.0"
+    id("io.github.samzhu.topplecat") version "0.2.0"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.1.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }

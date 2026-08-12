@@ -39,7 +39,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
-import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -68,7 +67,6 @@ import javax.tools.StandardLocation;
   "io.github.samzhu.topplecat.junit.ToppleAcceptanceTest",
   "io.github.samzhu.topplecat.junit.property.ToppleProperty"
 })
-@SupportedSourceVersion(SourceVersion.RELEASE_25)
 @SupportedOptions("org.gradle.annotation.processing.isolating")
 public final class ToppleAcceptanceProcessor extends AbstractProcessor {
   private static final String DESCRIPTOR_DIRECTORY = "META-INF/topplecat/contracts/";
@@ -87,6 +85,16 @@ public final class ToppleAcceptanceProcessor extends AbstractProcessor {
   private final Set<String> descriptorFiles = new LinkedHashSet<>();
   private final Set<String> propertyDescriptorFiles = new LinkedHashSet<>();
   private boolean wroteIndex;
+
+  /**
+   * The processor is compiled for Java 21 but may be invoked by javac 21 or a newer supported
+   * compiler. Returning the runtime compiler's value avoids coupling the public artifact to a
+   * source-version enum constant introduced after the release target.
+   */
+  @Override
+  public SourceVersion getSupportedSourceVersion() {
+    return SourceVersion.latestSupported();
+  }
 
   @Override
   public synchronized void init(ProcessingEnvironment environment) {

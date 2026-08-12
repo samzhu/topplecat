@@ -8,7 +8,8 @@ workflows, see the [development guide](DEVELOPMENT.md).
 
 ## Local setup
 
-- JDK 25
+- JDK 25 for the primary build and release line; JDK 21 is the minimum
+  supported ToppleCat runtime and compatibility build line.
 - Gradle 9.1.0 through the repository wrapper
 - A Unix-like shell for the release gate
 

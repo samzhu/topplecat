@@ -17,6 +17,12 @@ copied_label: Copied
 
 # 把業務規則寫成可執行檢查
 
+你的 authoring source 可以 target Java 17、21 或 25，但載入 ToppleCat 並執行 compiler
+的 Gradle daemon 必須使用 JDK 21 或 25。這是 source 相容性選擇，不代表支援 Java 17
+runtime：只使用 JDK 17 的環境不能執行以 Java 21 為 target 的 ToppleCat artifact。
+目前 contract source 使用 daemon 的 system compiler；沒有獨立且經測試的 compiler seam
+前，不要假設可以使用不同的 consumer toolchain。
+
 在請 AI 實作功能前，先用看得見的結果回答一個問題：發生什麼情況時，你會相信這條
 規則真的有作用？
 
@@ -53,7 +59,7 @@ void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
 
 想看能實際執行的完整寫法，可以選擇閱讀
 [JUnit cart-orders 學習專案](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)。
-它使用已發布的 0.1.0，並提供五項完全合成的保障課程；每一項完成後都會留下該課程的本機
+它使用已發布的 0.2.0，並提供五項完全合成的保障課程；每一項完成後都會留下該課程的本機
 HTML 驗證報告於 `build/topplecat/demo-reports/`。不需要先執行範例才能照著本頁撰寫。
 
 方法格式有明確限制：`ToppleCase` 必須放第一個，後面是一個 `ToppleScenario`，再

@@ -9,7 +9,7 @@ and [Traditional Chinese documentation](https://topplecat.samzhu.dev/docs/zh-TW/
 
 ## Install ToppleCat
 
-ToppleCat 0.1.0 is available from
+ToppleCat 0.2.0 is available from
 [Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat).
 Consumer projects do not need to clone or build the ToppleCat repository.
 
@@ -34,11 +34,11 @@ Then configure `build.gradle.kts`:
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.1.0"
+    id("io.github.samzhu.topplecat") version "0.2.0"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.1.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -46,8 +46,30 @@ dependencies {
 tasks.test { useJUnitPlatform() }
 ```
 
-Java 25 and a compatible Gradle version are required. `toppleCatInit` can add a
-non-destructive starter to an empty consumer project.
+ToppleCat runtime and Gradle/plugin execution require JDK 21 or 25. The
+published artifacts target Java 21 and the maintainer release build uses JDK
+25. Your consumer project may still compile its own source with a Java 17,
+21, or 25 target when the execution JDK is 21 or 25. A JDK 17-only Gradle
+environment cannot run ToppleCat. `toppleCatInit` can add a non-destructive
+starter to an empty consumer project.
+
+These are separate choices:
+
+| Concern | Supported policy |
+| --- | --- |
+| ToppleCat maintainer/release build JDK | JDK 25 primary; JDK 21 is the minimum tested build line |
+| ToppleCat library, plugin, report, and formal runtime | JDK 21 and JDK 25 |
+| Consumer project source target | Java 17, 21, or 25 when executed by JDK 21 or 25 |
+
+The initial support promise does not cover a JDK 21 Gradle daemon compiling
+consumer contract source with a separate JDK 25 toolchain, or the reverse. The
+custom contract compiler uses the daemon's system compiler until a separate
+tested compiler seam expands that promise.
+
+Support-floor changes are announced before removal: a newer LTS first enters
+CI, the oldest supported runtime is marked deprecated, and removal waits for a
+documented migration window and release boundary. A dependency upgrade that
+raises the Java floor follows the same compatibility-change rule.
 
 ## Prepare acceptance work with an AI
 

@@ -23,9 +23,8 @@ cp "$junit_service" "$junit_service_backup"
 restore_sample() {
   local sample="$1"
   local state_root="$2"
-  if [[ ! -d "$sample/src/hiddenTest" ]]; then
-    "$gradle" -p "$sample" -q -Dtopplecat.stateRoot="$state_root" toppleCatRestore >/dev/null 2>&1 || true
-  fi
+  "$gradle" --no-watch-fs -p "$sample" -Ptopplecat.useMavenLocal=true -q \
+    -Dtopplecat.stateRoot="$state_root" toppleCatRestore
 }
 
 run_sample() {
@@ -39,8 +38,8 @@ cleanup() {
   local status=$?
   trap - EXIT
   set +e
-  restore_sample "$junit_sample" "$junit_state_root"
-  restore_sample "$spring_sample" "$spring_state_root"
+  restore_sample "$junit_sample" "$junit_state_root" >/dev/null 2>&1 || true
+  restore_sample "$spring_sample" "$spring_state_root" >/dev/null 2>&1 || true
   if [[ -f "$junit_service_backup" ]]; then
     cp "$junit_service_backup" "$junit_service"
     rm -f "$junit_service_backup"
@@ -60,7 +59,8 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 "$gradle" clean check
 "$gradle" publishToMavenLocal
-published_junit_jar="$root/topplecat-junit/build/libs/topplecat-junit-0.1.0.jar"
+bash "$root/scripts/verify-artifacts.sh"
+published_junit_jar="$root/topplecat-junit/build/libs/topplecat-junit-0.2.0.jar"
 if [[ ! -f "$published_junit_jar" ]]; then
   echo "Release gate failed: expected JUnit artifact was not built: $published_junit_jar" >&2
   exit 1
@@ -99,7 +99,7 @@ assert_artifact_version() {
 run_sample "$junit_sample" "$junit_state_root" help --task toppleCatSeal
 run_sample "$spring_sample" "$spring_state_root" help --task toppleCatSeal
 echo "Release verification: running red-team attacks. Each attack must be rejected; expected rejections are labelled below."
-bash "$root/samples/junit-cart-orders/demo.sh" all
+TOPPLECAT_USE_MAVEN_LOCAL=true bash "$root/samples/junit-cart-orders/demo.sh" all
 TOPPLECAT_STATE_ROOT="$spring_state_root" bash "$root/samples/spring-boot-cart-orders/demo.sh"
 TOPPLECAT_STATE_ROOT="$release_state_root/mutation-gate" bash "$root/integration-tests/mutation-gate/verify.sh"
 
@@ -119,9 +119,9 @@ path.write_text(text.replace(wrong, correct, 1))
 PY
 run_sample "$junit_sample" "$junit_state_root" toppleCatSeal toppleCatVerify
 
-assert_artifact_version "$junit_sample/build.gradle.kts" "0.1.0"
-assert_artifact_version "$spring_sample/build.gradle.kts" "0.1.0"
-assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.1.0"
+assert_artifact_version "$junit_sample/build.gradle.kts" "0.2.0"
+assert_artifact_version "$spring_sample/build.gradle.kts" "0.2.0"
+assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.2.0"
 
 JUNIT_SAMPLE="$junit_sample" SPRING_SAMPLE="$spring_sample" python3 - <<'PY'
 import json
@@ -198,14 +198,14 @@ for verification_report in \
 done
 
 restore_sample "$junit_sample" "$junit_state_root"
-run_sample "$junit_sample" "$junit_state_root" toppleCatCheck
+run_sample "$junit_sample" "$junit_state_root" --no-watch-fs --rerun-tasks toppleCatCheck
 
 if [[ -e "$junit_sample/build/topplecat/reports/review/index.html" ]]; then
   echo "toppleCatCheck must not leave a Spec Review artifact" >&2
   exit 1
 fi
 
-run_sample "$junit_sample" "$junit_state_root" toppleCatReview
+run_sample "$junit_sample" "$junit_state_root" --no-watch-fs --rerun-tasks toppleCatReview
 
 restore_sample "$junit_sample" "$junit_state_root"
 junit_review="$junit_sample/build/topplecat/reports/review/data.json"

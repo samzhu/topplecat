@@ -4,6 +4,10 @@ set -euo pipefail
 
 sample="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 scenario="${1:---help}"
+gradle_args=()
+if [[ "${TOPPLECAT_USE_MAVEN_LOCAL:-false}" == true ]]; then
+  gradle_args+=("-Ptopplecat.useMavenLocal=true")
+fi
 
 usage() {
   cat <<'EOF'
@@ -46,14 +50,14 @@ run_lesson() {
     public-acceptance)
       echo "Synthetic delivery: SAVE100 now returns no discount; public examples observe it."
       set_fixed_discount "$service"
-      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal)
+      run_gradle "$work" -q -Dtopplecat.stateRoot="$state" toppleCatSeal
       replace_text "$service" 'int discount = "SAVE100".equals(cart.coupon()) ? 100 : 0;' 'int discount = 0;'
       expect_gate "$work" "$state" JUNIT
       echo "Supports: public examples caught this stated result. Cannot prove omitted rules do not exist."
       ;;
     hidden-tests)
       echo "Synthetic delivery: the checked-in 20% shortcut still passes the visible 500 example."
-      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal)
+      run_gradle "$work" -q -Dtopplecat.stateRoot="$state" toppleCatSeal
       expect_gate "$work" "$state" REVIEWER_JUNIT
       echo "Supports: independent examples challenged the same public rule. It adds no private rule."
       ;;
@@ -61,7 +65,7 @@ run_lesson() {
       echo "Synthetic delivery: a shortcut handles only the known example subtotals."
       echo "It passes Typed Case Rows but violates the fixed-discount invariant for generated carts."
       set_fixed_discount "$service"
-      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal)
+      run_gradle "$work" -q -Dtopplecat.stateRoot="$state" toppleCatSeal
       replace_text "$service" 'int discount = "SAVE100".equals(cart.coupon()) ? 100 : 0;' 'int discount = "SAVE100".equals(cart.coupon()) && (cart.subtotal() == 500 || cart.subtotal() == 800 || cart.subtotal() == 1200) ? 100 : 0;'
       expect_gate "$work" "$state" PROPERTY
       echo "Supports: generated trials found an invariant violation. It is not proof of every input."
@@ -70,7 +74,7 @@ run_lesson() {
       echo "Synthetic delivery: the public acceptance method observes only that a receipt exists."
       echo "Managed PIT now changes production behavior and finds an attributed survivor."
       set_fixed_discount "$service"
-      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal toppleCatVerify)
+      run_gradle "$work" -q -Dtopplecat.stateRoot="$state" toppleCatSeal toppleCatVerify
       python3 - "$build_file" "$acceptance" <<'PY'
 import pathlib, sys
 build = pathlib.Path(sys.argv[1])
@@ -80,14 +84,14 @@ path.write_text(path.read_text().replace(
     'c.verify("receipt", receipt);',
     'c.verify("receipt", new OrderReceipt("SAVE100".equals(cart.coupon()) ? 100 : 0, "SAVE100".equals(cart.coupon()) ? cart.subtotal() - 100 : cart.subtotal()));'))
 PY
-      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatRestore toppleCatReseal)
+      run_gradle "$work" -q -Dtopplecat.stateRoot="$state" toppleCatRestore toppleCatReseal
       expect_gate "$work" "$state" MUTATION
       echo "Supports: this acceptance method missed an attributed production change. It does not score all quality."
       ;;
     contract-integrity)
       echo "Synthetic delivery: a public expected value changes after the Mechanical Seal."
       set_fixed_discount "$service"
-      (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatSeal)
+      run_gradle "$work" -q -Dtopplecat.stateRoot="$state" toppleCatSeal
       python3 - "$public_cases" <<'PY'
 import pathlib, sys
 path = pathlib.Path(sys.argv[1])
@@ -100,6 +104,12 @@ PY
 
   retain_report "$work" "$report_dir"
   printf 'Read the synthetic Verification Report: %s\n' "$report_dir/index.html"
+}
+
+run_gradle() {
+  local work="$1"
+  shift
+  (cd "$work" && ./gradlew "${gradle_args[@]}" "$@")
 }
 
 set_fixed_discount() {
@@ -132,10 +142,13 @@ PY
 
 expect_gate() {
   local work="$1" state="$2" gate="$3"
-  if (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatVerify); then
+  local output_file
+  output_file="$(mktemp)"
+  if run_gradle "$work" -q -Dtopplecat.stateRoot="$state" toppleCatVerify >"$output_file" 2>&1; then
+    rm -f "$output_file"
     echo "Lesson failed: Verify unexpectedly passed." >&2; return 1
   fi
-  python3 - "$work/build/topplecat/evidence.json" "$gate" <<'PY'
+  if ! python3 - "$work/build/topplecat/evidence.json" "$gate" <<'PY'
 import json, pathlib, sys
 evidence = json.loads(pathlib.Path(sys.argv[1]).read_text())
 gates = {item['name']: item['verdict'] for item in evidence['gates']}
@@ -144,20 +157,35 @@ if evidence['verdict'] != 'FAIL' or gates.get('CONTRACT_INTEGRITY') != 'PASS' or
     raise SystemExit(f"Unexpected lesson evidence: {gates}")
 print(f"Confirmed: {sys.argv[2]}=FAIL in synthetic current-run evidence.")
 PY
+  then
+    cat "$output_file" >&2
+    rm -f "$output_file"
+    return 1
+  fi
+  rm -f "$output_file"
 }
 
 expect_integrity_failure() {
   local work="$1" state="$2"
-  if (cd "$work" && ./gradlew -q -Dtopplecat.stateRoot="$state" toppleCatVerify); then
+  local output_file
+  output_file="$(mktemp)"
+  if run_gradle "$work" -q -Dtopplecat.stateRoot="$state" toppleCatVerify >"$output_file" 2>&1; then
+    rm -f "$output_file"
     echo "Lesson failed: Verify unexpectedly passed." >&2; return 1
   fi
-  python3 - "$work/build/topplecat/evidence.json" <<'PY'
+  if ! python3 - "$work/build/topplecat/evidence.json" <<'PY'
 import json, pathlib, sys
 gates = {item['name']: item['verdict'] for item in json.loads(pathlib.Path(sys.argv[1]).read_text())['gates']}
 if gates.get('CONTRACT_INTEGRITY') != 'FAIL':
     raise SystemExit(f"Expected CONTRACT_INTEGRITY=FAIL, got {gates}")
 print("Confirmed: CONTRACT_INTEGRITY=FAIL in synthetic current-run evidence.")
 PY
+  then
+    cat "$output_file" >&2
+    rm -f "$output_file"
+    return 1
+  fi
+  rm -f "$output_file"
 }
 
 if [[ "$scenario" == "all" ]]; then

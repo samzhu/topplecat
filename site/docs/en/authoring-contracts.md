@@ -17,6 +17,14 @@ copied_label: Copied
 
 # Turn business rules into executable checks
 
+Your authoring source may target Java 17, 21, or 25, but the Gradle daemon
+that loads ToppleCat and runs its compiler must use JDK 21 or 25. This is a
+source compatibility choice, not Java 17 runtime support: a JDK 17-only
+environment cannot execute the published Java 21-targeted artifact. The
+initial support policy uses the daemon's system compiler for contract source;
+do not assume a different consumer toolchain without a separately tested
+compiler seam.
+
 Before asking an AI to implement a feature, answer one question in observable
 terms: what result would convince you that this rule works?
 
@@ -55,7 +63,7 @@ The `CouponStage` methods perform the real setup, service calls, and assertions.
 
 Want a complete, runnable version of this pattern? The optional
 [JUnit cart-orders learning project](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)
-uses the released 0.1.0 artifacts and lets you choose five synthetic safeguard
+uses the released 0.2.0 artifacts and lets you choose five synthetic safeguard
 lessons. Each one leaves a local HTML Verification Report for that lesson under
 `build/topplecat/demo-reports/`. You do not need to run it before following
 this guide.

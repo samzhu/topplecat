@@ -3,12 +3,6 @@ plugins {
     `maven-publish`
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
-}
-
 dependencies {
     // Plugin implementation uses these modules internally; its Gradle DSL exposes no module types.
     implementation(project(":topplecat-core"))

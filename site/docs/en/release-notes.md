@@ -1,5 +1,5 @@
 ---
-title: What's in 0.1.0
+title: What's in 0.2.0
 description: Check the Java requirements, supported verification workflow, reports, and limits in the current ToppleCat release.
 page_id: release-notes
 language_code: en
@@ -15,19 +15,20 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# What's in ToppleCat 0.1.0
+# What's in ToppleCat 0.2.0
 
 If ToppleCat is new to you, start with [What is ToppleCat?](index.md#documentation-home).
 This page is for people preparing an adoption or upgrade: it lists the current
 capabilities, environment requirements, and limits.
 
 For the full historical record, use the repository's
-[0.1.0 release notes](https://github.com/samzhu/topplecat/blob/main/docs/releases/0.1.0.md).
+[0.2.0 release notes](https://github.com/samzhu/topplecat/blob/main/docs/releases/0.2.0.md).
 
 ## Current release {#current-release}
 
-ToppleCat 0.1.0 supports Java 25, JUnit 6.1.1, and a compatible Gradle version.
-Its Gradle plugin and JUnit library are available from
+ToppleCat 0.2.0 supports JDK 21 and JDK 25, JUnit 6.1.1, and a compatible
+Gradle version. Its published artifacts target Java 21 bytecode and are built
+with JDK 25 using `--release 21`. Its Gradle plugin and JUnit library are available from
 [Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat).
 
 In this release a team can:
@@ -75,7 +76,7 @@ or make private reports available to an AI.
 
 ## Limits and upgrade notes {#upgrade-notes}
 
-- ToppleCat 0.1.0 is current-only. Reviewer custody and its Mechanical Seal are
+- ToppleCat 0.2.0 is current-only. Reviewer custody and its Mechanical Seal are
   not migrated from another schema version; restore, Check, Review, and Reseal
   the contract for the current release.
 - Formal Mutation Testing uses ToppleCat's fixed managed PIT profile. A

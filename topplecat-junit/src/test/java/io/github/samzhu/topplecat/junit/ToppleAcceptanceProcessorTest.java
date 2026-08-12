@@ -75,6 +75,36 @@ class ToppleAcceptanceProcessorTest {
   }
 
   @Test
+  void processesJava21AndJava25ConsumerSourceWithTheRelease21Artifact() throws Exception {
+    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+    List<String> releases =
+        compiler.getSourceVersions().stream()
+                .anyMatch(version -> version.name().equals("RELEASE_25"))
+            ? List.of("21", "25")
+            : List.of("21");
+    for (String release : releases) {
+      Compilation result =
+          compile(
+              "fixture/SourceVersionFixture.java",
+              release,
+              """
+              package fixture;
+              import io.github.samzhu.topplecat.junit.*;
+              class SourceVersionFixture {
+                @ToppleAcceptanceTest("AC-SOURCE-VERSION")
+                void accepts(ToppleCase c, ToppleScenario scenario, ExampleStage example) {
+                  scenario.then(example).matches(c);
+                }
+                static class ExampleStage extends ToppleStage {
+                  void matches(ToppleCase c) {}
+                }
+              }
+              """);
+      assertTrue(result.success(), "--release " + release + result.messages());
+    }
+  }
+
+  @Test
   void rejectsMethodsWithoutTheRequiredScenarioAndStageParameters() throws Exception {
     Compilation result =
         compile(
@@ -184,10 +214,18 @@ class ToppleAcceptanceProcessorTest {
   }
 
   private Compilation compile(String relative, String source) throws Exception {
-    return compile(Map.of(relative, source));
+    return compile(relative, "21", source);
+  }
+
+  private Compilation compile(String relative, String release, String source) throws Exception {
+    return compile(Map.of(relative, source), release);
   }
 
   private Compilation compile(Map<String, String> sources) throws Exception {
+    return compile(sources, "21");
+  }
+
+  private Compilation compile(Map<String, String> sources, String release) throws Exception {
     Path root = tempDir.resolve("src");
     List<Path> files =
         sources.entrySet().stream()
@@ -214,6 +252,7 @@ class ToppleAcceptanceProcessorTest {
               manager,
               diagnostics,
               List.of(
+                  "--release", release,
                   "-classpath", System.getProperty("java.class.path"),
                   "-processorpath", System.getProperty("java.class.path"),
                   "-processor", ToppleAcceptanceProcessor.class.getName(),

@@ -1,5 +1,13 @@
 # Authoring contracts
 
+Authoring source may target Java 17, 21, or 25, but the Gradle daemon that
+loads ToppleCat and runs its compiler must use JDK 21 or 25. This is a source
+compatibility choice, not Java 17 runtime support: a JDK 17-only environment
+cannot execute the published Java 21-targeted ToppleCat artifact. The initial
+support policy also assumes the custom contract compiler uses the daemon's
+system compiler; do not document a different consumer toolchain without a
+separate tested compiler seam.
+
 This guide is also available as the [official English technical documentation](https://topplecat.samzhu.dev/docs/authoring-contracts/)
 and [Traditional Chinese documentation](https://topplecat.samzhu.dev/docs/zh-TW/authoring-contracts/).
 
@@ -47,7 +55,7 @@ only changes the surrounding ToppleCat presentation and its Given/When/Then
 labels, never the Step sentence, placeholder, underlying phase, or Step order.
 
 The [JUnit cart-orders learning project](../../samples/junit-cart-orders/) is
-an optional, runnable copy of this SDK pattern. It consumes the released 0.1.0
+an optional, runnable copy of this SDK pattern. It consumes the released 0.2.0
 artifacts from Maven Central and provides five clearly labelled synthetic
 lessons. Each route leaves its local HTML Verification Report under
 `build/topplecat/demo-reports/` for inspection; readers do not need to run it

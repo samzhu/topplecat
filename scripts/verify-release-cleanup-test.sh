@@ -38,7 +38,7 @@ TMPDIR="$tmp_parent" GRADLE_CMD="$root/gradlew" "$root/scripts/verify-release.sh
 assert_empty
 
 for expected in \
-  "EXPECTED FAILURE: JUnit hidden-test attack was rejected." \
+  "Confirmed: REVIEWER_JUNIT=FAIL in synthetic current-run evidence." \
   "EXPECTED FAILURE: Spring hidden-test attack was rejected." \
   "EXPECTED FAILURE: Mutation-gate attack was rejected." \
   "Confirmed current-run evidence and safe agent feedback: REVIEWER_JUNIT=FAIL." \

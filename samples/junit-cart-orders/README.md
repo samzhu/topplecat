@@ -2,7 +2,7 @@
 
 This standalone, synthetic JUnit project shows a familiar failure mode: the
 public tests pass, but the implementation still breaks the agreed rule. It
-uses released ToppleCat 0.1.0 artifacts from Maven Central; it does not build
+uses released ToppleCat 0.2.0 artifacts from Maven Central; it does not build
 the ToppleCat repository first.
 
 The names in this README follow the [ToppleCat glossary](../../CONTEXT.md): a
@@ -13,7 +13,8 @@ chosen examples; they do not add a private rule.
 
 ## Requirements
 
-- JDK 25
+- JDK 21 or 25 (ToppleCat execution); the consumer source fixture may target
+  Java 17, 21, or 25
 - Internet access the first time Gradle downloads the wrapper and Maven Central
   dependencies
 

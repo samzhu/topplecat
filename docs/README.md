@@ -42,8 +42,8 @@ conflict. Do not silently copy one version into more files.
 
 ## Releases and maintainers
 
-- Latest release: [0.1.0](releases/0.1.0.md) ·
-  [繁體中文](releases/0.1.0.zh-TW.md)
+- Latest release: [0.2.0](releases/0.2.0.md) ·
+  [繁體中文](releases/0.2.0.zh-TW.md)
 - Contributor workflow: [CONTRIBUTING](../CONTRIBUTING.md)
 - Repository task map: [DEVELOPMENT](../DEVELOPMENT.md)
 - Release validation: [validation checklist](validation/README.md)

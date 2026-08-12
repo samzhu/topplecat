@@ -7,6 +7,8 @@ run:
 ```bash
 ./gradlew check
 GRADLE_CMD=./gradlew scripts/verify-release.sh
+bash scripts/publish-central-preflight-test.sh
+scripts/verify-consumer-compatibility.sh
 bash scripts/verify-release-cleanup-test.sh
 bash scripts/validate-skill.sh
 python3 scripts/verify-docs.py

@@ -36,6 +36,7 @@ public final class ToppleCatPlugin implements Plugin<Project> {
 
   @Override
   public void apply(Project project) {
+    requireSupportedRuntime();
     ToppleCatExtension extension =
         project.getExtensions().create("toppleCat", ToppleCatExtension.class);
     extension
@@ -58,6 +59,17 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     project
         .getPluginManager()
         .withPlugin("java", ignored -> configureJavaProject(project, extension));
+  }
+
+  private static void requireSupportedRuntime() {
+    int feature = Runtime.version().feature();
+    if (feature < 21) {
+      throw new GradleException(
+          "ToppleCat requires JDK 21 or newer to run the Gradle plugin; detected JDK "
+              + feature
+              + ". A Java 17 consumer source target is supported only when the Gradle/plugin "
+              + "execution environment runs on JDK 21 or 25.");
+    }
   }
 
   private static void configureJavaProject(Project project, ToppleCatExtension extension) {

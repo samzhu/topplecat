@@ -1,5 +1,5 @@
 ---
-title: 0.1.0 版本說明
+title: 0.2.0 版本說明
 description: 確認目前 ToppleCat 版本的 Java 要求、驗證流程、報告與限制。
 page_id: release-notes
 language_code: zh-TW
@@ -15,19 +15,20 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# ToppleCat 0.1.0 版本說明
+# ToppleCat 0.2.0 版本說明
 
 第一次聽到 ToppleCat，請先讀[ToppleCat 是什麼](index.md#documentation-home)。這一頁
 留給準備導入或升級的人，回答目前版本有哪些能力、需要什麼環境，以及有哪些限制。
 
 完整的歷史紀錄請讀
 repository 的
-[0.1.0 release notes](https://github.com/samzhu/topplecat/blob/main/docs/releases/0.1.0.zh-TW.md)。
+[0.2.0 release notes](https://github.com/samzhu/topplecat/blob/main/docs/releases/0.2.0.zh-TW.md)。
 
 ## 目前版本 {#current-release}
 
-ToppleCat 0.1.0 支援 Java 25、JUnit 6.1.1 與相容的 Gradle 版本。使用端專案
-需要的 Gradle plugin 與 JUnit library 已發布到
+ToppleCat 0.2.0 支援 JDK 21 與 JDK 25、JUnit 6.1.1，以及相容的 Gradle
+版本。發布的 artifact 以 Java 21 bytecode 為 target，並由 JDK 25 使用
+`--release 21` 建置。使用端專案需要的 Gradle plugin 與 JUnit library 已發布到
 [Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)。
 
 這個版本可以：
@@ -66,7 +67,7 @@ AC ID；兩種選法不能混用。報告頂端會列出這次實際檢查的規
 
 ## 限制與升級提醒 {#upgrade-notes}
 
-- ToppleCat 0.1.0 只支援目前格式。審閱者資料與 Mechanical Seal 不會從其他格式版本
+- ToppleCat 0.2.0 只支援目前格式。審閱者資料與 Mechanical Seal 不會從其他格式版本
   自動遷移；請還原資料、重新檢查與審閱，再為目前版本封存。
 - 正式 Mutation Testing 使用 ToppleCat 固定的 managed PIT profile。專案自訂的 PIT
   工作維持獨立。

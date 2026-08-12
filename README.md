@@ -99,8 +99,11 @@ disclosures remain readable without opening help.
 
 ## Quick start
 
-ToppleCat 0.1.0 requires Java 25 and a compatible Gradle version. The official
-artifacts are available from
+ToppleCat 0.2.0 requires JDK 21 or 25 and a compatible Gradle version. The
+published artifacts target Java 21 and are built on JDK 25. A consumer project
+may target Java 17, 21, or 25, but the Gradle/plugin execution environment must
+run on JDK 21 or 25. JDK 17-only ToppleCat execution is unsupported. The
+official artifacts are available from
 [Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat),
 so consumer projects do not need to clone or build this repository.
 
@@ -124,11 +127,11 @@ dependencyResolutionManagement {
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.1.0"
+    id("io.github.samzhu.topplecat") version "0.2.0"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.1.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -271,7 +274,7 @@ before proposing a new ToppleCat responsibility.
 - [Architecture](docs/architecture.md)
 - [Context glossary](CONTEXT.md)
 - [Documentation index](docs/README.md)
-- [0.1.0 release notes](docs/releases/0.1.0.md)
+- [0.2.0 release notes](docs/releases/0.2.0.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)
 

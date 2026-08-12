@@ -2,12 +2,6 @@ plugins {
     alias(libs.plugins.java.library)
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
-}
-
 dependencies {
     // Reviewer report projections accept ToppleCaseData values.
     api(project(":topplecat-core"))

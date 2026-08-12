@@ -6,27 +6,42 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.api.JavaVersion
 import org.gradle.plugins.signing.SigningExtension
 
 allprojects {
     group = "io.github.samzhu.topplecat"
-    version = "0.1.0"
+    version = "0.2.0"
 }
 
 subprojects {
     plugins.withId("java") {
+        val buildJdk = providers.gradleProperty("topplecat.buildJdk")
+                .map(String::toInt)
+                .orElse(25)
         extensions.configure<JavaPluginExtension> {
+            toolchain {
+                languageVersion.set(buildJdk.map(JavaLanguageVersion::of))
+            }
+            // The outgoing JVM attribute is part of the publication contract. The
+            // compiler's --release flag below remains the bytecode/API authority.
+            sourceCompatibility = JavaVersion.VERSION_21
+            targetCompatibility = JavaVersion.VERSION_21
             withSourcesJar()
             withJavadocJar()
         }
+        tasks.withType<JavaCompile>().configureEach {
+            options.release.set(21)
+        }
         tasks.withType<Javadoc>().configureEach {
             // Keep the complete Javadoc artifact while suppressing only missing-comment
-            // noise and duplicate standard web fonts. Malformed Javadoc and broken
-            // references still fail; consumers use their browser or system fonts.
+            // noise. Malformed Javadoc and broken references still fail; the doclet
+            // options must remain valid on both JDK 21 and JDK 25.
             val javadocOptions = options as StandardJavadocDocletOptions
             javadocOptions.addBooleanOption("Xdoclint:all,-missing", true)
-            javadocOptions.addBooleanOption("-no-fonts", true)
         }
         tasks.withType<Test>().configureEach {
             useJUnitPlatform()

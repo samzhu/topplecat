@@ -1,6 +1,12 @@
+import org.gradle.api.tasks.compile.JavaCompile
+
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.1.0"
+    id("io.github.samzhu.topplecat") version "0.2.0"
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(21)
 }
 
 java {
@@ -15,7 +21,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.1.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }

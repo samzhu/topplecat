@@ -17,10 +17,21 @@ copied_label: Copied
 
 # 把 ToppleCat 加進 Java 專案
 
-ToppleCat 0.1.0 已發布到 Maven Central。直接把 Gradle plugin 和 JUnit library 加進
+ToppleCat 0.2.0 已發布到 Maven Central。直接把 Gradle plugin 和 JUnit library 加進
 現有專案即可，不必下載 ToppleCat 原始碼，也不用自己 build。
 
-使用 ToppleCat 需要 JDK 25 與相容的 Gradle 版本。
+ToppleCat 的 runtime 與 Gradle/plugin 執行需要 JDK 21 或 25。發布的 artifact
+以 Java 21 為 target，維護者的 release build 使用 JDK 25。使用端專案可以使用
+Java 17、21 或 25 source target，但執行 JDK 必須是 21 或 25；只使用 JDK 17
+執行 ToppleCat 不受支援。
+
+目前不承諾 Gradle daemon JDK 與 consumer contract compiler JDK 不同的組合。
+現有 custom contract compiler 使用 daemon 的 system compiler；要擴大這項承諾，
+必須先有獨立且經測試的 compiler seam。
+
+加入新的 LTS 時，會先加入 CI，再標示最舊的支援 runtime 為 deprecated；移除前必須有
+文件化的 migration window 與 release boundary。相依套件升級若提高 Java floor，也遵循
+同樣的相容性變更規則。
 
 這一頁會帶你完成三件事：安裝 ToppleCat、讓 AI 能把已確認的規則寫成可執行檢查，並知道
 功能完成後該用哪個指令驗證。
@@ -76,11 +87,11 @@ dependencyResolutionManagement {
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.1.0"
+    id("io.github.samzhu.topplecat") version "0.2.0"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.1.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }

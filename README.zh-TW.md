@@ -81,7 +81,10 @@ agent feedback。報告也會在 Mutation Testing 與容易陌生的卡片術語
 
 ## 快速開始
 
-ToppleCat 0.1.0 需要 Java 25 與相容的 Gradle。正式套件已發布到
+ToppleCat 0.2.0 需要 JDK 21 或 25 與相容的 Gradle；發布的 artifact 以 Java 21
+為 target，並由 JDK 25 建置。使用端專案可以 target Java 17、21 或 25，但
+Gradle/plugin 的執行環境必須是 JDK 21 或 25；只使用 JDK 17 執行 ToppleCat 不受支援。
+正式套件已發布到
 [Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)，
 使用端專案不必下載或 build ToppleCat repository。
 
@@ -105,11 +108,11 @@ dependencyResolutionManagement {
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.1.0"
+    id("io.github.samzhu.topplecat") version "0.2.0"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.1.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -229,7 +232,7 @@ ToppleCat 從可執行驗收邊界開始：
 - [架構](docs/architecture.md)
 - [共同語言](CONTEXT.md)
 - [文件索引](docs/README.md)
-- [0.1.0 release notes](docs/releases/0.1.0.zh-TW.md)
+- [0.2.0 release notes](docs/releases/0.2.0.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)
 

@@ -10,10 +10,42 @@ permissions:
   contents: read
 
 jobs:
-  verify-release:
-    name: Verify release gate
+  minimum-compatibility:
+    name: Minimum compatibility (JDK 21)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Run repository check and publish candidate locally
+        run: ./gradlew -Ptopplecat.buildJdk=21 clean check publishToMavenLocal
+
+      - name: Scan Java 21 candidate artifacts
+        run: scripts/verify-artifacts.sh
+
+      - name: Verify Java 17 consumer source on JDK 21
+        run: scripts/verify-consumer-compatibility.sh
+        env:
+          TOPPLECAT_CONSUMER_JDK: "21"
+          TOPPLECAT_CONSUMER_RELEASE: "17"
+
+  primary-release:
+    name: Primary release gate (JDK 25)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout sources
@@ -30,7 +62,75 @@ jobs:
         with:
           cache-provider: basic
 
+      - name: Test publication preflight
+        run: scripts/publish-central-preflight-test.sh
+
       - name: Run ToppleCat release gate
         run: scripts/verify-release.sh
         env:
           GRADLE_CMD: ./gradlew
+
+  consumer-compatibility:
+    name: Consumer source/runtime matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - java: "21"
+            source: "17"
+          - java: "21"
+            source: "21"
+          - java: "25"
+            source: "17"
+          - java: "25"
+            source: "21"
+          - java: "25"
+            source: "25"
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Setup Java ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "${{ matrix.java }}"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Verify consumer source/runtime boundary
+        run: scripts/verify-consumer-compatibility.sh
+        env:
+          TOPPLECAT_CONSUMER_JDK: "${{ matrix.java }}"
+          TOPPLECAT_CONSUMER_RELEASE: "${{ matrix.source }}"
+
+  unsupported-runtime:
+    name: Unsupported runtime guard (JDK 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Confirm JDK 17 is rejected with an actionable message
+        run: |
+          set +e
+          output="$(scripts/verify-runtime-boundary.sh 2>&1)"
+          status=$?
+          set -e
+          test "$status" -ne 0
+          echo "$output"
+          [[ "$output" == *"ToppleCat unsupported runtime"* ]]

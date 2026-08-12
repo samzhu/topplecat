@@ -141,7 +141,7 @@ You do not need to guess the other capitalized terms. Use the
 | Follow the full flow and private information boundaries | [From rules to results](architecture.md) |
 | Connect your own business rules to Java/JUnit | [Turn rules into executable checks](authoring-contracts.md) |
 | Fix an installation or verification problem | [Troubleshooting](troubleshooting.md) |
-| Check the current version and environment requirements | [What's in 0.1.0](release-notes.md) |
+| Check the current version and environment requirements | [What's in 0.2.0](release-notes.md) |
 
 ## Let an AI help you read or install it {#ai-help}
 

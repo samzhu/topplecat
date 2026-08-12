@@ -47,6 +47,13 @@ public abstract class ToppleCatCompileContractsTask extends DefaultTask {
 
   @TaskAction
   public void compileContracts() {
+    int runtime = Runtime.version().feature();
+    if (runtime < 21) {
+      throw new GradleException(
+          "ToppleCat contract compilation requires JDK 21 or newer; detected JDK "
+              + runtime
+              + ". A Java 17 consumer source target does not imply Java 17 runtime support.");
+    }
     Path output = getDescriptorClassesDirectory().get().getAsFile().toPath();
     clean(output);
     List<Path> sources =
@@ -61,7 +68,8 @@ public abstract class ToppleCatCompileContractsTask extends DefaultTask {
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) {
       throw new GradleException(
-          "ToppleCat requires a JDK compiler to validate @ToppleAcceptanceTest scenarios.");
+          "ToppleCat requires a full JDK 21 or newer with a Java compiler to validate "
+              + "@ToppleAcceptanceTest scenarios; a JRE is not sufficient.");
     }
     DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
     // Keep Gradle's daemon-shared jar classpath handles open; closing this manager can invalidate

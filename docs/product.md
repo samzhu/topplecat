@@ -63,6 +63,26 @@ Both HTML reports are human, reviewer-only reading surfaces. Java/JUnit
 Acceptance Methods and Typed Case Rows remain the Executable Contract;
 generated JSON and HTML are projections.
 
+## Java adoption boundary
+
+ToppleCat's published library, JUnit integration, report, Gradle plugin, and
+formal verification flow run on JDK 21 and JDK 25. The single published
+artifact family targets Java 21 and is built and released primarily on JDK 25.
+This lets a Java 21 team adopt the gate without changing the gate's contract or
+evidence model.
+
+The consumer project's source target is independent: Java 17, 21, or 25 source
+can be verified when the Gradle/plugin execution environment runs on JDK 21 or
+25. A JDK 17-only environment is outside the ToppleCat runtime boundary. The
+initial product promise also does not cover a different Gradle daemon JDK and
+consumer contract compiler JDK; that boundary belongs to a future tested
+compiler seam.
+
+When a newer LTS is added, ToppleCat first adds it to CI and marks the oldest
+supported runtime line deprecated. Removal requires a documented migration
+window and a release boundary; a dependency upgrade that raises the Java floor
+is likewise a compatibility change, not a silent patch-level change.
+
 Verification Report serves Reviewers with different technical backgrounds. Its
 first layer uses reader outcomes such as `Passed`, `Problem found`, `Comparison
 completed`, and `Unable to assess`; canonical Gate verdicts and producer terms

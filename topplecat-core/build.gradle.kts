@@ -2,12 +2,6 @@ plugins {
     alias(libs.plugins.java.library)
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
-}
-
 dependencies {
     // JsonNode appears in the public case and evidence models.
     api(libs.jackson.databind)

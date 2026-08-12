@@ -1,12 +1,12 @@
 # 用 JUnit cart orders 學習 ToppleCat
 
-這是一個可獨立執行、完全合成的 JUnit 專案。它示範一個很常見的情況：公開測試都過了，實作卻還是沒有遵守原本同意的規則。範例直接使用 Maven Central 的 ToppleCat 0.1.0，不需要先建置 ToppleCat 原始碼。
+這是一個可獨立執行、完全合成的 JUnit 專案。它示範一個很常見的情況：公開測試都過了，實作卻還是沒有遵守原本同意的規則。範例直接使用 Maven Central 的 ToppleCat 0.2.0，不需要先建置 ToppleCat 原始碼。
 
 本頁沿用 [ToppleCat 名詞解釋](../../CONTEXT.md) 的詞彙。**驗收方法（Acceptance Method）** 是執行案例的 Java 方法；**型別案例資料列（Typed Case Rows）** 是人寫下的 JSON 或 YAML 例子。公開型別案例資料列會交給實作 AI；**審閱者控制的型別案例資料列（Hidden Tests）** 則用同一個驗收方法跑不同例子，不會偷偷加一條新規則。
 
 ## 需求
 
-- JDK 25
+- JDK 21 或 25（ToppleCat 執行環境）；使用端 source fixture 可以 target Java 17、21 或 25
 - 第一次執行時可連到網路，讓 Gradle 下載 wrapper 與 Maven Central 相依套件
 
 ```bash

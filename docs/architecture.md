@@ -51,6 +51,25 @@ reviewer-owned material.
 
 ## Execution boundary
 
+### Java build and runtime policy
+
+All four published Java modules use the shared Gradle convention: JDK 25 is the
+primary build toolchain and every Java compile task uses `--release 21`. The
+release target controls language, Java SE API, and class-file output; source or
+target compatibility flags alone are not the compatibility authority. Gradle
+publication metadata advertises JVM 21 for the API and runtime variants.
+
+The release verifier scans every class entry in every module JAR, requires major
+version 65 with a non-preview minor version, and checks the corresponding
+Gradle module metadata. The one artifact family therefore loads on JDK 21 and
+JDK 25. The Gradle plugin rejects a ToppleCat runtime below JDK 21 with an
+actionable environment message; a Java 17 consumer source target remains valid
+when its execution JDK is 21 or 25.
+
+The custom contract compiler task calls the daemon's system `JavaCompiler` and
+requires a full JDK. A different daemon JDK and consumer compiler/toolchain is
+not a supported combination until a separate tested seam exists.
+
 ```text
 ordinary ./gradlew test
     public project tests + public acceptance methods
@@ -167,7 +186,7 @@ fail during command configuration, before a formal Verify run starts.
 `toppleCatSeal` stores reviewer-only material under
 `~/.topplecat/projects/<sha256-project-key>/escrow/`, along with a mechanical
 approval. `toppleCatRestore` exposes it only in a reviewer boundary;
-`toppleCatReseal` replaces a restored, rechecked suite. The 0.1.0 format is the
+`toppleCatReseal` replaces a restored, rechecked suite. The 0.2.0 format is the
 only supported format. Custody is plaintext mechanical storage, not encryption
 or a sandbox.
 

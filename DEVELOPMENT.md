@@ -87,7 +87,11 @@ then delete the record.
 
 ## Local prerequisites
 
-Core development uses:
+Core development uses JDK 25 as the primary build and release environment. The
+published Java modules compile with `--release 21`; JDK 21 is the minimum
+compatibility line and must also run the repository checks. Consumer source
+fixtures may target Java 17, 21, or 25 only under a JDK 21 or 25 execution
+environment. Core development also uses:
 
 - JDK 25;
 - the repository's Gradle 9.1.0 wrapper; and

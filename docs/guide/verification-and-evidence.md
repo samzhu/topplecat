@@ -7,6 +7,34 @@ ToppleCat verifies an executable Java/JUnit acceptance contract. It does not
 select the current work, manage delivery history, grant organizational approval,
 or provide an operating-system security boundary.
 
+## Java compatibility boundary
+
+ToppleCat is published as one Java 21-targeted artifact family. Its four
+modules, Gradle plugin, report, JUnit integration, and formal verification flow
+run on JDK 21 and JDK 25. The release build uses JDK 25 with an explicit
+`--release 21` policy, so the compiler JDK and published bytecode target are
+separate decisions.
+
+A consumer project may target Java 17, 21, or 25 source when its Gradle/plugin
+execution environment runs on JDK 21 or 25. A JDK 17-only environment cannot
+load the published plugin or ToppleCat library. A Java 17 source target is not
+Java 17 ToppleCat runtime support. The current custom contract compiler uses
+the Gradle daemon's system compiler; a different daemon JDK and consumer
+compiler JDK are outside the initial support promise.
+
+For a compatibility smoke test, use the repository fixture with explicit
+values rather than inheriting the host JDK:
+
+```bash
+TOPPLECAT_CONSUMER_JDK=21 TOPPLECAT_CONSUMER_RELEASE=17 \
+  scripts/verify-consumer-compatibility.sh
+```
+
+The fixture runs ordinary acceptance, compiler-owned contract generation,
+Hidden Tests, Property-Based Testing, and formal Verify. The release verifier
+also scans every class in all four published module JARs for Java 21 major
+version 65, rejects preview classes, and checks Gradle JVM metadata is 21.
+
 The Reviewer may be the developer, Spec owner, or another accountable human.
 That human reads Spec Review before implementation handoff and Verification
 Report after the implementation agent's done claim, then decides whether to
@@ -72,7 +100,7 @@ toppleCatRestore
     -> toppleCatReseal
 ```
 
-The 0.1.0 custody and approval schemas are current-only. A prior schema is not
+The 0.2.0 custody and approval schemas are current-only. A prior schema is not
 migrated or read for verification; seal a new reviewer state instead.
 
 ## Independent formal work
