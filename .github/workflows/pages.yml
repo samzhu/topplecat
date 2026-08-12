@@ -149,6 +149,7 @@ jobs:
   deploy:
     name: Deploy verified Pages artifact
     needs: build
+    if: ${{ always() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
