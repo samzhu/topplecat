@@ -2,6 +2,15 @@
 
 {% block extrahead %}
   {{ super() }}
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E9ERD355ZQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-E9ERD355ZQ');
+  </script>
   {% if page is defined and page and page.meta %}
     {% set slug = "" if page.meta.page_id == "home" else page.meta.page_id ~ "/" %}
     {% set en_path = "/docs/" ~ slug %}
