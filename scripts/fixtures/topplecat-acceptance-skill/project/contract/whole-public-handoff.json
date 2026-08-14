@@ -1,0 +1,5 @@
+{
+  "acceptanceMethods": ["checkoutAppliesDiscount", "receiptKeepsIdentity", "paymentKeepsIdentity", "oldContract"],
+  "publicRows": ["checkout-public", "receipt-public", "payment-public", "old-public"],
+  "acceptanceConditionIds": ["AC-CHECKOUT-001", "AC-CHECKOUT-002", "AC-CHECKOUT-003", "AC-OLD"]
+}

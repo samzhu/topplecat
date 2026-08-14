@@ -1,5 +1,5 @@
 ---
-title: What's in 0.2.0
+title: What's in ToppleCat 0.2.1
 description: Check the Java requirements, supported verification workflow, reports, and limits in the current ToppleCat release.
 page_id: release-notes
 language_code: en
@@ -15,7 +15,7 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# What's in ToppleCat 0.2.0
+# What's in ToppleCat 0.2.1
 
 If ToppleCat is new to you, start with [What is ToppleCat?](index.md#documentation-home).
 This page is for people preparing an adoption or upgrade: it lists the current
@@ -24,17 +24,29 @@ capabilities, environment requirements, and limits.
 For the full historical record, use the repository's
 [0.2.0 release notes](https://github.com/samzhu/topplecat/blob/main/docs/releases/0.2.0.md).
 
-## Current release {#current-release}
+## Current release line {#current-release}
 
-ToppleCat 0.2.0 supports JDK 21 and JDK 25, JUnit 6.1.1, and a compatible
-Gradle version. Its published artifacts target Java 21 bytecode and are built
-with JDK 25 using `--release 21`. Its Gradle plugin and JUnit library are available from
-[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat).
+The 0.2.1 release line is tagged in this repository but has not been published
+to Maven Central. Build and consume it from the local Maven repository until a
+maintainer performs that separate publication. Released 0.2.0 remains the Maven
+Central baseline, and does not contain the selected-Spec Review, CommonMark
+parsing, or review projection changes described below.
+
+This is a breaking handoff change for projects using the former locator JSON:
+stop maintaining that registry and pass the exact repository-relative Markdown
+path or paths repeatedly as `--spec` to selected Check, Review, and scoped Verify
+commands. Multiple selected Specs are supported. Review requires `--spec`;
+whole-contract Check, Seal, and Verify remain available without selection, but
+whole-contract maintenance never claims Review readiness. `.feature` files stay
+upstream and are neither read nor translated.
 
 In this release a team can:
 
-- bind selected rules to public Java/JUnit Acceptance Methods and typed JSON or
+    - bind selected rules to public Java/JUnit Acceptance Methods and typed JSON or
   YAML case rows;
+- review canonical repository-relative Markdown Specs with exact AC headings and
+  acceptance markers; ordinary prose references and `.feature` files are not
+  selection inputs;
 - review and mechanically seal the complete executable contract before an AI
   implementation handoff;
 - run fresh Public Acceptance, reviewer-controlled examples, expected-value
@@ -88,6 +100,6 @@ or make private reports available to an AI.
 - `PASS` is evidence for the checked scope. It does not prove that every
   business rule was specified or grant organizational approval.
 
-To adopt the current release, [install ToppleCat from Maven Central](getting-started.md#ai-assisted-authoring).
+To adopt the current release line, [build 0.2.1 locally and add `mavenLocal()`](getting-started.md#ai-assisted-authoring).
 To understand a result, read
 [How ToppleCat verifies a delivery](verification-and-evidence.md#gates-and-verdicts).

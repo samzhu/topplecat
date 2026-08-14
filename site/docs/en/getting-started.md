@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Add ToppleCat from Maven Central to a Java/JUnit project, then prepare acceptance work for AI implementation and verification.
+description: Add ToppleCat to a Java/JUnit project, then prepare acceptance work for AI implementation and verification.
 page_id: getting-started
 language_code: en
 language_name: English
@@ -17,9 +17,10 @@ copied_label: Copied
 
 # Add ToppleCat to a Java project
 
-ToppleCat 0.2.0 is published on Maven Central. Add the Gradle plugin and JUnit
-library directly to an existing project; you do not need to clone or build
-ToppleCat from source.
+ToppleCat 0.2.1 is the current tagged release line, but it has not yet been
+published to Maven Central. Maven Central currently provides 0.2.0, which does
+not contain the selected-Spec Review behavior described here. Clone this
+repository and run `./gradlew publishToMavenLocal` before using 0.2.1.
 
 ToppleCat runtime and Gradle/plugin execution require JDK 21 or 25. The
 published artifacts target Java 21 and the maintainer release build uses JDK
@@ -69,20 +70,24 @@ To use ToppleCat with an implementation agent, install two things:
 - The `topplecat-acceptance` skill teaches an AI how to turn rules you have
   chosen into Java/JUnit acceptance code and case data.
 
-The [official ToppleCat artifacts](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)
-are available from Maven Central. Make the plugin marker and libraries available
-in `settings.gradle.kts`:
+The 0.2.0 artifacts are available from [Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat).
+For the 0.2.1 tagged release line, put the local Maven repository first in
+`settings.gradle.kts`:
 
 ```kotlin
 pluginManagement {
     repositories {
+        mavenLocal()
         gradlePluginPortal()
         mavenCentral()
     }
 }
 
 dependencyResolutionManagement {
-    repositories { mavenCentral() }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 }
 ```
 
@@ -91,11 +96,11 @@ Then add the plugin and JUnit dependencies in `build.gradle.kts`:
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.2.0"
+    id("io.github.samzhu.topplecat") version "0.2.1"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.1")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -183,6 +188,15 @@ Spec Review page. Read the selected Spec beside the Given/When/Then presentation
 compiled from the Java acceptance method and its case data. This page has no
 test result. It is where the Reviewer checks that the Java code says what the
 rule says.
+
+The `--spec` path must be a repository-relative Markdown file. Declare each AC
+with a visible ATX or Setext heading such as `AC-CHECKOUT: Checkout succeeds`,
+then place the exact standalone marker `<!-- topplecat:acceptance -->` after its
+authored rules. Ordinary AC references in prose, lists, tables, links, inline
+code, or fenced code do not select scope. ToppleCat reads and hashes the
+selected document once during Check, persists a checked projection, and Review
+renders that projection at the marker. It does not read or translate `.feature`
+files.
 
 Review runs the Check it needs. You do not need to put `toppleCatCheck` in the
 main path. If you only want quick feedback on acceptance bindings and case

@@ -49,8 +49,9 @@ AI can handle the technical wiring.
 ### Before the AI starts
 
 People select the rules for this delivery and turn the expected behaviour into
-runnable checks. Spec Review lets the responsible person see exactly what will
-be checked. ToppleCat then records the content of the complete contract and its
+runnable checks. Spec Review requires a canonical Markdown Spec path, shows the
+complete selected document, and inserts each bound acceptance card at its exact
+marker. ToppleCat then records the content of the complete contract and its
 verification settings.
 
 ### While the AI implements

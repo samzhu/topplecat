@@ -7,10 +7,13 @@ import io.github.samzhu.topplecat.report.ReviewDocument;
 import io.github.samzhu.topplecat.report.ReviewDocumentAsset;
 import io.github.samzhu.topplecat.report.SpecMarkdownBlock;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -21,20 +24,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-/** Reads complete selected Markdown documents into a safe, reviewer-only document projection. */
+/** Reads and validates complete selected Markdown documents into one checked projection. */
 final class ExternalSpecDocumentReader {
+  static final String ACCEPTANCE_MARKER = "<!-- topplecat:acceptance -->";
   private static final Pattern AC_ID =
       Pattern.compile("(?<![A-Za-z0-9_-])(AC-[A-Za-z0-9][A-Za-z0-9-]*)(?![A-Za-z0-9_-])");
-  private static final Pattern HEADING = Pattern.compile("^(#{1,6})\\s+(.+?)\\s*#*\\s*$");
-  private static final Pattern UNORDERED_ITEM = Pattern.compile("^\\s*[-*+]\\s+(.+?)\\s*$");
-  private static final Pattern ORDERED_ITEM = Pattern.compile("^\\s*\\d+[.)]\\s+(.+?)\\s*$");
-  private static final Pattern TASK_ITEM =
-      Pattern.compile("^\\s*[-*+]\\s+\\[([ xX])]\\s+(.+?)\\s*$");
-  private static final Pattern QUOTE = Pattern.compile("^\\s*>\\s?(.*)$");
-  private static final Pattern RULE = Pattern.compile("^\\s{0,3}([-*_])(?:\\s*\\1){2,}\\s*$");
-  private static final Pattern FENCE = Pattern.compile("^\\s*```\\s*([^\\s`]*)\\s*$");
-  private static final Pattern IMAGE =
-      Pattern.compile("^\\s*!\\[([^]]*)]\\(([^\\s)]+)(?:\\s+\\\"([^\\\"]*)\\\")?\\)\\s*$");
+  private static final Pattern AC_DECLARATION =
+      Pattern.compile("^(AC-[A-Za-z0-9][A-Za-z0-9-]*)[：:][ \\t]+(\\S(?:.*\\S)?)$");
 
   private ExternalSpecDocumentReader() {}
 
@@ -45,12 +41,71 @@ final class ExternalSpecDocumentReader {
     Path root = projectRoot.toAbsolutePath().normalize();
     List<ReviewDocument> documents = new ArrayList<>();
     Map<String, ReviewAcLocation> locations = new LinkedHashMap<>();
+    Map<String, String> digests = new LinkedHashMap<>();
+    Map<String, List<Declaration>> declarations = new LinkedHashMap<>();
+    List<Reference> references = new ArrayList<>();
+    List<SelectedSpecDiagnostic> diagnostics = new ArrayList<>();
     for (Path document : markdownDocuments(configuredEntries)) {
+      rejectSymbolicPathComponent(root, document, displayPath(root, document));
       ParsedDocument parsed = parseDocument(root, document);
       documents.add(parsed.document());
+      digests.put(parsed.document().path(), parsed.document().sha256());
+      diagnostics.addAll(parsed.diagnostics());
+      references.addAll(parsed.references());
+      parsed
+          .declarations()
+          .forEach(
+              declaration ->
+                  declarations
+                      .computeIfAbsent(declaration.acId(), ignored -> new ArrayList<>())
+                      .add(declaration));
       parsed.locations().forEach(locations::putIfAbsent);
     }
-    return new ParsedSpecs(documents, locations, true);
+    declarations.forEach(
+        (acId, entries) -> {
+          if (entries.size() > 1) {
+            String allLocations =
+                entries.stream()
+                    .map(Declaration::location)
+                    .sorted()
+                    .reduce((left, right) -> left + ", " + right)
+                    .orElse("");
+            for (Declaration entry : entries) {
+              diagnostics.add(
+                  diagnostic(
+                      "TC-SPEC-AC-DUPLICATE",
+                      entry.path(),
+                      entry.line(),
+                      entry.column(),
+                      acId,
+                      "The AC is declared more than once at " + allLocations + ".",
+                      "Keep exactly one canonical heading and acceptance marker for this AC.",
+                      "Remove the duplicate declaration from the owning canonical Spec."));
+            }
+            locations.remove(acId);
+          }
+        });
+    Map<String, List<Declaration>> validDeclarations = declarations;
+    references.forEach(
+        reference -> {
+          List<Declaration> entries = validDeclarations.getOrDefault(reference.acId(), List.of());
+          if (entries.isEmpty()) {
+            diagnostics.add(
+                diagnostic(
+                    "TC-SPEC-AC-DECLARATION-MISSING",
+                    reference.path(),
+                    reference.line(),
+                    reference.column(),
+                    reference.acId(),
+                    "The selected Spec contains an ordinary reference to "
+                        + reference.acId()
+                        + " but no valid declaration selects it across the selected documents.",
+                    "Declare the AC in one visible heading and place one exact standalone"
+                        + " acceptance marker after its rules.",
+                    "Repair the canonical Spec rather than relying on a bare AC reference."));
+          }
+        });
+    return new ParsedSpecs(documents, locations, digests, diagnostics, true);
   }
 
   static List<Path> markdownDocuments(Collection<Path> configuredEntries) {
@@ -62,10 +117,15 @@ final class ExternalSpecDocumentReader {
                 + entry
                 + ". Create the file or directory, or remove it from toppleCat.specDocs.");
       }
+      if (Files.isSymbolicLink(entry)) {
+        throw new ToppleCatException(
+            "ToppleCat selected Spec must not be a symbolic link: " + entry);
+      }
       if (Files.isDirectory(entry)) {
         try (Stream<Path> paths = Files.walk(entry)) {
           paths
               .filter(Files::isRegularFile)
+              .filter(path -> !Files.isSymbolicLink(path))
               .filter(ExternalSpecDocumentReader::isMarkdown)
               .sorted()
               .forEach(documents::add);
@@ -87,344 +147,332 @@ final class ExternalSpecDocumentReader {
   }
 
   private static ParsedDocument parseDocument(Path root, Path document) {
-    List<String> lines;
     byte[] bytes;
     try {
-      lines = Files.readAllLines(document);
       bytes = Files.readAllBytes(document);
     } catch (IOException exception) {
       throw new ToppleCatException(
           "Cannot read ToppleCat Spec document " + document + ": " + exception.getMessage(),
           exception);
     }
+    String source = new String(bytes, StandardCharsets.UTF_8);
     String displayPath = displayPath(root, document);
     AssetCollector assets = new AssetCollector(root, document);
-    List<SpecMarkdownBlock> blocks = blocks(lines, assets);
+    CanonicalMarkdownStructure.Parsed markdown =
+        CanonicalMarkdownStructure.parse(
+            source,
+            destination -> {
+              AssetResolution resolution = assets.resolve(destination);
+              return new CanonicalMarkdownStructure.ResolvedImage(
+                  resolution.destination(), resolution.message());
+            });
+    Structure structure = structure(displayPath, lines(source), markdown.events());
+    List<SpecMarkdownBlock> rawBlocks = markdown.blocks();
+    List<SpecMarkdownBlock> projectedBlocks = new ArrayList<>(rawBlocks);
+    List<Integer> markerBlocks = new ArrayList<>();
+    for (int index = 0; index < rawBlocks.size(); index++) {
+      if (rawBlocks.get(index).kind() == SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER) {
+        markerBlocks.add(index);
+      }
+    }
+    for (int index = 0;
+        index < structure.pairedIds().size() && index < markerBlocks.size();
+        index++) {
+      int blockIndex = markerBlocks.get(index);
+      SpecMarkdownBlock marker = projectedBlocks.get(blockIndex);
+      projectedBlocks.set(
+          blockIndex,
+          new SpecMarkdownBlock(
+              marker.kind(),
+              marker.headingLevel(),
+              marker.text(),
+              marker.items(),
+              marker.language(),
+              marker.destination(),
+              marker.title(),
+              marker.tableHeaders(),
+              marker.tableRows(),
+              structure.pairedIds().get(index),
+              marker.children()));
+    }
     Map<String, ReviewAcLocation> locations = new LinkedHashMap<>();
-    for (int index = 0; index < blocks.size(); index++) {
-      if (blocks.get(index).kind() == SpecMarkdownBlock.Kind.CODE_FENCE
-          || blocks.get(index).kind() == SpecMarkdownBlock.Kind.MERMAID
-          || blocks.get(index).kind() == SpecMarkdownBlock.Kind.FALLBACK) {
-        continue;
-      }
-      String text = blockText(blocks.get(index));
-      Matcher matcher = AC_ID.matcher(text);
-      while (matcher.find()) {
-        locations.putIfAbsent(matcher.group(1), new ReviewAcLocation(displayPath, index + 1));
-      }
+    for (int index = 0;
+        index < structure.pairedIds().size() && index < markerBlocks.size();
+        index++) {
+      String acId = structure.pairedIds().get(index);
+      int blockIndex = markerBlocks.get(index);
+      locations.putIfAbsent(
+          acId,
+          new ReviewAcLocation(
+              displayPath, blockIndex + 1, displayPath + "#acceptance-" + blockIndex));
     }
     return new ParsedDocument(
-        new ReviewDocument(displayPath, Hashing.sha256(bytes), blocks, assets.assets()), locations);
+        new ReviewDocument(displayPath, Hashing.sha256(bytes), projectedBlocks, assets.assets()),
+        locations,
+        structure.declarations(),
+        structure.references(),
+        structure.diagnostics());
   }
 
-  private static List<SpecMarkdownBlock> blocks(List<String> lines, AssetCollector assets) {
-    List<SpecMarkdownBlock> result = new ArrayList<>();
-    List<String> paragraph = new ArrayList<>();
-    List<String> list = new ArrayList<>();
-    SpecMarkdownBlock.Kind listKind = null;
-    for (int index = 0; index < lines.size(); ) {
-      String line = lines.get(index);
-      Matcher fence = FENCE.matcher(line);
-      if (fence.matches()) {
-        flush(result, paragraph, list, listKind);
-        list.clear();
-        listKind = null;
-        String language = fence.group(1).toLowerCase(Locale.ROOT);
-        StringBuilder source = new StringBuilder();
-        index++;
-        while (index < lines.size() && !FENCE.matcher(lines.get(index)).matches()) {
-          if (!source.isEmpty()) {
-            source.append('\n');
+  private static void rejectSymbolicPathComponent(Path root, Path candidate, String suppliedPath) {
+    Path normalizedRoot = root.toAbsolutePath().normalize();
+    Path absoluteCandidate = candidate.toAbsolutePath().normalize();
+    if (!absoluteCandidate.startsWith(normalizedRoot)) {
+      throw new ToppleCatException(
+          "ToppleCat selected Spec must stay inside the repository root: " + suppliedPath);
+    }
+    Path current = normalizedRoot;
+    Path relative = normalizedRoot.relativize(absoluteCandidate);
+    for (Path component : relative) {
+      current = current.resolve(component);
+      if (Files.isSymbolicLink(current)) {
+        throw new ToppleCatException(
+            "ToppleCat selected Spec must not follow a symbolic link component ("
+                + current
+                + "): "
+                + suppliedPath);
+      }
+    }
+  }
+
+  private static List<String> lines(String source) {
+    String normalized = source.replace("\r\n", "\n").replace('\r', '\n');
+    String[] split = normalized.split("\\n", -1);
+    if (split.length > 1 && split[split.length - 1].isEmpty()) {
+      return List.of(split).subList(0, split.length - 1);
+    }
+    return List.of(split);
+  }
+
+  private static Structure structure(
+      String path, List<String> lines, List<CanonicalMarkdownStructure.Event> events) {
+    List<SelectedSpecDiagnostic> diagnostics = new ArrayList<>();
+    List<Declaration> declarations = new ArrayList<>();
+    List<String> pairedIds = new ArrayList<>();
+    Declaration open = null;
+    Map<String, MarkerLocation> completed = new LinkedHashMap<>();
+    for (CanonicalMarkdownStructure.Event event : events) {
+      if (event.kind() == CanonicalMarkdownStructure.EventKind.HEADING) {
+        List<String> ids = ids(event.text());
+        if (ids.isEmpty()) {
+          continue;
+        }
+        Matcher declaration = AC_DECLARATION.matcher(plainMarkdown(event.text()));
+        if (!declaration.matches() || ids.size() != 1) {
+          if (open != null) {
+            String boundaryId = ids.isEmpty() ? "" : ids.getFirst();
+            diagnostics.add(
+                diagnostic(
+                    "TC-SPEC-AC-DECLARATION-OVERLAP",
+                    path,
+                    event.line(),
+                    event.column(),
+                    boundaryId,
+                    "This AC-bearing heading starts before "
+                        + open.acId()
+                        + " receives its marker.",
+                    "Close the earlier AC with its exact standalone acceptance marker before this"
+                        + " heading.",
+                    "Repair this heading and place the marker owned by "
+                        + open.acId()
+                        + " before it."));
+            diagnostics.add(
+                diagnostic(
+                    "TC-SPEC-AC-MARKER-MISSING",
+                    path,
+                    open.line(),
+                    open.column(),
+                    open.acId(),
+                    "The declaration reaches the next AC-bearing heading without its acceptance"
+                        + " marker.",
+                    "Place " + ACCEPTANCE_MARKER + " after this AC's authored rules and examples.",
+                    "Add the exact standalone marker before the next AC-bearing heading."));
+            open = null;
           }
-          source.append(lines.get(index++));
+          for (String acId : ids) {
+            diagnostics.add(
+                diagnostic(
+                    "TC-SPEC-AC-HEADING-INVALID",
+                    path,
+                    event.line(),
+                    event.column(),
+                    acId,
+                    "The heading mentions " + acId + " but does not declare a business title.",
+                    "Use a visible Markdown heading whose plain text is "
+                        + acId
+                        + ": business title (a full-width colon is also valid).",
+                    "Add the title and keep the exact acceptance marker after the authored"
+                        + " rules."));
+          }
+          continue;
         }
-        if (index < lines.size()) {
-          index++;
-          result.add(
-              block(
-                  language.equals("mermaid")
-                      ? SpecMarkdownBlock.Kind.MERMAID
-                      : SpecMarkdownBlock.Kind.CODE_FENCE,
-                  0,
-                  source.toString(),
-                  List.of(),
-                  language,
+        String acId = declaration.group(1);
+        if (open != null) {
+          diagnostics.add(
+              diagnostic(
+                  "TC-SPEC-AC-DECLARATION-OVERLAP",
+                  path,
+                  event.line(),
+                  event.column(),
+                  acId,
+                  "This AC declaration starts before " + open.acId() + " receives its marker.",
+                  "Close the earlier AC with its exact standalone acceptance marker before"
+                      + " declaring another AC.",
+                  "Move or add the marker owned by " + open.acId() + " before this heading."));
+          diagnostics.add(
+              diagnostic(
+                  "TC-SPEC-AC-MARKER-MISSING",
+                  path,
+                  open.line(),
+                  open.column(),
+                  open.acId(),
+                  "The declaration reaches another AC heading without its acceptance marker.",
+                  "Place " + ACCEPTANCE_MARKER + " after this AC's authored rules and examples.",
+                  "Add the exact standalone marker before the next AC heading."));
+        }
+        open = new Declaration(acId, path, event.line(), event.column(), 0, 0);
+      } else if (event.kind() == CanonicalMarkdownStructure.EventKind.MARKER) {
+        if (open == null) {
+          String code =
+              completed.isEmpty() ? "TC-SPEC-AC-MARKER-ORPHAN" : "TC-SPEC-AC-MARKER-DUPLICATE";
+          diagnostics.add(
+              diagnostic(
+                  code,
+                  path,
+                  event.line(),
+                  event.column(),
                   "",
-                  "",
-                  List.of(),
-                  List.of()));
+                  code.endsWith("DUPLICATE")
+                      ? "The acceptance marker is extra; the first marker at "
+                          + completed.values().stream()
+                              .reduce((first, last) -> last)
+                              .map(MarkerLocation::location)
+                              .orElse("the completed AC")
+                          + " and this extra marker at "
+                          + path
+                          + ":"
+                          + event.line()
+                          + ":"
+                          + event.column()
+                          + " are both reported."
+                      : "The acceptance marker does not follow a valid AC declaration.",
+                  "Place one exact standalone marker after the authored rules of its declared AC.",
+                  "Remove the marker or add the matching visible AC heading before it."));
         } else {
-          result.add(
-              block(
-                  SpecMarkdownBlock.Kind.FALLBACK,
-                  0,
-                  "Unclosed fenced code block:\n" + source,
-                  List.of(),
-                  language,
-                  "",
-                  "",
-                  List.of(),
-                  List.of()));
-        }
-        continue;
-      }
-      Matcher heading = HEADING.matcher(line);
-      if (heading.matches()) {
-        flush(result, paragraph, list, listKind);
-        list.clear();
-        listKind = null;
-        result.add(
-            block(
-                SpecMarkdownBlock.Kind.HEADING,
-                heading.group(1).length(),
-                heading.group(2),
-                List.of(),
-                "",
-                "",
-                "",
-                List.of(),
-                List.of()));
-        index++;
-        continue;
-      }
-      if (RULE.matcher(line).matches()) {
-        flush(result, paragraph, list, listKind);
-        list.clear();
-        listKind = null;
-        result.add(
-            block(
-                SpecMarkdownBlock.Kind.HORIZONTAL_RULE,
-                0,
-                "",
-                List.of(),
-                "",
-                "",
-                "",
-                List.of(),
-                List.of()));
-        index++;
-        continue;
-      }
-      Matcher image = IMAGE.matcher(line);
-      if (image.matches()) {
-        flush(result, paragraph, list, listKind);
-        list.clear();
-        listKind = null;
-        AssetResolution resolution = assets.resolve(image.group(2));
-        result.add(
-            block(
-                SpecMarkdownBlock.Kind.IMAGE,
-                0,
-                image.group(1),
-                List.of(),
-                "",
-                resolution.destination(),
-                image.group(3) == null ? resolution.message() : image.group(3),
-                List.of(),
-                List.of()));
-        index++;
-        continue;
-      }
-      if (isTableHeader(lines, index)) {
-        flush(result, paragraph, list, listKind);
-        list.clear();
-        listKind = null;
-        List<String> headers = splitTable(line);
-        List<List<String>> rows = new ArrayList<>();
-        index += 2;
-        while (index < lines.size()
-            && lines.get(index).contains("|")
-            && !lines.get(index).isBlank()) {
-          rows.add(splitTable(lines.get(index++)));
-        }
-        result.add(
-            block(SpecMarkdownBlock.Kind.TABLE, 0, "", List.of(), "", "", "", headers, rows));
-        continue;
-      }
-      Matcher quote = QUOTE.matcher(line);
-      if (quote.matches()) {
-        flush(result, paragraph, list, listKind);
-        list.clear();
-        listKind = null;
-        List<String> quoteLines = new ArrayList<>();
-        while (index < lines.size() && (quote = QUOTE.matcher(lines.get(index))).matches()) {
-          quoteLines.add(quote.group(1));
-          index++;
-        }
-        result.add(
-            block(
-                SpecMarkdownBlock.Kind.BLOCK_QUOTE,
-                0,
-                String.join("\n", quoteLines),
-                List.of(),
-                "",
-                "",
-                "",
-                List.of(),
-                List.of()));
-        continue;
-      }
-      Matcher task = TASK_ITEM.matcher(line);
-      Matcher unordered = UNORDERED_ITEM.matcher(line);
-      Matcher ordered = ORDERED_ITEM.matcher(line);
-      if (task.matches() || unordered.matches() || ordered.matches()) {
-        SpecMarkdownBlock.Kind nextKind =
-            task.matches()
-                ? SpecMarkdownBlock.Kind.TASK_LIST
-                : unordered.matches()
-                    ? SpecMarkdownBlock.Kind.LIST
-                    : SpecMarkdownBlock.Kind.ORDERED_LIST;
-        if (listKind != null && listKind != nextKind) {
-          flush(result, paragraph, list, listKind);
-          list.clear();
-        }
-        flushParagraph(result, paragraph);
-        listKind = nextKind;
-        list.add(
-            task.matches()
-                ? "[" + task.group(1).toLowerCase(Locale.ROOT) + "] " + task.group(2)
-                : unordered.matches() ? unordered.group(1) : ordered.group(1));
-        index++;
-        continue;
-      }
-      if (line.isBlank()) {
-        flush(result, paragraph, list, listKind);
-        list.clear();
-        listKind = null;
-        index++;
-        continue;
-      }
-      if (line.stripLeading().startsWith("<")) {
-        flush(result, paragraph, list, listKind);
-        list.clear();
-        listKind = null;
-        result.add(
-            block(
-                SpecMarkdownBlock.Kind.FALLBACK,
-                0,
-                line,
-                List.of(),
-                "",
-                "",
-                "",
-                List.of(),
-                List.of()));
-      } else {
-        flushList(result, list, listKind);
-        list.clear();
-        listKind = null;
-        paragraph.add(line.trim());
-      }
-      index++;
-    }
-    flush(result, paragraph, list, listKind);
-    return List.copyOf(result);
-  }
-
-  private static SpecMarkdownBlock block(
-      SpecMarkdownBlock.Kind kind,
-      int headingLevel,
-      String text,
-      List<String> items,
-      String language,
-      String destination,
-      String title,
-      List<String> tableHeaders,
-      List<List<String>> tableRows) {
-    String anchor = firstAc(text);
-    if (anchor.isBlank()) {
-      for (String item : items) {
-        anchor = firstAc(item);
-        if (!anchor.isBlank()) {
-          break;
+          Declaration paired =
+              new Declaration(
+                  open.acId(), path, open.line(), open.column(), event.line(), event.column());
+          declarations.add(paired);
+          pairedIds.add(open.acId());
+          completed.put(open.acId(), new MarkerLocation(path, event.line(), event.column()));
+          open = null;
         }
       }
     }
-    return new SpecMarkdownBlock(
-        kind,
-        headingLevel,
-        text,
-        items,
-        language,
-        destination,
-        title,
-        tableHeaders,
-        tableRows,
-        anchor);
-  }
-
-  private static void flush(
-      List<SpecMarkdownBlock> result,
-      List<String> paragraph,
-      List<String> list,
-      SpecMarkdownBlock.Kind listKind) {
-    flushParagraph(result, paragraph);
-    flushList(result, list, listKind);
-  }
-
-  private static void flushParagraph(List<SpecMarkdownBlock> result, List<String> paragraph) {
-    if (!paragraph.isEmpty()) {
-      result.add(
-          block(
-              SpecMarkdownBlock.Kind.PARAGRAPH,
-              0,
-              String.join(" ", paragraph),
-              List.of(),
-              "",
-              "",
-              "",
-              List.of(),
-              List.of()));
-      paragraph.clear();
+    if (open != null) {
+      diagnostics.add(
+          diagnostic(
+              "TC-SPEC-AC-MARKER-MISSING",
+              path,
+              open.line(),
+              open.column(),
+              open.acId(),
+              "The AC declaration reaches the end of the document without its acceptance marker.",
+              "Place " + ACCEPTANCE_MARKER + " after this AC's authored rules and examples.",
+              "Add the exact standalone marker before the document ends."));
     }
+    return new Structure(declarations, pairedIds, references(path, lines), diagnostics);
   }
 
-  private static void flushList(
-      List<SpecMarkdownBlock> result, List<String> list, SpecMarkdownBlock.Kind listKind) {
-    if (!list.isEmpty()) {
-      result.add(
-          block(
-              listKind == null ? SpecMarkdownBlock.Kind.LIST : listKind,
-              0,
-              "",
-              List.copyOf(list),
-              "",
-              "",
-              "",
-              List.of(),
-              List.of()));
+  private static List<Reference> references(String path, List<String> lines) {
+    List<Reference> references = new ArrayList<>();
+    Fence fence = null;
+    for (int lineNumber = 0; lineNumber < lines.size(); lineNumber++) {
+      String line = lines.get(lineNumber);
+      if (fence != null) {
+        if (isClosingFence(line, fence)) {
+          fence = null;
+        }
+        continue;
+      }
+      Fence opened = openingFence(line);
+      if (opened != null) {
+        fence = opened;
+        continue;
+      }
+      Matcher matcher = AC_ID.matcher(line);
+      while (matcher.find()) {
+        references.add(new Reference(matcher.group(1), path, lineNumber + 1, matcher.start() + 1));
+      }
     }
+    return references;
   }
 
-  private static boolean isTableHeader(List<String> lines, int index) {
-    return index + 1 < lines.size()
-        && lines.get(index).contains("|")
-        && lines
-            .get(index + 1)
-            .matches("^\\s*\\|?\\s*:?-{3,}:?\\s*(?:\\|\\s*:?-{3,}:?\\s*)+\\|?\\s*$");
-  }
-
-  private static List<String> splitTable(String line) {
-    String trimmed = line.trim();
-    if (trimmed.startsWith("|")) {
-      trimmed = trimmed.substring(1);
-    }
-    if (trimmed.endsWith("|")) {
-      trimmed = trimmed.substring(0, trimmed.length() - 1);
-    }
-    return java.util.Arrays.stream(trimmed.split("\\|", -1)).map(String::trim).toList();
-  }
-
-  private static String blockText(SpecMarkdownBlock block) {
-    if (!block.text().isBlank()) {
-      return block.text();
-    }
-    return String.join(" ", block.items());
-  }
-
-  private static String firstAc(String value) {
+  private static List<String> ids(String value) {
+    List<String> ids = new ArrayList<>();
     Matcher matcher = AC_ID.matcher(value == null ? "" : value);
-    return matcher.find() ? matcher.group(1) : "";
+    while (matcher.find()) {
+      ids.add(matcher.group(1));
+    }
+    return ids;
+  }
+
+  private static String plainMarkdown(String value) {
+    String plain = value == null ? "" : value;
+    plain = plain.replaceAll("!\\[([^]]*)]\\([^)]*\\)", "$1");
+    plain = plain.replaceAll("\\[([^]]*)]\\([^)]*\\)", "$1");
+    plain = plain.replaceAll("`([^`]*)`", "$1");
+    plain = plain.replaceAll("<[^>]*>", "");
+    plain = plain.replaceAll("[*_~]", "");
+    plain = plain.replace("\\\\", "");
+    return plain.replaceAll("\\s+", " ").trim();
+  }
+
+  private static SelectedSpecDiagnostic diagnostic(
+      String code,
+      String path,
+      int line,
+      int column,
+      String acId,
+      String problem,
+      String required,
+      String fix) {
+    return new SelectedSpecDiagnostic(code, path, line, column, acId, problem, required, fix);
+  }
+
+  private static Fence openingFence(String line) {
+    String stripped = line.stripLeading();
+    if (line.length() - stripped.length() > 3 || stripped.length() < 3) {
+      return null;
+    }
+    char delimiter = stripped.charAt(0);
+    if (delimiter != '`' && delimiter != '~') {
+      return null;
+    }
+    int count = 0;
+    while (count < stripped.length() && stripped.charAt(count) == delimiter) {
+      count++;
+    }
+    if (count < 3) {
+      return null;
+    }
+    String info = stripped.substring(count).trim();
+    if (delimiter == '`' && info.contains("`")) {
+      return null;
+    }
+    return new Fence(delimiter, count, info);
+  }
+
+  private static boolean isClosingFence(String line, Fence fence) {
+    String stripped = line.stripLeading();
+    if (line.length() - stripped.length() > 3 || stripped.length() < fence.length()) {
+      return false;
+    }
+    int count = 0;
+    while (count < stripped.length() && stripped.charAt(count) == fence.delimiter()) {
+      count++;
+    }
+    return count >= fence.length() && stripped.substring(count).trim().isEmpty();
   }
 
   private static boolean isMarkdown(Path path) {
@@ -438,22 +486,99 @@ final class ExternalSpecDocumentReader {
   }
 
   record ParsedSpecs(
-      List<ReviewDocument> documents, Map<String, ReviewAcLocation> locations, boolean configured) {
+      List<ReviewDocument> documents,
+      Map<String, ReviewAcLocation> locations,
+      Map<String, String> documentDigests,
+      List<SelectedSpecDiagnostic> diagnostics,
+      boolean configured) {
     ParsedSpecs {
       documents = List.copyOf(documents == null ? List.of() : documents);
-      locations = Map.copyOf(new LinkedHashMap<>(locations == null ? Map.of() : locations));
+      locations =
+          Collections.unmodifiableMap(
+              new LinkedHashMap<>(locations == null ? Map.of() : locations));
+      documentDigests =
+          Collections.unmodifiableMap(
+              new LinkedHashMap<>(documentDigests == null ? Map.of() : documentDigests));
+      diagnostics =
+          (diagnostics == null ? List.<SelectedSpecDiagnostic>of() : diagnostics)
+              .stream().sorted(Comparator.comparing(SelectedSpecDiagnostic::sortKey)).toList();
     }
 
     static ParsedSpecs empty() {
-      return new ParsedSpecs(List.of(), Map.of(), false);
+      return new ParsedSpecs(List.of(), Map.of(), Map.of(), List.of(), false);
     }
 
     List<String> acceptanceConditionIds() {
       return locations.keySet().stream().sorted().toList();
     }
+
+    String diagnosticMessage() {
+      StringBuilder message = new StringBuilder("Selected Spec validation failed:");
+      for (SelectedSpecDiagnostic diagnostic : diagnostics) {
+        message
+            .append("\n- [")
+            .append(diagnostic.ruleCode())
+            .append("] ")
+            .append(diagnostic.path())
+            .append(":")
+            .append(diagnostic.line())
+            .append(":")
+            .append(diagnostic.column())
+            .append(diagnostic.acId().isBlank() ? "" : " (" + diagnostic.acId() + ")")
+            .append(" Problem: ")
+            .append(diagnostic.problem())
+            .append(" Required: ")
+            .append(diagnostic.required())
+            .append(" Fix: ")
+            .append(diagnostic.fix());
+      }
+      return message.toString();
+    }
   }
 
-  private record ParsedDocument(ReviewDocument document, Map<String, ReviewAcLocation> locations) {}
+  record SelectedSpecDiagnostic(
+      String ruleCode,
+      String path,
+      int line,
+      int column,
+      String acId,
+      String problem,
+      String required,
+      String fix) {
+    String sortKey() {
+      return String.format("%s\u0000%09d\u0000%09d\u0000%s", path, line, column, ruleCode);
+    }
+  }
+
+  private record ParsedDocument(
+      ReviewDocument document,
+      Map<String, ReviewAcLocation> locations,
+      List<Declaration> declarations,
+      List<Reference> references,
+      List<SelectedSpecDiagnostic> diagnostics) {}
+
+  private record Structure(
+      List<Declaration> declarations,
+      List<String> pairedIds,
+      List<Reference> references,
+      List<SelectedSpecDiagnostic> diagnostics) {}
+
+  private record Declaration(
+      String acId, String path, int line, int column, int markerLine, int markerColumn) {
+    String location() {
+      return path + ":" + line + ":" + column;
+    }
+  }
+
+  private record MarkerLocation(String path, int line, int column) {
+    String location() {
+      return path + ":" + line + ":" + column;
+    }
+  }
+
+  private record Reference(String acId, String path, int line, int column) {}
+
+  private record Fence(char delimiter, int length, String info) {}
 
   private record AssetResolution(String destination, String message) {}
 
@@ -517,7 +642,7 @@ final class ExternalSpecDocumentReader {
 
     private List<ReviewDocumentAsset> assets() {
       return assets.values().stream()
-          .sorted(java.util.Comparator.comparing(ReviewDocumentAsset::bundlePath))
+          .sorted(Comparator.comparing(ReviewDocumentAsset::bundlePath))
           .toList();
     }
 

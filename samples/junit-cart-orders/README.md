@@ -2,8 +2,8 @@
 
 This standalone, synthetic JUnit project shows a familiar failure mode: the
 public tests pass, but the implementation still breaks the agreed rule. It
-uses released ToppleCat 0.2.0 artifacts from Maven Central; it does not build
-the ToppleCat repository first.
+uses the locally published ToppleCat 0.2.1 artifact; Maven Central publication
+is a separate maintainer action and is not assumed by this sample.
 
 The names in this README follow the [ToppleCat glossary](../../CONTEXT.md): a
 Java **Acceptance Method** runs **Typed Case Rows**. Public Typed Case Rows are

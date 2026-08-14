@@ -1,0 +1,26 @@
+[
+  {
+    "caseId": "checkout-public",
+    "acId": "AC-CHECKOUT-001",
+    "inputs": {"cart": {"qualifies": true}},
+    "expected": {"discountApplied": true}
+  },
+  {
+    "caseId": "receipt-public",
+    "acId": "AC-CHECKOUT-002",
+    "inputs": {"checkout": {"completed": true}},
+    "expected": {"orderIdentityPresent": true}
+  },
+  {
+    "caseId": "payment-public",
+    "acId": "AC-CHECKOUT-003",
+    "inputs": {"payment": {"authorized": true}},
+    "expected": {"paymentIdentityPresent": true}
+  },
+  {
+    "caseId": "old-public",
+    "acId": "AC-OLD",
+    "inputs": {"legacy": {"available": true}},
+    "expected": {"oldContractAvailable": true}
+  }
+]

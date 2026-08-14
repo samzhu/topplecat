@@ -40,6 +40,10 @@ outputs/
 *.tmp
 .venv*/
 
+# Python interpreter caches
+__pycache__/
+*.py[cod]
+
 # Packaged artifacts
 *.jar
 !gradle/wrapper/gradle-wrapper.jar

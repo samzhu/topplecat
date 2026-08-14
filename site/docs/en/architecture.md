@@ -45,6 +45,13 @@ still match the Mechanical Seal. It then runs public acceptance and every
 enabled independent safeguard, writes the current evidence and reports, and
 returns one aggregate result.
 
+For Spec Review, the Gradle Check reads and hashes each selected canonical
+Markdown document once. It persists the safe selected-document projection and
+AC marker locations; Review consumes that checked projection without rereading
+the source. A visible AC heading and the exact standalone acceptance marker are
+required, while ordinary prose references and `.feature` files are outside this
+boundary.
+
 ## What is authoritative {#contract-authority}
 
 The public Java/JUnit Acceptance Methods and typed JSON or YAML case rows are

@@ -11,6 +11,9 @@ from urllib.parse import unquote
 
 
 ROOT = Path(__file__).resolve().parent.parent
+PREVIOUS_RELEASE_VERSION = "0.2.0"
+CURRENT_RELEASE_VERSION = "0.2.1"
+MAVEN_CENTRAL_VERSION = "0.2.0"
 PRIVATE_SECTIONS = {"grimo", "history", "decisions", "deepwiki", "maintainers"}
 SECRET_TOKENS = ("coupon-hidden-800", "customer-2", "ReviewerBoundary")
 LEGACY_REPORT_NAMES = ("spec.html", "review.html")
@@ -82,6 +85,8 @@ REQUIRED_DOC_INDEX_LINKS = (
     "../CONTEXT.md",
     "releases/0.2.0.md",
     "releases/0.2.0.zh-TW.md",
+    "releases/0.2.1.md",
+    "releases/0.2.1.zh-TW.md",
     "validation/README.md",
 )
 REQUIRED_DESIGN_SECTIONS = (
@@ -93,9 +98,15 @@ REQUIRED_DESIGN_SECTIONS = (
     "## Acceptance evidence",
     "## Consequences and alternatives",
 )
-CURRENT_RELEASE_FILES = {"0.2.0.md", "0.2.0.zh-TW.md"}
-EXPECTED_RELEASE_FILES = CURRENT_RELEASE_FILES
+CURRENT_RELEASE_FILES = {"0.2.1.md", "0.2.1.zh-TW.md"}
+EXPECTED_RELEASE_FILES = {
+    "0.2.0.md",
+    "0.2.0.zh-TW.md",
+    "0.2.1.md",
+    "0.2.1.zh-TW.md",
+}
 RELEASE_NOTE = re.compile(r"^(\d+\.\d+\.\d+)(\.zh-TW)?\.md$")
+SEMVER_TAG = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
 CONTEXT_TERMS = (
     "Executable Contract",
     "Acceptance Condition",
@@ -235,8 +246,81 @@ def has_balanced_fences(text: str) -> bool:
     return fence is None
 
 
+def current_maven_central_claim_is_safe(text: str) -> bool:
+    """Reject a sentence that presents 0.2.1 as a Maven Central artifact."""
+    sentences = re.split(r"(?<=[.!?。！？])\s+", text)
+    positive = re.compile(
+        r"(?:available|published|released)\s+(?:from|on|to)\s+Maven\s+Central"
+        r"|可從\s*Maven\s+Central\s*(?:取得|下載)"
+        r"|(?:已發布|正式套件).*?Maven\s+Central",
+        flags=re.IGNORECASE,
+    )
+    explicit_unpublished = re.compile(
+        r"\b(?:not|has\s+not|is\s+not)\s+(?:currently\s+)?(?:been\s+)?(?:available|published|released)\b"
+        r"|尚未\s*(?:提供|發布)|未\s*(?:發布|提供)",
+        flags=re.IGNORECASE,
+    )
+    for sentence in sentences:
+        if CURRENT_RELEASE_VERSION in sentence and positive.search(sentence) and not explicit_unpublished.search(sentence):
+            return False
+    return True
+
+
 def main() -> int:
     failures: list[str] = []
+    build_text = (ROOT / "build.gradle.kts").read_text(encoding="utf-8")
+    version_text = (ROOT / "topplecat-gradle-plugin/src/main/java/io/github/samzhu/topplecat/gradle/ToppleCatVersion.java").read_text(encoding="utf-8")
+    skill_text = (ROOT / ".agents/skills/topplecat-acceptance/SKILL.md").read_text(encoding="utf-8")
+    if f'version = "{CURRENT_RELEASE_VERSION}"' not in build_text:
+        failures.append(f"build.gradle.kts: current release must be {CURRENT_RELEASE_VERSION}")
+    if f'CURRENT = "{CURRENT_RELEASE_VERSION}"' not in version_text:
+        failures.append(f"ToppleCatVersion: current release must be {CURRENT_RELEASE_VERSION}")
+    if f'topplecat-version: "{CURRENT_RELEASE_VERSION}"' not in skill_text:
+        failures.append(f"acceptance skill: metadata must identify {CURRENT_RELEASE_VERSION}")
+    tag_result = subprocess.run(
+        ["git", "tag", "--list"], cwd=ROOT, text=True, capture_output=True, check=False
+    )
+    if tag_result.returncode == 0:
+        versions = [
+            tuple(int(part) for part in match.groups())
+            for tag in tag_result.stdout.splitlines()
+            if (match := SEMVER_TAG.fullmatch(tag.strip()))
+        ]
+        if versions:
+            highest = max(versions)
+            expected_candidate = (highest[0], highest[1], highest[2] + 1)
+            actual_release = tuple(int(part) for part in CURRENT_RELEASE_VERSION.split("."))
+            if highest != actual_release and actual_release != expected_candidate:
+                failures.append(
+                    "current release must either be the highest local tag or the next patch after "
+                    f"the highest available release tag {highest[0]}.{highest[1]}.{highest[2]}, "
+                    f"not {CURRENT_RELEASE_VERSION}"
+                )
+    historical = (ROOT / f"docs/releases/{PREVIOUS_RELEASE_VERSION}.md").read_text(encoding="utf-8")
+    for feature_phrase in ("selected Spec Review", "topplecat:acceptance"):
+        if feature_phrase in historical:
+            failures.append(f"historical {PREVIOUS_RELEASE_VERSION} release note contains current feature phrase: {feature_phrase}")
+    site_release = (ROOT / "site/docs/en/release-notes.md").read_text(encoding="utf-8")
+    site_release_zh = (ROOT / "site/docs/zh-TW/release-notes.md").read_text(encoding="utf-8")
+    if "Maven Central" not in site_release or "Maven Central" not in site_release_zh:
+        failures.append("site current release notes must state the Maven Central publication boundary")
+    for readme, required_unreleased in (
+        (ROOT / "README.md", "not been published to Maven Central"),
+        (ROOT / "README.zh-TW.md", "尚未發布到 Maven Central"),
+    ):
+        readme_text = readme.read_text(encoding="utf-8")
+        normalized_readme = " ".join(readme_text.split())
+        if CURRENT_RELEASE_VERSION not in readme_text:
+            failures.append(f"{readme.name}: missing current release {CURRENT_RELEASE_VERSION}")
+        if required_unreleased not in normalized_readme or not current_maven_central_claim_is_safe(readme_text):
+            failures.append(f"{readme.name}: {CURRENT_RELEASE_VERSION} must not be described as published to Maven Central")
+        if "publishToMavenLocal" not in readme_text or "mavenLocal()" not in readme_text:
+            failures.append(f"{readme.name}: candidate setup must show publishToMavenLocal and mavenLocal()")
+    false_claim = (ROOT / "README.md").read_text(encoding="utf-8").replace(
+        "has not\nbeen published to Maven Central yet", "has been published to Maven Central"
+    )
+    if current_maven_central_claim_is_safe(false_claim):
+        failures.append("README guard self-test did not reject a 0.2.1 Maven Central claim")
     public_documents = [path for path in source_markdown() if is_public_document(path)]
     root_markdown_files = {path.name for path in ROOT.glob("*.md")}
     if root_markdown_files != EXPECTED_ROOT_MARKDOWN_FILES:
@@ -320,7 +404,7 @@ def main() -> int:
             release_versions.setdefault(match.group(1), set()).add(language)
         if release_files != EXPECTED_RELEASE_FILES:
             failures.append(
-                "docs/releases: expected only the current 0.2.0 English and Traditional-Chinese notes"
+                "docs/releases: expected the 0.2.0 history pair and current 0.2.1 English/Traditional-Chinese notes"
             )
         for version, languages in sorted(release_versions.items()):
             if languages != {"en", "zh-TW"}:
@@ -385,26 +469,26 @@ def main() -> int:
             if re.search(pattern, text):
                 failures.append(f"{relative}: uses replaced terminology matching {pattern}; {replacement}")
 
-    english_release = ROOT / "docs/releases/0.2.0.md"
-    chinese_release = ROOT / "docs/releases/0.2.0.zh-TW.md"
+    english_release = ROOT / f"docs/releases/{CURRENT_RELEASE_VERSION}.md"
+    chinese_release = ROOT / f"docs/releases/{CURRENT_RELEASE_VERSION}.zh-TW.md"
     if english_release.is_file() and chinese_release.is_file():
         release_markers = (
             (
                 english_release,
                 (
-                    "--ac",
-                    "complete executable contract",
+                    "--spec",
+                    "repository-relative",
                     "toppleCatSeal",
-                    "0.2.0",
+                    CURRENT_RELEASE_VERSION,
                 ),
             ),
             (
                 chinese_release,
                 (
-                    "--ac",
-                    "完整可執行契約",
+                    "--spec",
+                    "repository-relative",
                     "toppleCatSeal",
-                    "0.2.0",
+                    CURRENT_RELEASE_VERSION,
                 ),
             ),
         )
@@ -413,7 +497,7 @@ def main() -> int:
             for marker in markers:
                 if marker not in text:
                     failures.append(
-                        f"{release.relative_to(ROOT)}: missing synchronized 0.2.0 change {marker}"
+                        f"{release.relative_to(ROOT)}: missing synchronized {CURRENT_RELEASE_VERSION} change {marker}"
                     )
 
     for relative in SDK_REFERENCE_DOCUMENTS:

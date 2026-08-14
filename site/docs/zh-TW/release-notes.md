@@ -1,5 +1,5 @@
 ---
-title: 0.2.0 版本說明
+title: ToppleCat 0.2.1 版本說明
 description: 確認目前 ToppleCat 版本的 Java 要求、驗證流程、報告與限制。
 page_id: release-notes
 language_code: zh-TW
@@ -15,7 +15,7 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# ToppleCat 0.2.0 版本說明
+# ToppleCat 0.2.1 版本說明
 
 第一次聽到 ToppleCat，請先讀[ToppleCat 是什麼](index.md#documentation-home)。這一頁
 留給準備導入或升級的人，回答目前版本有哪些能力、需要什麼環境，以及有哪些限制。
@@ -24,17 +24,23 @@ copied_label: Copied
 repository 的
 [0.2.0 release notes](https://github.com/samzhu/topplecat/blob/main/docs/releases/0.2.0.zh-TW.md)。
 
-## 目前版本 {#current-release}
+## 目前的 release line {#current-release}
 
-ToppleCat 0.2.0 支援 JDK 21 與 JDK 25、JUnit 6.1.1，以及相容的 Gradle
-版本。發布的 artifact 以 Java 21 bytecode 為 target，並由 JDK 25 使用
-`--release 21` 建置。使用端專案需要的 Gradle plugin 與 JUnit library 已發布到
-[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)。
+0.2.1 release line 已在本 repository 建立 tag，但尚未發布到 Maven Central。在維護者
+完成另外的發布工作前，請從本 repository 的 local Maven repository 使用它。已發布的
+0.2.0 仍是 Maven Central baseline，不包含下方描述的 selected-Spec Review、CommonMark
+解析與 review projection 變更。
+
+這是使用舊 locator JSON 專案的 breaking handoff 變更：停止維護那份 registry，改在選定的
+Check、Review 與 scoped Verify 命令上重複傳入一個或多個確切的 repository-relative Markdown
+路徑。Review 必須有 `--spec`；沒有選定 Spec 時，whole-contract Check、Seal、Verify 仍可執行，
+但不宣稱 Review ready。`.feature` 仍屬 upstream，不會被讀取或翻譯。
 
 這個版本可以：
 
 - 把選定規則連到公開 Java/JUnit 驗收方法與型別化 JSON 或 YAML 案例資料；
-- 在 AI 開始實作前，審閱並機械封存完整可執行契約；
+- 以確切的 repository-relative Markdown Spec 路徑選取並審閱完整 Spec，將 AC executable projection
+  嵌入唯一 marker 位置，再機械封存完整可執行契約；
 - 執行新的公開驗收、審閱者控制案例、預期值檢查、Property-Based
   Testing 與 managed Mutation Testing；
 - 產生以驗收條件為中心的私人 Verification Report、機器可讀證據，以及不洩漏審閱者
@@ -45,7 +51,8 @@ CI 的正常命令是沒有指定 Spec 或 AC 的 `./gradlew toppleCatVerify`。
 
 ## 報告與語言
 
-ToppleCat 會在你的專案裡產生兩份私人報告。Spec Review 讓人先確認之後要檢查的規則；
+ToppleCat 會在你的專案裡產生兩份私人報告。Spec Review 讓人先確認 canonical Markdown
+Spec 與之後要檢查的規則；
 Verification Report 說明 AI 完成後的本次驗證結果。兩份都是可以離線開啟的 HTML
 頁面，不會把內容送到這個公開網站或外部服務。
 
@@ -75,5 +82,5 @@ AC ID；兩種選法不能混用。報告頂端會列出這次實際檢查的規
 - 審閱者資料保存在本機的純文字儲存區，不是加密或程序隔離。
 - `PASS` 是已檢查範圍的證據，不證明所有業務規則都已寫下，也不代表組織核准。
 
-要導入目前版本，請[從 Maven Central 安裝 ToppleCat](getting-started.md#ai-assisted-authoring)。
+要導入目前版本，請先[在本機建置並使用 0.2.1](getting-started.md#ai-assisted-authoring)。
 要解讀結果，請讀[ToppleCat 如何檢查交付](verification-and-evidence.md#gates-and-verdicts)。

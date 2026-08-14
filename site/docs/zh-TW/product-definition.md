@@ -43,8 +43,9 @@ copied_label: Copied
 
 ### AI 開始前
 
-人先選定這次要做的規則，並把預期行為寫成可執行檢查。Spec Review 讓負責驗收的人
-確認之後到底會檢查什麼。確認後，ToppleCat 會記住完整契約與驗證設定的內容。
+人先選定這次要做的規則，並把預期行為寫成可執行檢查。Spec Review 要求 canonical
+Markdown Spec 路徑，讓負責驗收的人確認完整選定文件，並在每個 marker 位置插入對應的
+AC 驗收卡。確認後，ToppleCat 會記住完整契約與驗證設定的內容。
 
 ### AI 實作時
 

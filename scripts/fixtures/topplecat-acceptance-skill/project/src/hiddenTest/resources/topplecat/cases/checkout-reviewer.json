@@ -1,0 +1,20 @@
+[
+  {
+    "caseId": "checkout-independent-boundary",
+    "acId": "AC-CHECKOUT-001",
+    "inputs": {"cart": {"qualifies": false}},
+    "expected": {"discountApplied": false}
+  },
+  {
+    "caseId": "payment-independent-boundary",
+    "acId": "AC-CHECKOUT-003",
+    "inputs": {"payment": {"authorized": true}},
+    "expected": {"paymentIdentityPresent": false}
+  },
+  {
+    "caseId": "old-independent-boundary",
+    "acId": "AC-OLD",
+    "inputs": {"legacy": {"available": true}},
+    "expected": {"oldContractAvailable": false}
+  }
+]

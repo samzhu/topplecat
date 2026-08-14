@@ -1,6 +1,7 @@
 package io.github.samzhu.topplecat.report;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.samzhu.topplecat.core.AttachmentRef;
@@ -197,6 +198,81 @@ class ReportBundleScaleTest {
       assertEquals(
           1_000, page.querySelectorAll("[data-lazy-case][data-loaded='true']").getLength());
       assertEquals(0, page.querySelectorAll(".ac-technical[open]").getLength());
+    }
+  }
+
+  @Test
+  void selectedSpecReviewKeepsOneHundredProjectionsAndNestedRowsBehindAccessibleDetails()
+      throws Exception {
+    List<ReviewDocument> documents = new ArrayList<>();
+    List<ReviewAcceptanceCondition> conditions = new ArrayList<>();
+    for (int index = 0; index < 100; index++) {
+      String acId = "AC-REVIEW-SCALE-%03d".formatted(index);
+      String path = "specs/checkout-%03d.md".formatted(index);
+      documents.add(
+          new ReviewDocument(
+              path,
+              "a".repeat(64),
+              List.of(
+                  new SpecMarkdownBlock(
+                      SpecMarkdownBlock.Kind.HEADING, 2, acId + ": Rule", List.of()),
+                  new SpecMarkdownBlock(
+                      SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER,
+                      0,
+                      "",
+                      List.of(),
+                      "",
+                      "",
+                      "",
+                      List.of(),
+                      List.of(),
+                      acId)),
+              List.of()));
+      List<ReviewCase> cases = new ArrayList<>();
+      for (int row = 0; row < 2; row++) {
+        cases.add(
+            new ReviewCase(
+                CaseVisibility.PUBLIC,
+                acId + "-case-" + row,
+                JSON.readTree("{\"nested\":{\"input\":\"" + acId + "-input\"}}"),
+                JSON.readTree("{\"nested\":{\"expected\":\"" + acId + "-expected\"}}"),
+                List.of(new ReviewScenarioStep(StepPhase.GIVEN, "the authored state is ready"))));
+      }
+      conditions.add(
+          new ReviewAcceptanceCondition(
+              acId,
+              "A long selected review title " + acId,
+              new ReviewAcLocation(path, 2, "acceptance-" + index),
+              cases,
+              new ReviewMethod(List.of(), "")));
+    }
+    ReviewView view =
+        new ReviewView(
+            ReviewView.SCHEMA_VERSION,
+            Instant.parse("2026-08-01T00:00:00Z"),
+            documents,
+            conditions,
+            null,
+            List.of());
+    Path bundle = tempDir.resolve("review-scale");
+    long started = System.nanoTime();
+    HtmlBundleWriter.review(bundle, view);
+    assertTrue(Duration.ofNanos(System.nanoTime() - started).compareTo(Duration.ofSeconds(2)) < 0);
+    assertTrue(Files.size(bundle.resolve("data.json")) > 100_000);
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      client.getOptions().setScreenWidth(360);
+      client.getOptions().setScreenHeight(800);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(100);
+      assertEquals(1, page.querySelectorAll("#selected-documents").getLength());
+      assertEquals(100, page.querySelectorAll("#selected-documents article.ac-review").getLength());
+      assertEquals(200, page.querySelectorAll("details.case-values").getLength());
+      assertEquals(0, page.querySelectorAll("details.case-values[open]").getLength());
+      assertFalse(
+          (Boolean)
+              page.executeJavaScript("document.documentElement.scrollWidth > window.innerWidth")
+                  .getJavaScriptResult());
     }
   }
 

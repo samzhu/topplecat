@@ -162,10 +162,16 @@ These reviewer-only coordinates and details do not enter safe feedback.
 
 ## Scope and custody
 
-Check and Review accept repeatable `--spec` paths. Check maps the external
-Spec's ACs to executable acceptance methods; Review needs the same document to
-render its full prose with the executable material. Seal and Reseal have no
-selection: they custody all reviewer source and approve the complete contract.
+Check and Review accept repeatable `--spec` paths. Review requires at least
+one exact path and rejects a missing selection before its dependent Check
+starts. Check maps the external Spec's valid heading/marker ACs to executable
+acceptance methods, reads each selected document once, hashes those bytes, and
+writes a safe checked projection. Structural Markdown errors are reported by
+Check after the selection gate while it reads and parses the selected bytes;
+Review does not produce a report for that failed Check. Review consumes that projection rather than
+re-reading Markdown, so its HTML cannot combine bytes Check did not accept.
+Seal and Reseal have no selection: they custody all reviewer source and approve
+the complete contract.
 
 Verify has no selection by default and then runs every AC. For a quick formal
 report, it accepts either repeatable `--spec` paths or repeatable `--ac AC-...`
@@ -226,15 +232,18 @@ Verify reuses an existing Mechanical Seal through an internal custody check; it
 does not run Review, Seal, or update approval. The integrity comparison always
 uses the complete contract, even when Verify later runs a selected AC scope.
 
-- Spec Review is reviewer-only, precedes handoff, and presents complete selected Markdown documents with their bound executable material.
+- Spec Review is reviewer-only, precedes handoff, and presents complete selected Markdown documents with each bound executable projection inline at its exact marker.
 - Verification Report is reviewer-only and contains results, counterexamples,
   classifications, replay tokens, and private failures when applicable.
 - `agent-feedback.json` has gate-level safe reasons only—no hidden values,
   IDs, paths, source names, tokens, attachments, or raw failures.
 
 Spec Review is a document reader, not an execution dashboard: it renders every
-selected Markdown document in order before the AC-bound Scenario, public and
-reviewer Typed Case Rows, Properties, and the one public Acceptance Method.
+selected Markdown document once and replaces each exact acceptance marker with
+the AC-bound Scenario, public and reviewer Typed Case Rows, Properties, and the
+one public Acceptance Method. The reviewer projection is v8. Heading level
+does not affect the load point; ordinary AC references never create scope or a
+second projection.
 Raw Markdown HTML and unsafe URLs are escaped, repository-local image assets
 stay inside the offline bundle, and Mermaid has an escaped source fallback.
 Both report bundles are offline, self-contained, and CSP-safe. They load no

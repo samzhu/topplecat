@@ -81,25 +81,31 @@ agent feedback。報告也會在 Mutation Testing 與容易陌生的卡片術語
 
 ## 快速開始
 
-ToppleCat 0.2.0 需要 JDK 21 或 25 與相容的 Gradle；發布的 artifact 以 Java 21
-為 target，並由 JDK 25 建置。使用端專案可以 target Java 17、21 或 25，但
-Gradle/plugin 的執行環境必須是 JDK 21 或 25；只使用 JDK 17 執行 ToppleCat 不受支援。
-正式套件已發布到
-[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)，
-使用端專案不必下載或 build ToppleCat repository。
+ToppleCat 0.2.1 是目前的 tagged release line，但這次 release 尚未發布到 Maven Central。
+本 checkout 的 selected-Spec Review 行為不在已發布的 0.2.0 中。若要現在使用
+0.2.1，請先 clone 本 repository 並執行 `./gradlew publishToMavenLocal`，
+再在使用端的 plugin 與 dependency repository 中把 `mavenLocal()` 放在
+`mavenCentral()` 前面。已發布的 0.2.0 artifact 仍可從
+[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)
+取得，但不提供以下 selected-Spec 行為。使用端專案可以 target Java 17、21 或 25；
+Gradle/plugin 的執行環境必須是 JDK 21 或 25，只使用 JDK 17 執行 ToppleCat 不受支援。
 
 `settings.gradle.kts`：
 
 ```kotlin
 pluginManagement {
     repositories {
+        mavenLocal()
         gradlePluginPortal()
         mavenCentral()
     }
 }
 
 dependencyResolutionManagement {
-    repositories { mavenCentral() }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 }
 ```
 
@@ -108,11 +114,11 @@ dependencyResolutionManagement {
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.2.0"
+    id("io.github.samzhu.topplecat") version "0.2.1"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.1")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -138,6 +144,11 @@ tasks.test { useJUnitPlatform() }
 ./gradlew toppleCatVerify --spec specs/checkout/spec.md
 ./gradlew toppleCatVerify --ac AC-CHECKOUT-THRESHOLD --ac AC-CHECKOUT-VIP
 ```
+
+`toppleCatCheck` 與 `toppleCatReview` 的每個 `--spec` 都必須是 repository-relative 的
+Markdown 檔案。文件要用可見標題宣告 AC，例如 `AC-CHECKOUT: Checkout succeeds`，並在
+該條規則後放置唯一、獨立一行的 `<!-- topplecat:acceptance -->` marker。一般文字、清單、
+表格、連結、inline code 或 fenced code 中的引用不會選取 AC；`.feature` 檔案不會被讀取或翻譯。
 
 範圍驗證報告會明說這種 `PASS` 只代表列出的 AC 通過，不代表完整可執行契約通過。CI
 應使用不帶選項的 `toppleCatVerify`。
@@ -232,6 +243,7 @@ ToppleCat 從可執行驗收邊界開始：
 - [架構](docs/architecture.md)
 - [共同語言](CONTEXT.md)
 - [文件索引](docs/README.md)
+- [0.2.1 release notes](docs/releases/0.2.1.zh-TW.md)
 - [0.2.0 release notes](docs/releases/0.2.0.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)

@@ -55,11 +55,24 @@ final decision.
 ./gradlew toppleCatVerify
 ```
 
+`toppleCatReview` requires at least one canonical repository-relative Markdown
+`--spec` path. The selected document is read, hashed, and structurally checked
+once by `toppleCatCheck`: each AC must have a visible `AC-ID: business title`
+heading (full-width `：` is also accepted) and one standalone
+`<!-- topplecat:acceptance -->` marker. Check persists a safe checked
+projection; Review consumes that projection and does not reread the Markdown.
+Ordinary AC references in prose, lists, tables, links, inline code, or fences do
+not select scope. Missing selection is rejected before the dependent Check
+starts. Once a path is selected, missing, duplicate, orphaned, or misplaced
+declarations and markers are found while Check reads and parses the selected
+Markdown; Check then fails with repairable `TC-SPEC-AC-*` diagnostics and Review
+does not produce a report.
+
 Check and Review use repeatable `--spec` paths. Check verifies that every AC in
 the selected Markdown documents has an executable public binding; Review shows
-that prose with its Scenario and case rows. Seal and Reseal always custody the
-complete reviewer source and approve the complete executable contract. They do
-not take a Spec or AC selection.
+that prose with its Scenario and case rows at the authored marker. Seal and
+Reseal always custody the complete reviewer source and approve the complete
+executable contract. They do not take a Spec or AC selection.
 
 Verify without a selection is the normal full-contract command and the command
 for CI. A Reviewer who needs a quicker report for an implementation just
@@ -376,8 +389,9 @@ Each run starts in `build/topplecat/runs/current/`, receives a fresh UUID when
 archived, and retains only a small recent archive set. Stable copies are for
 inspection, never inputs to a later verdict.
 
-Spec Review reads the complete selected SDD before executable material. It says
-that the specification is prepared but not executed. Verification Report starts
+Spec Review renders the complete selected Markdown document before executable
+material, replacing each exact acceptance marker with its bound AC card. It
+says that the specification is prepared but not executed. Verification Report starts
 with pass, fail, or unavailable evidence, then lists the selected ACs needing
 attention before the complete AC list. Each AC keeps the fixed order Contract
 rule and result, Public Acceptance, Hidden Tests, Expected Result Check,

@@ -9,6 +9,7 @@ skill_path="$skill_root/SKILL.md"
 interface_path="$skill_root/agents/openai.yaml"
 old_skill_root="$root/.agents/skills/topplecat-verification"
 references=(authoring.md safeguards.md reports.md)
+behavior_test="$root/scripts/test-topplecat-acceptance-skill.py"
 
 fail() {
   echo "ToppleCat skill validation failed: $1" >&2
@@ -17,6 +18,9 @@ fail() {
 
 [[ -f "$skill_path" ]] || fail "$skill_path was not found."
 [[ -f "$interface_path" ]] || fail "$interface_path was not found."
+[[ -f "$behavior_test" ]] || fail "$behavior_test was not found."
+[[ ! -e "$skill_root/behavior-contract.json" ]] \
+  || fail "unapproved acceptance behavior manifest remains: $skill_root/behavior-contract.json"
 grep -Fq 'CONTEXT.md' "$skill_path" || fail "SKILL.md must require the root context glossary."
 [[ ! -e "$old_skill_root" ]] || fail "legacy skill directory remains: $old_skill_root"
 [[ "$(sed -n '1p' "$skill_path")" == '---' ]] || fail "missing YAML front matter."
@@ -58,6 +62,9 @@ for reference in "${references[@]}"; do
     || fail "$skill_path does not link references/$reference."
 done
 
+! grep -R -Fq 'acceptance-skill.behavior' "$root/.agents/skills" \
+  || fail "unapproved parallel acceptance behavior schema remains in repository skills."
+
 for required in \
   'AC-...' \
   '@ToppleAcceptanceTest' \
@@ -71,6 +78,9 @@ for required in \
   'Implementation Agent' \
   'External Workflow' \
   'Current-run Evidence' \
+  'canonical Markdown' \
+  'whole-contract branch' \
+  'Never read or translate .feature' \
   'The Reviewer' \
   'alone decides whether to'; do
   grep -Fq -- "$required" "$skill_path" || fail "missing required behavior: $required"
@@ -156,6 +166,9 @@ word_count="$(wc -w < "$skill_path" | tr -d ' ')"
   || fail "skill exceeds progressive-disclosure limits."
 
 echo "ToppleCat skill validation PASS: $skill $skill_version"
+
+python3 "$behavior_test" \
+  || fail "acceptance skill deterministic instruction-source and assertion tests failed."
 
 release_skill="topplecat-release"
 release_root="$root/.agents/skills/$release_skill"

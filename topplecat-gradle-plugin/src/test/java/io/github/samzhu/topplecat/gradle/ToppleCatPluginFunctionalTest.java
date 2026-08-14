@@ -15,12 +15,18 @@ import io.github.samzhu.topplecat.core.ToppleEvidence;
 import io.github.samzhu.topplecat.core.ToppleEvidenceJson;
 import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
 import io.github.samzhu.topplecat.report.ReportJson;
+import io.github.samzhu.topplecat.report.ReviewView;
+import io.github.samzhu.topplecat.report.SelectedSpecProjection;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import net.bytebuddy.ByteBuddy;
 import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
+import org.htmlunit.BrowserVersion;
+import org.htmlunit.WebClient;
+import org.htmlunit.html.HtmlPage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -106,12 +112,13 @@ class ToppleCatPluginFunctionalTest {
         """);
     writeTraditionalChineseScenarioAcceptance();
     writePublicCase("coupon-public", "AC-COUPON", 100);
+    writeCanonicalSpec("specs/coupon.md", "AC-COUPON", "套用 SAVE100 折抵訂單小計");
 
     var unsupported = runner("toppleCatVerify", "--language", "ja").buildAndFail();
     assertTrue(unsupported.getOutput().contains("Supported values: en, zh-TW"));
     assertFalse(Files.exists(project.resolve("build/topplecat/runs/current")));
 
-    runner("toppleCatReview", "--language", "zh-TW").build();
+    runner("toppleCatReview", "--spec", "specs/coupon.md", "--language", "zh-TW").build();
     assertReportLanguage("review", "zh-TW");
     String reviewData =
         Files.readString(project.resolve("build/topplecat/reports/review/data.json"));
@@ -119,7 +126,7 @@ class ToppleCatPluginFunctionalTest {
     assertTrue(reviewData.contains("套用 SAVE100 折抵訂單小計"));
     assertTrue(reviewData.contains("準備可結帳的購物車"));
 
-    runner("toppleCatReview").build();
+    runner("toppleCatReview", "--spec", "specs/coupon.md").build();
     assertReportLanguage("review", "en");
 
     runner("toppleCatSeal").build();
@@ -137,6 +144,257 @@ class ToppleCatPluginFunctionalTest {
         Files.readString(project.resolve("build/topplecat/evidence.json")).contains("zh-TW"));
     assertFalse(
         Files.readString(project.resolve("build/topplecat/agent-feedback.json")).contains("zh-TW"));
+  }
+
+  @Test
+  void selectedReviewTestKitPreservesCanonicalScopeRowsMarkersAndOfflineNavigation()
+      throws Exception {
+    writeProject("");
+    writeTwoAcceptanceConditionsWithPropertyOnlyOnB();
+    writePublicCasesForAAndB();
+    writeHiddenCasesForAAndB();
+    writeSelectedReviewFixture();
+
+    runner("toppleCatReview", "--spec", "specs/checkout.md").build();
+
+    ReviewView review =
+        ReportJson.readReview(
+            Files.readString(project.resolve("build/topplecat/reports/review/data.json")));
+    assertEquals(1, review.selectedSpecDocuments().size());
+    assertEquals("specs/checkout.md", review.selectedSpecDocuments().getFirst().path());
+    assertEquals(2, review.acceptanceConditions().size());
+    assertEquals(
+        2,
+        review.selectedSpecDocuments().getFirst().blocks().stream()
+            .filter(
+                block ->
+                    block.kind()
+                        == io.github.samzhu.topplecat.report.SpecMarkdownBlock.Kind
+                            .ACCEPTANCE_MARKER)
+            .count());
+    assertTrue(
+        review.acceptanceConditions().stream().allMatch(condition -> !condition.cases().isEmpty()));
+    assertTrue(
+        review.acceptanceConditions().stream()
+            .flatMap(condition -> condition.cases().stream())
+            .allMatch(testCase -> !testCase.scenario().isEmpty()));
+    String data = Files.readString(project.resolve("build/topplecat/reports/review/data.json"));
+    assertFalse(data.contains("AC-OLD"));
+    assertFalse(data.contains("checkout.feature"));
+    assertTrue(data.contains("coupon-a"));
+    assertTrue(data.contains("reviewer-a"), data);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page =
+          client.getPage(
+              project.resolve("build/topplecat/reports/review/index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+      assertEquals(1, page.querySelectorAll("article.document").getLength());
+      assertEquals(1, page.querySelectorAll("#review-AC-A").getLength());
+      assertEquals(1, page.querySelectorAll("#review-AC-B").getLength());
+      assertTrue(page.querySelectorAll("a[href=\"#review-AC-A\"]").getLength() >= 2);
+      assertTrue(page.asNormalizedText().contains("Background AC-A"));
+      assertTrue(page.asNormalizedText().contains("Apply coupon"));
+      assertTrue(page.asNormalizedText().contains("Reject missing items"));
+      assertNotNull(page.querySelector("details.case-values"));
+      assertNull(page.querySelector("#executable-material"));
+      assertFalse(page.asNormalizedText().contains("AC-OLD"));
+      assertFalse(page.asNormalizedText().contains("checkout.feature"));
+    }
+
+    runner("toppleCatReview", "--spec", "specs/checkout.md", "--language", "zh-TW").build();
+    ReviewView localized =
+        ReportJson.readReview(
+            Files.readString(project.resolve("build/topplecat/reports/review/data.json")));
+    assertEquals(review.selectedSpecDocuments(), localized.selectedSpecDocuments());
+    assertEquals(review.acceptanceConditions(), localized.acceptanceConditions());
+  }
+
+  @Test
+  void selectedReviewCarriesExactRelativePathsAndClearsStaleHandoffForAbsolutePath()
+      throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeTwoAcceptanceConditionsWithPropertyOnlyOnB();
+    writePublicCasesForAAndB();
+    writeCanonicalSpec("specs/one.md", "AC-A", "First selected rule");
+    writeCanonicalSpec("specs/two.md", "AC-B", "Second selected rule");
+
+    runner("toppleCatReview", "--spec", "specs/one.md", "--spec", "specs/two.md").build();
+
+    ReviewView review =
+        ReportJson.readReview(
+            Files.readString(project.resolve("build/topplecat/reports/review/data.json")));
+    assertEquals(
+        List.of("specs/one.md", "specs/two.md"),
+        review.selectedSpecDocuments().stream().map(document -> document.path()).toList());
+    assertEquals(
+        List.of("AC-A", "AC-B"),
+        review.acceptanceConditions().stream().map(condition -> condition.acId()).toList());
+    assertEquals(
+        2,
+        review.selectedSpecDocuments().stream()
+            .flatMap(document -> document.blocks().stream())
+            .filter(
+                block ->
+                    block.kind()
+                        == io.github.samzhu.topplecat.report.SpecMarkdownBlock.Kind
+                            .ACCEPTANCE_MARKER)
+            .count());
+
+    Path selectedScope = project.resolve("build/topplecat/selected-spec-scope.json");
+    Path selectedProjection = project.resolve("build/topplecat/selected-spec-projection.json");
+    assertTrue(Files.isRegularFile(selectedScope));
+    assertTrue(Files.isRegularFile(selectedProjection));
+    assertTrue(Files.isDirectory(project.resolve("build/topplecat/reports/review")));
+    String absolutePath = project.resolve("specs/one.md").toAbsolutePath().toString();
+    var absolute = runner("toppleCatReview", "--spec", absolutePath).buildAndFail();
+    assertTrue(absolute.getOutput().contains("> Task :toppleCatCheck"), absolute.getOutput());
+    assertTrue(absolute.getOutput().contains("must be repository-relative"), absolute.getOutput());
+    assertFalse(Files.exists(selectedScope));
+    assertFalse(Files.exists(selectedProjection));
+    assertFalse(Files.exists(project.resolve("build/topplecat/reports/review")));
+  }
+
+  @Test
+  void checkedSelectedProjectionKeepsMarkdownAndJavaSnapshotsUntilNextCheck() throws Exception {
+    writeProject("");
+    writeScenarioAcceptance();
+    Path acceptanceSource = project.resolve("src/test/java/example/CouponAcceptanceTest.java");
+    String originalAcceptance = Files.readString(acceptanceSource);
+    String authoredCall = "scenario.then(coupon).matches(testCase);";
+    assertTrue(originalAcceptance.contains(authoredCall));
+    String mutatedAcceptance =
+        originalAcceptance.replace(
+            authoredCall,
+            "scenario.then(coupon).matches(testCase, \"} {\"); // } in a line comment /* { and } in"
+                + " a block comment */");
+    assertNotEquals(originalAcceptance, mutatedAcceptance);
+    Files.writeString(acceptanceSource, mutatedAcceptance);
+    writePropertyWithBraces();
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+    writeCanonicalSpec("specs/coupon.md", "AC-COUPON", "Coupon");
+
+    runner("toppleCatCheck", "--spec", "specs/coupon.md").build();
+    Path projectionFile = project.resolve("build/topplecat/selected-spec-projection.json");
+    SelectedSpecProjection checked =
+        ReportJson.readSelectedSpecProjection(Files.readString(projectionFile));
+    String checkedSource = checked.acceptanceMethodSources().get("AC-COUPON");
+    assertNotNull(checkedSource);
+    assertTrue(checkedSource.contains("matches(testCase, \"} {\")"));
+    assertTrue(checkedSource.contains("block comment"));
+    assertTrue(checkedSource.trim().endsWith("}"));
+    assertEquals(1, checked.propertySources().size());
+    String checkedPropertySource = checked.propertySources().values().iterator().next();
+    assertTrue(checkedPropertySource.contains("expectedJson = \"} {\""));
+    assertTrue(checkedPropertySource.contains("property block comment"));
+    assertTrue(checkedPropertySource.trim().endsWith("}"));
+    assertTrue(
+        checked.selectedSpecDocuments().getFirst().blocks().stream()
+            .anyMatch(block -> block.text().contains("The canonical business rule")));
+
+    Files.writeString(
+        project.resolve("build.gradle"),
+        """
+        tasks.register('editAfterCheckedProjection') {
+            dependsOn('toppleCatCheck')
+            doLast {
+                def marker = file('build/edit-after-checked-projection.done')
+                if (!marker.exists()) {
+                    def spec = file('specs/coupon.md')
+                    spec.text = spec.text.replace('The canonical business rule.', 'LIVE SPEC EDIT')
+                    def acceptance = file('src/test/java/example/CouponAcceptanceTest.java')
+                    acceptance.text = acceptance.text.replace(
+                        'scenario.then(coupon).matches(testCase, "} {");',
+                        '// LIVE SOURCE EDIT\\n                scenario.then(coupon).matches(testCase, "} {");')
+                    marker.text = 'done'
+                    println('EDIT_AFTER_CHECKED_PROJECTION')
+                }
+            }
+        }
+        tasks.configureEach { task ->
+            if (task.name == 'toppleCatReview') {
+                task.dependsOn('editAfterCheckedProjection')
+            }
+        }
+        """,
+        StandardOpenOption.APPEND);
+
+    var checkedThenEdited = runner("toppleCatReview", "--spec", "specs/coupon.md").build();
+    String firstOutput = checkedThenEdited.getOutput();
+    assertEquals(
+        1, firstOutput.lines().filter(line -> line.contains("> Task :toppleCatCheck")).count());
+    assertTrue(firstOutput.contains("EDIT_AFTER_CHECKED_PROJECTION"), firstOutput);
+    assertTrue(
+        firstOutput.indexOf("> Task :toppleCatCheck")
+            < firstOutput.indexOf("EDIT_AFTER_CHECKED_PROJECTION"));
+    assertTrue(
+        firstOutput.indexOf("EDIT_AFTER_CHECKED_PROJECTION")
+            < firstOutput.indexOf("> Task :toppleCatReview"));
+
+    SelectedSpecProjection stillChecked =
+        ReportJson.readSelectedSpecProjection(Files.readString(projectionFile));
+    assertEquals(checked, stillChecked);
+    assertFalse(Files.readString(projectionFile).contains("LIVE SPEC EDIT"));
+    assertFalse(Files.readString(projectionFile).contains("LIVE SOURCE EDIT"));
+    String checkedReview =
+        Files.readString(project.resolve("build/topplecat/reports/review/data.json"));
+    assertTrue(checkedReview.contains("The canonical business rule"));
+    assertFalse(checkedReview.contains("LIVE SPEC EDIT"));
+    assertFalse(checkedReview.contains("LIVE SOURCE EDIT"));
+    ReviewView checkedReviewView = ReportJson.readReview(checkedReview);
+    var checkedCondition = checkedReviewView.acceptanceConditions().getFirst();
+    assertEquals(checkedSource, checkedCondition.method().sourceCode());
+    assertEquals(checkedPropertySource, checkedCondition.properties().getFirst().sourceCode());
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      HtmlPage page =
+          client.getPage(
+              project.resolve("build/topplecat/reports/review/index.html").toUri().toURL());
+      String normalizedReviewText = page.asNormalizedText();
+      assertTrue(normalizedReviewText.contains("Property declarations"), normalizedReviewText);
+      String renderedSource =
+          page.querySelectorAll("pre").stream()
+              .map(element -> element.asNormalizedText())
+              .reduce("", (left, right) -> left + right);
+      assertTrue(renderedSource.contains("matches(testCase,"), renderedSource);
+      assertTrue(renderedSource.contains("expectedJson ="), renderedSource);
+      assertTrue(renderedSource.contains("property block comment"), renderedSource);
+    }
+
+    runner("toppleCatReview", "--spec", "specs/coupon.md").build();
+    String refreshedReview =
+        Files.readString(project.resolve("build/topplecat/reports/review/data.json"));
+    assertTrue(refreshedReview.contains("LIVE SPEC EDIT"));
+    assertTrue(refreshedReview.contains("LIVE SOURCE EDIT"));
+  }
+
+  @Test
+  void reviewRequiresExplicitSpecBeforeDependentCheckAndClearsStaleHtml() throws Exception {
+    writeProject(
+        """
+        toppleCat {
+            hiddenTests { enabled.set(false) }
+            mutationTesting { enabled.set(false) }
+        }
+        """);
+    writeAcceptance("100", false);
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+    Path stale = project.resolve("build/topplecat/reports/review/index.html");
+    Files.createDirectories(stale.getParent());
+    Files.writeString(stale, "stale review");
+
+    var failure = runner("toppleCatReview").buildAndFail();
+
+    assertTrue(failure.getOutput().contains("TC-SPEC-SELECTION-REQUIRED"), failure.getOutput());
+    assertTrue(failure.getOutput().contains("dependent Check did not start"), failure.getOutput());
+    assertFalse(failure.getOutput().contains("> Task :toppleCatCheck"), failure.getOutput());
+    assertFalse(Files.exists(project.resolve("build/topplecat/reports/review/index.html")));
   }
 
   @Test
@@ -845,7 +1103,8 @@ class ToppleCatPluginFunctionalTest {
     writePublicCase("coupon-public", "AC-COUPON", 100);
     Path spec = project.resolve("specs/coupon.md");
     Files.createDirectories(spec.getParent());
-    Files.writeString(spec, "# Coupon\n\nAC-COUPON\n");
+    Files.writeString(
+        spec, "# AC-COUPON: Coupon\n\nThe coupon rule.\n\n<!-- topplecat:acceptance -->\n");
 
     runner("toppleCatSeal").build();
     var verify = runner("toppleCatVerify", "--spec", "specs/coupon.md").build();
@@ -908,7 +1167,7 @@ class ToppleCatPluginFunctionalTest {
     writePublicCasesForAAndB();
     Path spec = project.resolve("specs/a.md");
     Files.createDirectories(spec.getParent());
-    Files.writeString(spec, "# A\n\nAC-A\n");
+    Files.writeString(spec, "# AC-A: A\n\nThe A rule.\n\n<!-- topplecat:acceptance -->\n");
     runner("toppleCatSeal").build();
 
     runner("toppleCatVerify", "--ac", "AC-A", "--ac", "AC-B").buildAndFail();
@@ -1011,7 +1270,7 @@ class ToppleCatPluginFunctionalTest {
     writePublicCasesForAAndB();
     Path spec = project.resolve("specs/a.md");
     Files.createDirectories(spec.getParent());
-    Files.writeString(spec, "# A\n\nAC-A\n");
+    Files.writeString(spec, "# AC-A: A\n\nThe A rule.\n\n<!-- topplecat:acceptance -->\n");
 
     runner("toppleCatSeal").build();
     runner("toppleCatVerify", "--spec", "specs/a.md").build();
@@ -1073,7 +1332,7 @@ class ToppleCatPluginFunctionalTest {
     writeProductionClass();
     Path spec = project.resolve("specs/a.md");
     Files.createDirectories(spec.getParent());
-    Files.writeString(spec, "# A\n\nAC-A\n");
+    Files.writeString(spec, "# AC-A: A\n\nThe A rule.\n\n<!-- topplecat:acceptance -->\n");
 
     runner("toppleCatSeal").build();
     var failure = runner("toppleCatVerify", "--spec", "specs/a.md").buildAndFail();
@@ -1185,9 +1444,10 @@ class ToppleCatPluginFunctionalTest {
     assertFalse(check.getOutput().contains("reviewer-shape-secret"));
     assertFalse(check.getOutput().contains("reviewerOnlyShape"));
 
-    runner("toppleCatReview").build();
+    writeCanonicalSpec("specs/coupon.md", "AC-COUPON", "Coupon");
+    runner("toppleCatReview", "--spec", "specs/coupon.md").build();
     String review = Files.readString(project.resolve("build/topplecat/reports/review/data.json"));
-    assertTrue(review.contains("topplecat.review-view.v7"));
+    assertTrue(review.contains("topplecat.review-view.v8"));
     assertTrue(review.contains("contractQualityAdvisories"));
     assertTrue(review.contains("EXPECTED_SHAPE_VARIANT_MISSING"));
 
@@ -1305,7 +1565,30 @@ class ToppleCatPluginFunctionalTest {
             static class CouponStage extends ToppleStage {
                 private int actual;
                 void reads_discount(int value) { actual = value; }
-                void matches(ToppleCase testCase) { testCase.verify("discount", actual); }
+                void matches(ToppleCase testCase) { matches(testCase, ""); }
+                void matches(ToppleCase testCase, String expectedJson) { testCase.verify("discount", actual); }
+            }
+        }
+        """);
+  }
+
+  private void writePropertyWithBraces() throws Exception {
+    Path source = project.resolve("src/test/java/example/CouponProperty.java");
+    Files.createDirectories(source.getParent());
+    Files.writeString(
+        source,
+        """
+        package example;
+        import io.github.samzhu.topplecat.junit.property.Generators;
+        import io.github.samzhu.topplecat.junit.property.PropertyTrials;
+        import io.github.samzhu.topplecat.junit.property.ToppleProperty;
+        class CouponProperty {
+            @ToppleProperty("AC-COUPON")
+            void discountIsBounded(PropertyTrials trials) {
+                trials.forAll(Generators.integers(0, 5)).check(value -> {
+                    String expectedJson = "} {"; // } in a property line comment
+                    /* { and } in a property block comment */
+                });
             }
         }
         """);
@@ -1755,6 +2038,67 @@ class ToppleCatPluginFunctionalTest {
             .formatted(id, acId, discount));
   }
 
+  private void writeCanonicalSpec(String path, String acId, String title) throws Exception {
+    Path spec = project.resolve(path);
+    Files.createDirectories(spec.getParent());
+    Files.writeString(
+        spec,
+        "# %s: %s\n\nThe canonical business rule.\n\n%s\n"
+            .formatted(acId, title, "<!-- topplecat:acceptance -->"));
+  }
+
+  private void writeSelectedReviewFixture() throws Exception {
+    Path spec = project.resolve("specs/checkout.md");
+    Files.createDirectories(spec.getParent());
+    Files.writeString(
+        spec,
+        """
+        # Checkout context
+
+        Background AC-A explains the shared checkout rule.
+
+        ## AC-A: Apply coupon
+
+        The cart accepts an eligible coupon and reduces the total.
+
+        ### Example: accepted coupon
+        - Given an eligible cart
+        - When the customer applies SAVE10
+        - Then the total is reduced
+
+        <!-- topplecat:acceptance -->
+
+        ### AC-B: Reject missing items
+
+        A checkout without a purchasable item is rejected.
+
+        <!-- topplecat:acceptance -->
+        """);
+    Path old = project.resolve("src/test/java/example/OldAcceptance.java");
+    Files.createDirectories(old.getParent());
+    Files.writeString(
+        old,
+        """
+        package example;
+        import io.github.samzhu.topplecat.junit.ToppleAcceptanceTest;
+        import io.github.samzhu.topplecat.junit.ToppleCase;
+        import io.github.samzhu.topplecat.junit.ToppleScenario;
+        import io.github.samzhu.topplecat.junit.ToppleStage;
+        class OldAcceptance {
+            @ToppleAcceptanceTest("AC-OLD")
+            void oldContract(ToppleCase testCase, ToppleScenario scenario, OldStage stage) {
+                scenario.then(stage).matches(testCase);
+            }
+            static class OldStage extends ToppleStage {
+                void matches(ToppleCase testCase) { testCase.verify("discount", 1); }
+            }
+        }
+        """);
+    Path feature = project.resolve("specs/checkout.feature");
+    Files.writeString(
+        feature, "Feature: old upstream artifact\n  Scenario: duplicate AC-A\n    Given AC-A\n");
+  }
+
   private void writeOverloadedAcceptanceMethods() throws Exception {
     Path source = project.resolve("src/test/java/example/OverloadedAcceptanceTest.java");
     Files.createDirectories(source.getParent());
@@ -1894,6 +2238,19 @@ class ToppleCatPluginFunctionalTest {
         cases,
         "[{\"caseId\":\"%s\",\"acId\":\"%s\",\"inputs\":{},\"expected\":{\"discount\":%d}}]"
             .formatted(id, acId, discount));
+  }
+
+  private void writeHiddenCasesForAAndB() throws Exception {
+    Path cases = project.resolve("src/hiddenTest/resources/topplecat/cases/scoped.json");
+    Files.createDirectories(cases.getParent());
+    Files.writeString(
+        cases,
+        """
+        [
+          {"caseId":"reviewer-a","acId":"AC-A","inputs":{},"expected":{"discount":100}},
+          {"caseId":"reviewer-b","acId":"AC-B","inputs":{},"expected":{"discount":100}}
+        ]
+        """);
   }
 
   private void writeHiddenCustodyMarker() throws Exception {

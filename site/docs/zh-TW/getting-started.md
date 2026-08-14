@@ -1,6 +1,6 @@
 ---
 title: 開始使用
-description: 從 Maven Central 把 ToppleCat 加進 Java/JUnit 專案，再準備可供 AI 實作與驗證的驗收內容。
+description: 把 ToppleCat 加進 Java/JUnit 專案，再準備可供 AI 實作與驗證的驗收內容。
 page_id: getting-started
 language_code: zh-TW
 language_name: 繁體中文
@@ -17,8 +17,9 @@ copied_label: Copied
 
 # 把 ToppleCat 加進 Java 專案
 
-ToppleCat 0.2.0 已發布到 Maven Central。直接把 Gradle plugin 和 JUnit library 加進
-現有專案即可，不必下載 ToppleCat 原始碼，也不用自己 build。
+ToppleCat 0.2.1 是目前的 tagged release line，但尚未發布到 Maven Central。Maven Central
+目前提供的 0.2.0 不包含本頁描述的 selected-Spec Review 行為。請先 clone 本
+repository 並執行 `./gradlew publishToMavenLocal`，再使用 0.2.1。
 
 ToppleCat 的 runtime 與 Gradle/plugin 執行需要 JDK 21 或 25。發布的 artifact
 以 Java 21 為 target，維護者的 release build 使用 JDK 25。使用端專案可以使用
@@ -66,19 +67,24 @@ JSON 或 YAML 案例列提供一台具體購物車，以及預期收到的收據
 - `topplecat-acceptance` skill 告訴 AI，怎麼把你選定的驗收條件寫成
   Java/JUnit 能執行的驗收方法與案例。
 
-[ToppleCat 的正式套件](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)
-已發布到 Maven Central。先在 `settings.gradle.kts` 設定 plugin marker 與 library 的來源：
+0.2.0 的 [ToppleCat 正式套件](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)
+已發布到 Maven Central。0.2.1 tagged release line 請先在 `settings.gradle.kts` 把本機
+Maven repository 放在前面：
 
 ```kotlin
 pluginManagement {
     repositories {
+        mavenLocal()
         gradlePluginPortal()
         mavenCentral()
     }
 }
 
 dependencyResolutionManagement {
-    repositories { mavenCentral() }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 }
 ```
 
@@ -87,11 +93,11 @@ dependencyResolutionManagement {
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.2.0"
+    id("io.github.samzhu.topplecat") version "0.2.1"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.1")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -170,6 +176,13 @@ Spec 和 Java 驗收程式準備好後，執行：
 頁面。你可以把選定的 Spec、Java 驗收方法編譯出的 Given/When/Then 呈現，以及案例放在
 一起閱讀。這份頁面沒有測試結果；它要回答的是「Java 程式寫的驗收內容，是否就是原本的
 規則？」
+
+`--spec` 必須是 repository-relative 的 Markdown 檔案。每條 AC 都要用可見的 ATX 或
+Setext 標題宣告，例如 `AC-CHECKOUT: Checkout succeeds`，再在該條規則之後放置唯一、
+獨立一行的 `<!-- topplecat:acceptance -->` marker。段落、清單、表格、連結、inline
+code 或 fenced code 中單純提到 AC ID，不會選取範圍。ToppleCat 在 Check 時只讀取並
+雜湊選定文件一次，保存安全的 checked projection，Review 在 marker 位置呈現它；不會
+讀取或翻譯 `.feature` 檔案。
 
 Review 會執行它需要的 Check，所以主流程不用再列 `toppleCatCheck`。如果只想快速檢查
 驗收方法和案例有沒有綁好，可以另外執行

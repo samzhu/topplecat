@@ -99,26 +99,33 @@ disclosures remain readable without opening help.
 
 ## Quick start
 
-ToppleCat 0.2.0 requires JDK 21 or 25 and a compatible Gradle version. The
-published artifacts target Java 21 and are built on JDK 25. A consumer project
-may target Java 17, 21, or 25, but the Gradle/plugin execution environment must
-run on JDK 21 or 25. JDK 17-only ToppleCat execution is unsupported. The
-official artifacts are available from
+ToppleCat 0.2.1 is the current tagged release line, but this release has not
+been published to Maven Central yet. The selected-Spec Review behavior in this
+checkout is not present in released 0.2.0. To use 0.2.1 now, clone this
+repository and run `./gradlew publishToMavenLocal`, then add `mavenLocal()`
+before `mavenCentral()` in the consumer's plugin and dependency repositories.
+The released 0.2.0 artifacts remain available from
 [Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat),
-so consumer projects do not need to clone or build this repository.
+but do not provide the selected-Spec behavior below. A consumer project may
+target Java 17, 21, or 25, while the Gradle/plugin execution environment must
+run on JDK 21 or 25; JDK 17-only ToppleCat execution is unsupported.
 
 `settings.gradle.kts`:
 
 ```kotlin
 pluginManagement {
     repositories {
+        mavenLocal()
         gradlePluginPortal()
         mavenCentral()
     }
 }
 
 dependencyResolutionManagement {
-    repositories { mavenCentral() }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 }
 ```
 
@@ -127,11 +134,11 @@ dependencyResolutionManagement {
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.2.0"
+    id("io.github.samzhu.topplecat") version "0.2.1"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.1")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -160,6 +167,13 @@ the two forms:
 ./gradlew toppleCatVerify --spec specs/checkout/spec.md
 ./gradlew toppleCatVerify --ac AC-CHECKOUT-THRESHOLD --ac AC-CHECKOUT-VIP
 ```
+
+For `toppleCatCheck` and `toppleCatReview`, each `--spec` must name a
+repository-relative Markdown file. The file declares an AC with a visible
+heading such as `AC-CHECKOUT: Checkout succeeds` and places the exact standalone
+marker `<!-- topplecat:acceptance -->` after that AC's authored rules. Ordinary
+references in prose, lists, tables, links, inline code, or fenced code do not
+select an AC; `.feature` files are not read or translated.
 
 A scoped Verification Report repeats that its `PASS` covers only the listed ACs
 and does not mean the complete executable contract passed. CI should use
@@ -274,6 +288,7 @@ before proposing a new ToppleCat responsibility.
 - [Architecture](docs/architecture.md)
 - [Context glossary](CONTEXT.md)
 - [Documentation index](docs/README.md)
+- [0.2.1 release notes](docs/releases/0.2.1.md)
 - [0.2.0 release notes](docs/releases/0.2.0.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)

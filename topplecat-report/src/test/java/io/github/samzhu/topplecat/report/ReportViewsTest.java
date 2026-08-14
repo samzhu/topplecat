@@ -25,6 +25,40 @@ class ReportViewsTest {
   @TempDir Path tempDir;
 
   @Test
+  void selectedSpecProjectionRoundTripsItsCheckedDocumentsAndMarkerLocations() {
+    ReviewDocument document =
+        new ReviewDocument(
+            "specs/checkout.md",
+            "a".repeat(64),
+            List.of(
+                new SpecMarkdownBlock(
+                    SpecMarkdownBlock.Kind.HEADING, 1, "AC-CHECKOUT: Checkout succeeds", List.of()),
+                new SpecMarkdownBlock(
+                    SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER,
+                    2,
+                    "<!-- topplecat:acceptance -->",
+                    List.of(),
+                    "",
+                    "",
+                    "",
+                    List.of(),
+                    List.of(),
+                    "AC-CHECKOUT")),
+            List.of());
+    SelectedSpecProjection projection =
+        new SelectedSpecProjection(
+            SelectedSpecProjection.SCHEMA_VERSION,
+            List.of(document),
+            Map.of("AC-CHECKOUT", new ReviewAcLocation("specs/checkout.md", 2, "AC-CHECKOUT")));
+
+    String json = ReportJson.writeSelectedSpecProjection(projection);
+
+    assertTrue(json.contains("topplecat.selected-spec-projection.v2"));
+    assertEquals(projection, ReportJson.readSelectedSpecProjection(json));
+    assertEquals(List.of("AC-CHECKOUT"), projection.acceptanceConditionIds());
+  }
+
+  @Test
   void reviewKeepsTheCompleteSelectedDocumentAheadOfReviewerOnlyExecutableMaterial()
       throws Exception {
     ReviewDocument document =

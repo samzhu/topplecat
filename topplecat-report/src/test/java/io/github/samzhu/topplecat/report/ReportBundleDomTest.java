@@ -3,9 +3,11 @@ package io.github.samzhu.topplecat.report;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.samzhu.topplecat.core.CaseVisibility;
+import io.github.samzhu.topplecat.core.ContractQualityAdvisory;
 import io.github.samzhu.topplecat.core.EvidenceGate;
 import io.github.samzhu.topplecat.core.EvidenceVerdict;
 import io.github.samzhu.topplecat.core.ExpectedActualComparison;
@@ -20,6 +22,7 @@ import io.github.samzhu.topplecat.pitest.PitMutationAttribution;
 import io.github.samzhu.topplecat.pitest.PitMutationEvidence;
 import io.github.samzhu.topplecat.pitest.PitOutcomeCount;
 import io.github.samzhu.topplecat.pitest.ToppleCatManagedMutationProfile;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -61,7 +64,24 @@ class ReportBundleDomTest {
             "a".repeat(64),
             List.of(
                 new SpecMarkdownBlock(
-                    SpecMarkdownBlock.Kind.HEADING, 1, "Checkout AC-CHECKOUT", List.of()),
+                    SpecMarkdownBlock.Kind.HEADING, 1, "Checkout context", List.of()),
+                new SpecMarkdownBlock(
+                    SpecMarkdownBlock.Kind.PARAGRAPH,
+                    0,
+                    "[AC-CHECKOUT](https://example.test/spec?x=1&amp;y=2 \"Terms &amp; limits\")"
+                        + " AC-CHECKOUT `AC-CHECKOUT`",
+                    List.of()),
+                new SpecMarkdownBlock(
+                    SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER,
+                    0,
+                    "",
+                    List.of(),
+                    "",
+                    "",
+                    "",
+                    List.of(),
+                    List.of(),
+                    "AC-CHECKOUT"),
                 new SpecMarkdownBlock(
                     SpecMarkdownBlock.Kind.TASK_LIST,
                     0,
@@ -118,7 +138,13 @@ class ReportBundleDomTest {
                                     "準備可結帳的購物車")))),
                     new ReviewMethod(List.of(), javaSource))),
             null,
-            List.of());
+            List.of(
+                new ContractQualityAdvisory(
+                    ContractQualityAdvisory.EXPECTED_SHAPE_VARIANT_MISSING,
+                    "AC-CHECKOUT",
+                    "expected.receipt",
+                    1,
+                    1)));
     Path bundle = tempDir.resolve("review");
     HtmlBundleWriter.review(bundle, view);
 
@@ -142,7 +168,7 @@ class ReportBundleDomTest {
       assertEquals(
           javaSource, ((HtmlElement) page.querySelectorAll("pre code").item(0)).getTextContent());
       assertEquals(
-          javaSource, ((HtmlElement) page.querySelectorAll("pre code").item(2)).getTextContent());
+          javaSource, ((HtmlElement) page.querySelectorAll("pre code").item(1)).getTextContent());
       assertNotNull(page.querySelector(".tok-annotation"));
       assertNotNull(page.querySelector(".tok-escape"));
       assertFalse(page.asNormalizedText().contains("class=\"tok-annotation\">"));
@@ -150,6 +176,26 @@ class ReportBundleDomTest {
       assertFalse(page.asXml().contains("<script>"));
       assertFalse(page.asNormalizedText().contains("Delivery accepted"));
       assertFalse(page.asNormalizedText().contains("Delivery rejected"));
+      assertTrue(page.asNormalizedText().contains("ToppleCat projection"));
+      assertNull(page.querySelector("#executable-material"));
+      assertFalse(page.asXml().contains("topplecat:acceptance"));
+      assertEquals(1, page.querySelectorAll("#review-AC-CHECKOUT").getLength());
+      assertEquals(3, page.querySelectorAll("a[href=\"#review-AC-CHECKOUT\"]").getLength());
+      assertEquals(
+          1,
+          page.querySelectorAll("a[href=\"https://example.test/spec?x=1&amp;y=2\"]").getLength());
+      assertEquals(
+          0,
+          page.querySelectorAll(
+                  "a[href=\"https://example.test/spec?x=1&amp;y=2\"]"
+                      + " a[href=\"#review-AC-CHECKOUT\"]")
+              .getLength());
+      assertEquals(
+          "Terms &amp; limits",
+          ((HtmlElement) page.querySelector("a[href=\"https://example.test/spec?x=1&amp;y=2\"]"))
+              .getAttribute("title"));
+      assertEquals(0, page.querySelectorAll("code a[href=\"#review-AC-CHECKOUT\"]").getLength());
+      assertTrue(page.asXml().contains("<code>AC-CHECKOUT</code>"));
     }
 
     Path traditionalChineseBundle = tempDir.resolve("review-zh-TW");
@@ -172,6 +218,123 @@ class ReportBundleDomTest {
       assertTrue(page.asNormalizedText().contains("準備可結帳的購物車"));
       assertFalse(page.asNormalizedText().contains("Specification prepared — not executed"));
     }
+  }
+
+  @Test
+  void specReviewPreservesCommonMarkContainerSemanticsInSafeRecursiveProjection() throws Exception {
+    SpecMarkdownBlock nestedOrdered =
+        container(
+            SpecMarkdownBlock.Kind.ORDERED_LIST,
+            List.of(listItem("", List.of(paragraph("nested ordered item")))));
+    SpecMarkdownBlock outerList =
+        container(
+            SpecMarkdownBlock.Kind.LIST,
+            List.of(
+                listItem(
+                    "",
+                    List.of(
+                        paragraph("outer item"),
+                        nestedOrdered,
+                        paragraph("second paragraph in one item")))));
+    SpecMarkdownBlock taskList =
+        container(
+            SpecMarkdownBlock.Kind.TASK_LIST,
+            List.of(listItem("[x]", List.of(paragraph("completed task")))));
+    SpecMarkdownBlock quote =
+        container(
+            SpecMarkdownBlock.Kind.BLOCK_QUOTE,
+            List.of(
+                paragraph("quoted context"),
+                outerList,
+                new SpecMarkdownBlock(
+                    SpecMarkdownBlock.Kind.TABLE,
+                    0,
+                    "",
+                    List.of(),
+                    "",
+                    "",
+                    "",
+                    List.of("Amount", "Result"),
+                    List.of(List.of("500", "accepted")),
+                    "",
+                    List.of())));
+    ReviewDocument document =
+        new ReviewDocument(
+            "specs/containers.md",
+            "b".repeat(64),
+            List.of(
+                quote,
+                taskList,
+                new SpecMarkdownBlock(
+                    SpecMarkdownBlock.Kind.FALLBACK,
+                    0,
+                    "<script>window.injected = true</script>",
+                    List.of(),
+                    "html",
+                    "",
+                    "",
+                    List.of(),
+                    List.of(),
+                    "",
+                    List.of())),
+            List.of());
+    ReviewView view =
+        new ReviewView(
+            ReviewView.SCHEMA_VERSION, NOW, List.of(document), List.of(), null, List.of());
+    Path bundle = tempDir.resolve("containers");
+    HtmlBundleWriter.review(bundle, view);
+
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      client.getOptions().setThrowExceptionOnScriptError(true);
+      HtmlPage page = client.getPage(bundle.resolve("index.html").toUri().toURL());
+      client.waitForBackgroundJavaScript(250);
+      assertEquals(1, page.querySelectorAll("blockquote").getLength());
+      assertTrue(page.asNormalizedText().contains("quoted context"));
+      assertFalse(page.asNormalizedText().contains("> quoted context"));
+      assertEquals(1, page.querySelectorAll("blockquote ul").getLength());
+      assertEquals(2, page.querySelectorAll("ul").getLength());
+      assertEquals(1, page.querySelectorAll("blockquote ol").getLength());
+      assertTrue(page.asNormalizedText().contains("second paragraph in one item"));
+      assertTrue(page.asNormalizedText().contains("nested ordered item"));
+      assertEquals(1, page.querySelectorAll("input[type=checkbox][checked]").getLength());
+      assertEquals(1, page.querySelectorAll("table").getLength());
+      assertTrue(page.asNormalizedText().contains("500"));
+      assertFalse(page.asXml().contains("<script>window.injected"));
+      assertTrue(page.asNormalizedText().contains("window.injected"));
+    }
+  }
+
+  @Test
+  void reviewAssetDigestMismatchStopsBundleAndUnchangedAssetIsCopied() throws Exception {
+    Path source = tempDir.resolve("receipt.png");
+    byte[] original = "checked asset".getBytes(StandardCharsets.UTF_8);
+    Files.write(source, original);
+    String digest = io.github.samzhu.topplecat.core.Hashing.sha256(original);
+    ReviewDocument document =
+        new ReviewDocument(
+            "specs/checkout.md",
+            "a".repeat(64),
+            List.of(),
+            List.of(
+                new ReviewDocumentAsset(
+                    "receipt.png", "assets/spec/" + digest + ".png", "image/png")));
+    ReviewView view =
+        new ReviewView(
+            ReviewView.SCHEMA_VERSION, NOW, List.of(document), List.of(), null, List.of());
+    Path unchanged = tempDir.resolve("asset-ok");
+    HtmlBundleWriter.review(unchanged, view, tempDir);
+    assertEquals(
+        "checked asset", Files.readString(unchanged.resolve("assets/spec/" + digest + ".png")));
+
+    Files.writeString(source, "new asset", StandardCharsets.UTF_8);
+    Path changed = tempDir.resolve("asset-changed");
+    Files.createDirectories(changed.resolve("assets/spec"));
+    Files.writeString(changed.resolve("stale.txt"), "must be cleared");
+    var failure =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalStateException.class, () -> HtmlBundleWriter.review(changed, view, tempDir));
+    assertTrue(failure.getMessage().contains("asset changed after Check"));
+    assertFalse(Files.exists(changed));
   }
 
   @Test
@@ -1302,6 +1465,25 @@ class ReportBundleDomTest {
                 List.of(),
                 hiddenFails ? "The reviewer example found a problem." : null));
     return new VerificationAcceptanceCondition(acId, title, CaseResultStatus.PASS, cases);
+  }
+
+  private static SpecMarkdownBlock paragraph(String text) {
+    return container(SpecMarkdownBlock.Kind.PARAGRAPH, text, List.of());
+  }
+
+  private static SpecMarkdownBlock listItem(String marker, List<SpecMarkdownBlock> children) {
+    return container(SpecMarkdownBlock.Kind.LIST_ITEM, marker, children);
+  }
+
+  private static SpecMarkdownBlock container(
+      SpecMarkdownBlock.Kind kind, List<SpecMarkdownBlock> children) {
+    return container(kind, "", children);
+  }
+
+  private static SpecMarkdownBlock container(
+      SpecMarkdownBlock.Kind kind, String text, List<SpecMarkdownBlock> children) {
+    return new SpecMarkdownBlock(
+        kind, 0, text, List.of(), "", "", "", List.of(), List.of(), "", children);
   }
 
   private static void assertOrder(String text, String... fragments) {

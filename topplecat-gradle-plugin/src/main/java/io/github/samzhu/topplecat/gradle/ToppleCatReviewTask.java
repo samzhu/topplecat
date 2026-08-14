@@ -5,14 +5,18 @@ import io.github.samzhu.topplecat.core.CaseDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinition;
 import io.github.samzhu.topplecat.core.ContractDefinitionJson;
 import io.github.samzhu.topplecat.core.ContractQualityAdvisor;
+import io.github.samzhu.topplecat.core.SelectedSpecScope;
+import io.github.samzhu.topplecat.core.SelectedSpecScopeJson;
 import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.report.DeliveryScope;
 import io.github.samzhu.topplecat.report.HtmlBundleWriter;
+import io.github.samzhu.topplecat.report.ReportJson;
 import io.github.samzhu.topplecat.report.ReportLanguage;
 import io.github.samzhu.topplecat.report.ReportViews;
 import io.github.samzhu.topplecat.report.ReviewMethod;
 import io.github.samzhu.topplecat.report.ReviewProperty;
 import io.github.samzhu.topplecat.report.ReviewView;
+import io.github.samzhu.topplecat.report.SelectedSpecProjection;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,6 +45,12 @@ public abstract class ToppleCatReviewTask extends ToppleCatReviewerPresentationT
   @InputFile
   public abstract RegularFileProperty getDefinitionFile();
 
+  @InputFile
+  public abstract RegularFileProperty getSelectedSpecScopeFile();
+
+  @InputFile
+  public abstract RegularFileProperty getSelectedSpecProjectionFile();
+
   /** Presentation-only task input; excluded from the checked contract and Mechanical Seal. */
   @Input
   public abstract org.gradle.api.provider.Property<String> getReportLanguage();
@@ -49,17 +59,34 @@ public abstract class ToppleCatReviewTask extends ToppleCatReviewerPresentationT
   public void review() {
     Path root = getProjectRoot().get().getAsFile().toPath();
     ContractDefinition definition = readDefinition();
-    SpecScopeResolver.ResolvedSpecScope scope =
-        SpecScopeResolver.resolve(
-            root,
-            getSelectedSpecPaths().getOrElse(List.of()),
-            getSpecOptionProvided().getOrElse(false));
-    if (scope.scope().selected()) {
+    if (!getSpecOptionProvided().getOrElse(false)
+        || getSelectedSpecPaths().getOrElse(List.of()).isEmpty()) {
+      throw new GradleException(
+          "[TC-SPEC-SELECTION-REQUIRED] toppleCatReview requires at least one --spec canonical"
+              + " repository-relative Markdown path.");
+    }
+    SelectedSpecScope selectedScope = readSelectedScope();
+    SelectedSpecProjection projection = readSelectedProjection();
+    if (!selectedScope.selected() || projection.selectedSpecDocuments().isEmpty()) {
+      throw new GradleException(
+          "[TC-SPEC-SELECTION-REQUIRED] toppleCatReview requires a checked --spec projection.");
+    }
+    if (!selectedScope.specDocuments().stream()
+        .map(document -> document.path() + "=" + document.sha256())
+        .toList()
+        .equals(
+            projection.selectedSpecDocuments().stream()
+                .map(document -> document.path() + "=" + document.sha256())
+                .toList())) {
+      throw new GradleException(
+          "Checked Selected Spec scope and projection differ; rerun toppleCatCheck before Review.");
+    }
+    if (selectedScope.selected()) {
       definition =
           ContractDefinition.withComputedDigest(
               definition.acceptanceConditions().stream()
                   .filter(
-                      contract -> scope.scope().acceptanceConditionIds().contains(contract.acId()))
+                      contract -> selectedScope.acceptanceConditionIds().contains(contract.acId()))
                   .toList());
     }
     Map<String, String> titles = new LinkedHashMap<>();
@@ -74,10 +101,7 @@ public abstract class ToppleCatReviewTask extends ToppleCatReviewerPresentationT
           contract.acId(),
           new ReviewMethod(
               ScenarioText.render(contract.scenario().steps()),
-              sourceCode(
-                  getPublicTestSourceRoot().get().getAsFile().toPath(),
-                  contract.scenario().sourceRef().file(),
-                  contract.scenario().sourceRef().line()),
+              projection.acceptanceMethodSources().getOrDefault(contract.acId(), ""),
               contract.scenario().acceptanceTestMethodIdentity(),
               contract.scenario().sourceRef().file(),
               contract.scenario().sourceRef().line()));
@@ -94,10 +118,7 @@ public abstract class ToppleCatReviewTask extends ToppleCatReviewerPresentationT
                           property.tries(),
                           property.maxDiscards(),
                           property.maxShrinks(),
-                          sourceCode(
-                              getPublicTestSourceRoot().get().getAsFile().toPath(),
-                              property.sourceRef().file(),
-                              property.sourceRef().line())))
+                          projection.propertySources().getOrDefault(property.methodIdentity(), "")))
               .toList());
     }
     List<ToppleCaseData> cases =
@@ -107,10 +128,10 @@ public abstract class ToppleCatReviewTask extends ToppleCatReviewerPresentationT
             .toList();
     DeliveryScope deliveryScope =
         DeliveryScope.from(
-            scope.scope(),
-            scope.scope().selected() ? "SELECTED_SPECS" : "ALL",
+            selectedScope,
+            selectedScope.selected() ? "SELECTED_SPECS" : "ALL",
             "ALL_PUBLIC_ACCEPTANCE_CONTRACTS",
-            scope.scope().selected() ? "SELECTED_SPECS" : "FULL_CONTRACT",
+            selectedScope.selected() ? "SELECTED_SPECS" : "FULL_CONTRACT",
             0,
             0);
     ReviewView view =
@@ -118,8 +139,8 @@ public abstract class ToppleCatReviewTask extends ToppleCatReviewerPresentationT
             ReportViews.review(
                 titles,
                 cases,
-                scope.parsedSpecs().documents(),
-                scope.parsedSpecs().locations(),
+                projection.selectedSpecDocuments(),
+                projection.acceptanceLocations(),
                 methods,
                 templates,
                 Instant.now(),
@@ -135,6 +156,24 @@ public abstract class ToppleCatReviewTask extends ToppleCatReviewerPresentationT
     Path review = getReviewRoot().get().getAsFile().toPath();
     HtmlBundleWriter.review(review, view, root, ReportLanguage.fromTag(getReportLanguage().get()));
     getLogger().lifecycle("ToppleCat reviewer review written: {}", review.resolve("index.html"));
+  }
+
+  private SelectedSpecScope readSelectedScope() {
+    try {
+      return SelectedSpecScopeJson.read(
+          Files.readString(getSelectedSpecScopeFile().get().getAsFile().toPath()));
+    } catch (IOException | RuntimeException exception) {
+      throw new GradleException("Cannot read checked Selected Spec scope.", exception);
+    }
+  }
+
+  private SelectedSpecProjection readSelectedProjection() {
+    try {
+      return ReportJson.readSelectedSpecProjection(
+          Files.readString(getSelectedSpecProjectionFile().get().getAsFile().toPath()));
+    } catch (IOException | RuntimeException exception) {
+      throw new GradleException("Cannot read checked Selected Spec projection.", exception);
+    }
   }
 
   private ContractDefinition readDefinition() {
@@ -156,132 +195,5 @@ public abstract class ToppleCatReviewTask extends ToppleCatReviewerPresentationT
         testCase.inputs(),
         testCase.expected(),
         Path.of("contract-definition.json"));
-  }
-
-  private static String sourceCode(Path root, String fileName, long methodLine) {
-    try (var sources = Files.walk(root)) {
-      Path source =
-          sources
-              .filter(path -> path.getFileName().toString().equals(fileName))
-              .findFirst()
-              .orElse(null);
-      if (source == null) {
-        return "";
-      }
-      return canonicalMethod(Files.readAllLines(source), methodLine);
-    } catch (IOException exception) {
-      throw new GradleException(
-          "Cannot read acceptance source for reviewer review: " + exception.getMessage(),
-          exception);
-    }
-  }
-
-  private static String canonicalMethod(List<String> lines, long oneBasedMethodLine) {
-    if (lines.isEmpty()) {
-      return "";
-    }
-    int declaration = (int) Math.max(0L, Math.min(lines.size() - 1L, oneBasedMethodLine - 1L));
-    int start = declaration;
-    while (start > 0 && lines.get(start - 1).stripLeading().startsWith("@")) {
-      start--;
-    }
-
-    int end = declaration;
-    int braces = 0;
-    boolean bodyStarted = false;
-    JavaLexicalState state = new JavaLexicalState();
-    for (int lineIndex = declaration; lineIndex < lines.size(); lineIndex++) {
-      String line = lines.get(lineIndex);
-      for (int index = 0; index < line.length(); index++) {
-        char current = line.charAt(index);
-        char next = index + 1 < line.length() ? line.charAt(index + 1) : '\0';
-        if (state.consume(current, next)) {
-          continue;
-        }
-        if (current == '{') {
-          braces++;
-          bodyStarted = true;
-        } else if (current == '}') {
-          braces--;
-        }
-      }
-      state.endLine();
-      end = lineIndex;
-      if (bodyStarted && braces == 0) {
-        break;
-      }
-    }
-
-    List<String> snippet = lines.subList(start, end + 1);
-    int indentation =
-        snippet.stream()
-            .filter(line -> !line.isBlank())
-            .mapToInt(ToppleCatReviewTask::leadingWhitespace)
-            .min()
-            .orElse(0);
-    return snippet.stream()
-        .map(line -> line.length() >= indentation ? line.substring(indentation) : line)
-        .reduce((left, right) -> left + System.lineSeparator() + right)
-        .orElse("");
-  }
-
-  private static int leadingWhitespace(String line) {
-    int index = 0;
-    while (index < line.length() && Character.isWhitespace(line.charAt(index))) {
-      index++;
-    }
-    return index;
-  }
-
-  private static final class JavaLexicalState {
-    private boolean lineComment;
-    private boolean blockComment;
-    private boolean string;
-    private boolean character;
-    private boolean escaped;
-
-    private boolean consume(char current, char next) {
-      if (lineComment) {
-        return true;
-      }
-      if (blockComment) {
-        if (current == '*' && next == '/') {
-          blockComment = false;
-        }
-        return true;
-      }
-      if (string || character) {
-        if (escaped) {
-          escaped = false;
-        } else if (current == '\\') {
-          escaped = true;
-        } else if ((string && current == '"') || (character && current == '\'')) {
-          string = false;
-          character = false;
-        }
-        return true;
-      }
-      if (current == '/' && next == '/') {
-        lineComment = true;
-        return true;
-      }
-      if (current == '/' && next == '*') {
-        blockComment = true;
-        return true;
-      }
-      if (current == '"') {
-        string = true;
-        return true;
-      }
-      if (current == '\'') {
-        character = true;
-        return true;
-      }
-      return false;
-    }
-
-    private void endLine() {
-      lineComment = false;
-    }
   }
 }

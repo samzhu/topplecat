@@ -72,6 +72,24 @@ public final class ToppleCatPlugin implements Plugin<Project> {
     }
   }
 
+  private static void clearReviewerReview(Path reviewRoot) {
+    if (!Files.exists(reviewRoot)) {
+      return;
+    }
+    try (var paths = Files.walk(reviewRoot)) {
+      for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+        Files.deleteIfExists(path);
+      }
+    } catch (IOException exception) {
+      throw new GradleException(
+          "Cannot clear stale ToppleCat reviewer review "
+              + reviewRoot
+              + ": "
+              + exception.getMessage(),
+          exception);
+    }
+  }
+
   private static void configureJavaProject(Project project, ToppleCatExtension extension) {
     Directory runDirectory =
         project.getLayout().getBuildDirectory().dir("topplecat/runs/current").get();
@@ -200,6 +218,8 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                   task.getProjectRoot().set(project.getLayout().getProjectDirectory());
                   task.getPublicCaseRoot().set(extension.getPublicCaseRoot());
                   task.getHiddenSourceRoot().set(extension.getHiddenSourceRoot());
+                  task.getPublicTestSourceRoot()
+                      .set(project.getLayout().getProjectDirectory().dir("src/test/java"));
                   task.getCaseSources()
                       .from(extension.getPublicCaseRoot(), extension.getHiddenSourceRoot());
                   task.getDescriptorClassDirectories()
@@ -229,6 +249,12 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                               .getLayout()
                               .getBuildDirectory()
                               .file("topplecat/selected-spec-scope.json"));
+                  task.getSelectedSpecProjectionFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/selected-spec-projection.json"));
                   task.getOutputs().upToDateWhen(ignored -> false);
                   task.getOutputs()
                       .doNotCacheIf(
@@ -258,9 +284,43 @@ public final class ToppleCatPlugin implements Plugin<Project> {
                               .getLayout()
                               .getBuildDirectory()
                               .file("topplecat/contract-definition.json"));
+                  task.getSelectedSpecScopeFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/selected-spec-scope.json"));
+                  task.getSelectedSpecProjectionFile()
+                      .set(
+                          project
+                              .getLayout()
+                              .getBuildDirectory()
+                              .file("topplecat/selected-spec-projection.json"));
                   task.getReportLanguage().set(extension.getCommandLineReportLanguage());
                   configureScopeTask(task, extension);
                 });
+    project
+        .getGradle()
+        .getTaskGraph()
+        .whenReady(
+            graph -> {
+              if (graph.getAllTasks().contains(review.get())
+                  && (!extension.getCommandLineSpecProvided().getOrElse(false)
+                      || extension.getCommandLineSpecPaths().getOrElse(List.of()).isEmpty())) {
+                clearReviewerReview(
+                    project
+                        .getLayout()
+                        .getBuildDirectory()
+                        .dir("topplecat/reports/review")
+                        .get()
+                        .getAsFile()
+                        .toPath());
+                throw new GradleException(
+                    "[TC-SPEC-SELECTION-REQUIRED] toppleCatReview requires at least one --spec"
+                        + " canonical repository-relative Markdown path. The dependent Check did"
+                        + " not start.");
+              }
+            });
     TaskProvider<ToppleCatSealTask> hide =
         project
             .getTasks()

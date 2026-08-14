@@ -10,6 +10,33 @@ that uses direct `scenario.given|when|then|and(stage).step(...)` calls. Declare 
 `ToppleScenario` second, then distinct non-final concrete `ToppleStage`
 parameters with accessible no-argument constructors. Move setup, service calls,
 assertions, local variables, helper calls, and control flow into Stage methods.
+
+## Spec Review refuses the selection
+
+`toppleCatReview` must receive at least one repository-relative Markdown path:
+
+```bash
+./gradlew toppleCatReview --spec specs/checkout/spec.md
+```
+
+The selected document must declare each AC with a visible ATX or Setext heading
+such as `AC-CHECKOUT: Checkout succeeds`, followed later by the exact standalone
+marker `<!-- topplecat:acceptance -->`. A paragraph or list that merely mentions
+an AC ID does not declare or select it. Check reports repairable
+`TC-SPEC-AC-*` diagnostics for missing, duplicate, orphaned, or misplaced
+headings and markers; fix the Markdown and rerun Check before Review.
+
+Review uses the checked projection written by Check. If the selected path or
+document bytes changed after Check, rerun Check; Review will not reread or
+silently reinterpret the Markdown.
+
+## A `.feature` file is ignored
+
+ToppleCat does not read or translate Gherkin `.feature` files. Keep the
+human-authored workflow wherever the team manages it, and provide ToppleCat
+with the canonical repository-relative Markdown Spec described in the
+[authoring guide](authoring.md#canonical-markdown-spec-format).
+
 ## A row or selected AC has no acceptance binding
 
 Add one compilable public `@ToppleAcceptanceTest` with the same literal AC ID,

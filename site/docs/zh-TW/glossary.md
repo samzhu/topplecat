@@ -86,8 +86,10 @@ Mutation Testing 會暫時改動程式行為，再看原本的公開 Acceptance 
 
 ## Spec Review／規格審閱與 Verification Report／驗證報告
 
-**Spec Review** 是 AI 開始實作前使用的私人頁面，讓人確認選定的規格與準備好的檢查。
-**Verification Report** 是 AI 宣稱完成後使用的私人頁面，說明本次驗證結果與需要追查的
+**Spec Review** 是 AI 開始實作前使用的私人頁面，讓人確認選定的 canonical Markdown
+Spec 與準備好的檢查。Check 只讀取並雜湊每份選定文件一次，Review 使用它保存的 checked
+projection，在精確 marker 位置插入對應的驗收卡。**Verification Report** 是 AI 宣稱
+完成後使用的私人頁面，說明本次驗證結果與需要追查的
 問題。
 
 完整正式詞彙請查

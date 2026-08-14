@@ -13,11 +13,11 @@
       'markdown.unrenderable': 'Content could not be rendered as Markdown. Its escaped source is preserved below.',
       'visibility.hidden': 'Reviewer case', 'visibility.public': 'Public case',
       'method.source': 'Acceptance Method source', 'method.description': 'Only the AC-bound acceptance method is shown. Stage, helper, and production source are excluded.', 'method.unavailable': 'Acceptance Method source is unavailable.',
-      'inputs': 'Inputs', 'expectedResult': 'Expected result', 'common.none': 'None',
+      'inputs': 'Inputs', 'expectedResult': 'Expected result', 'case.valuesSummary': 'Show complete input and expected values', 'common.none': 'None',
       'property.declarations': 'Property declarations', 'property.tries': '{0} tries, at most {1} discards and {2} shrinks.', 'property.details': 'Property source and technical details',
       'advisory.heading': 'Contract Quality Advisories', 'advisory.description': 'These reviewer-only observations are non-blocking. They do not add a business rule, change an execution result, or alter a Gate.', 'advisory.for': 'for', 'advisory.publicRows': 'Public rows: {0}.', 'advisory.reviewerRows': 'Reviewer rows: {0}.',
-      'review.selectedSdd': 'Selected SDD', 'review.documentPosition': 'document position {0}.', 'review.noSpec': 'No external Spec document was selected for this full-contract review.', 'review.material': 'Executable Scenario and typed cases', 'review.noRows': 'No typed case rows were recorded.', 'review.techSummary': 'Technical and policy metadata', 'review.techMeta': 'This report projects the checked executable contract. Its details do not add a rule or execution result.',
-      'review.title': 'Spec Review', 'review.notice': 'Specification prepared, not executed', 'review.withDocs': 'The complete selected SDD documents appear first. The executable material below is the Java/JUnit contract bound to their ACs.', 'review.withoutDocs': 'No external Spec document was selected. This is the complete executable contract, not an invented Markdown document.', 'review.selectedDocuments': 'Selected SDD documents', 'review.outline': 'On this page', 'review.advisories': 'Advisories',
+      'review.selectedSdd': 'Selected SDD', 'review.documentPosition': 'document position {0}.', 'review.noSpec': 'No external Spec document was selected for this full-contract review.', 'review.material': 'Executable Scenario and typed cases', 'review.projection': 'ToppleCat projection', 'review.projectionDescription': 'The checked Java/JUnit Acceptance Method, compiler-described Scenarios, Typed Case Rows, and applicable Properties are inserted at this declared load point. This projection adds no business rule.', 'review.noRows': 'No typed case rows were recorded.', 'review.techSummary': 'Technical and policy metadata', 'review.techMeta': 'This report projects the checked executable contract. Its details do not add a rule or execution result.',
+      'review.title': 'Spec Review', 'review.notice': 'Specification prepared, not executed', 'review.withDocs': 'The complete selected SDD documents appear once. The checked Java/JUnit contract is inserted at each declared acceptance marker.', 'review.withoutDocs': 'No external Spec document was selected. This is the complete executable contract, not an invented Markdown document.', 'review.selectedDocuments': 'Selected SDD documents', 'review.outline': 'On this page', 'review.advisories': 'Advisories',
       'gate.evidenceUnavailable': 'Current-run evidence is unavailable.', 'gate.canonicalReason': '{0}',
       'comparison.heading': 'Expected compared with actual', 'comparison.scope': 'Only fields actually compared by the acceptance code appear here. ToppleCat cannot conclude that a rule was checked when it is not represented in this comparison.', 'comparison.boundTo': 'Comparison recorded by Step', 'comparison.expected': 'Expected', 'comparison.path': 'Checked field', 'comparison.difference': 'Difference type', 'comparison.actual': 'Actual', 'comparison.kind.CHANGED': 'Values differ', 'comparison.kind.MISSING_EXPECTED': 'Expected field is missing from actual result', 'comparison.kind.UNEXPECTED_ACTUAL': 'Actual result contains an unexpected field',
       'stepData.heading': 'Values passed to Steps', 'stepData.arguments': 'Technical values passed to',
@@ -41,11 +41,11 @@
       'markdown.unrenderable': '無法將內容算繪為 Markdown。下方保留了已跳脫的原始內容。',
       'visibility.hidden': '審閱者案例', 'visibility.public': '公開案例',
       'method.source': '驗收方法原始碼', 'method.description': '此處只顯示綁定 AC 的驗收方法；不會顯示 Stage、輔助程式或產品原始碼。', 'method.unavailable': '驗收方法原始碼無法使用。',
-      'inputs': '輸入', 'expectedResult': '預期結果', 'common.none': '無',
+      'inputs': '輸入', 'expectedResult': '預期結果', 'case.valuesSummary': '查看完整輸入與預期值', 'common.none': '無',
       'property.declarations': 'Property 宣告', 'property.tries': '{0} 次嘗試，最多 {1} 次捨棄與 {2} 次縮減。', 'property.details': 'Property 原始碼與技術細節',
       'advisory.heading': '契約品質提醒', 'advisory.description': '這些僅供審閱者閱讀的觀察不會阻擋流程。它們不會新增業務規則、改變執行結果或修改 Gate。', 'advisory.for': '適用於', 'advisory.publicRows': '公開資料列：{0}。', 'advisory.reviewerRows': '審閱者資料列：{0}。',
-      'review.selectedSdd': '已選 SDD', 'review.documentPosition': '文件位置 {0}。', 'review.noSpec': '這次完整契約審閱沒有選擇外部 Spec 文件。', 'review.material': '可執行的情境與型別案例', 'review.noRows': '沒有記錄型別案例資料列。', 'review.techSummary': '技術與政策中繼資料', 'review.techMeta': '本報告投影已檢查的可執行契約；其中細節不會新增規則或執行結果。',
-      'review.title': '規格審閱', 'review.notice': '規格已備妥，尚未執行', 'review.withDocs': '先列出完整的已選 SDD 文件，接著才是綁定其 AC 的 Java/JUnit 可執行材料。', 'review.withoutDocs': '沒有選擇外部 Spec 文件。這是完整的可執行契約，不是 ToppleCat 臆造的 Markdown 文件。', 'review.selectedDocuments': '已選 SDD 文件', 'review.outline': '本頁內容', 'review.advisories': '提醒',
+      'review.selectedSdd': '已選 SDD', 'review.documentPosition': '文件位置 {0}。', 'review.noSpec': '這次完整契約審閱沒有選擇外部 Spec 文件。', 'review.material': '可執行的情境與型別案例', 'review.projection': 'ToppleCat 投影', 'review.projectionDescription': '已檢查的 Java/JUnit 驗收方法、編譯器描述的情境、型別案例資料列與適用的 Property 會插入這個宣告的載入點。這個投影不會新增業務規則。', 'review.noRows': '沒有記錄型別案例資料列。', 'review.techSummary': '技術與政策中繼資料', 'review.techMeta': '本報告投影已檢查的可執行契約；其中細節不會新增規則或執行結果。',
+      'review.title': '規格審閱', 'review.notice': '規格已備妥，尚未執行', 'review.withDocs': '完整的已選 SDD 文件只呈現一次；已檢查的 Java/JUnit 契約會插入每個宣告的 acceptance marker。', 'review.withoutDocs': '沒有選擇外部 Spec 文件。這是完整的可執行契約，不是 ToppleCat 臆造的 Markdown 文件。', 'review.selectedDocuments': '已選 SDD 文件', 'review.outline': '本頁內容', 'review.advisories': '提醒',
       'gate.evidenceUnavailable': '本次執行證據無法使用。', 'gate.canonicalReason': '本次執行證據記錄的原始原因：{0}',
       'comparison.heading': '預期與實際的比對結果', 'comparison.scope': '這裡只列出驗收程式實際比對的欄位。未出現在比對中的規則，ToppleCat 無法判定是否已檢查。', 'comparison.boundTo': '由下列步驟記錄比對', 'comparison.expected': '預期', 'comparison.path': '檢查欄位', 'comparison.difference': '差異類型', 'comparison.actual': '實際', 'comparison.kind.CHANGED': '兩邊的值不同', 'comparison.kind.MISSING_EXPECTED': '實際結果缺少預期欄位', 'comparison.kind.UNEXPECTED_ACTUAL': '實際結果多出未預期欄位',
       'stepData.heading': '傳入步驟的值', 'stepData.arguments': '傳入下列步驟的技術資料：',
@@ -165,17 +165,98 @@
     const popoverId = `topplecat-info-${id(key)}-${ordinal}`;
     return `<span class="info-term" data-info-wrapper data-info-key="${e(key)}"><span class="info-term-label">${e(t(`info.${key}.term`))}</span><button type="button" class="info-button" data-info-button aria-expanded="false" aria-controls="${popoverId}" aria-describedby="${popoverId}" aria-label="${e(t(`info.${key}.aria`))}">ⓘ</button><span class="info-popover" data-info-popover id="${popoverId}" role="tooltip" hidden>${e(t(`info.${key}.description`))}</span></span>`;
   };
+  const linkKnownReferences = value => value.replace(/(?<![A-Za-z0-9_-])(AC-[A-Za-z0-9][A-Za-z0-9-]*)(?![A-Za-z0-9_-])/g, (match) => {
+      const known = (data.acceptanceConditions || []).some(item => item.acId === match);
+      return known ? `<a class="ac-reference" href="#review-${id(match)}">${match}</a>` : match;
+    });
+  const closingBracket = (source, start) => {
+    let escaped = false;
+    for (let index = start; index < source.length; index += 1) {
+      const character = source[index];
+      if (escaped) { escaped = false; continue; }
+      if (character === '\\') { escaped = true; continue; }
+      if (character === ']') return index;
+    }
+    return -1;
+  };
+  const authoredLink = (source, start) => {
+    if (source[start] !== '[') return null;
+    const labelEnd = closingBracket(source, start + 1);
+    if (labelEnd < 0 || source[labelEnd + 1] !== '(') return null;
+    let index = labelEnd + 2;
+    while (/\s/.test(source[index] || '')) index += 1;
+    let destination = '';
+    if (source[index] === '<') {
+      const end = source.indexOf('>', index + 1);
+      if (end < 0) return null;
+      destination = source.slice(index + 1, end); index = end + 1;
+    } else {
+      const destinationStart = index; let depth = 0; let escaped = false;
+      while (index < source.length) {
+        const character = source[index];
+        if (escaped) { escaped = false; index += 1; continue; }
+        if (character === '\\') { escaped = true; index += 1; continue; }
+        if (character === '(') depth += 1;
+        if (character === ')') { if (depth === 0) break; depth -= 1; }
+        if (depth === 0 && /\s/.test(character)) break;
+        index += 1;
+      }
+      destination = source.slice(destinationStart, index);
+    }
+    while (/\s/.test(source[index] || '')) index += 1;
+    let title = '';
+    if (source[index] === '"' || source[index] === "'") {
+      const quote = source[index]; const titleStart = ++index; let escaped = false;
+      while (index < source.length) {
+        if (escaped) { escaped = false; index += 1; continue; }
+        if (source[index] === '\\') { escaped = true; index += 1; continue; }
+        if (source[index] === quote) break;
+        index += 1;
+      }
+      if (source[index] !== quote) return null;
+      title = source.slice(titleStart, index); index += 1;
+      while (/\s/.test(source[index] || '')) index += 1;
+    }
+    if (source[index] !== ')') return null;
+    return { end: index + 1, label: source.slice(start + 1, labelEnd), destination, title };
+  };
   const inline = source => {
-    const escaped = e(source);
-    return escaped
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\[([^\]]+)]\(([^\s)]+)(?:\s+&quot;[^&]*&quot;)?\)/g, (_all, label, href) => {
-        const safe = safeHref(href.replace(/&amp;/g, '&'));
-        return safe ? `<a href="${e(safe)}" target="_blank" rel="noopener">${label}</a>` : `${label} <code>${e(href)}</code>`;
-      })
+    const protectedParts = [];
+    const protect = html => {
+      const token = `\u0000${protectedParts.length}\u0000`;
+      protectedParts.push(html);
+      return token;
+    };
+    let value = ''; let position = 0;
+    while (position < String(source).length) {
+      const text = String(source);
+      if (text[position] === '`') {
+        let run = 1; while (text[position + run] === '`') run += 1;
+        const delimiter = '`'.repeat(run); const end = text.indexOf(delimiter, position + run);
+        if (end >= 0) {
+          value += protect(`<code>${e(text.slice(position + run, end))}</code>`);
+          position = end + run; continue;
+        }
+      }
+      if (text[position] === '[') {
+        const parsed = authoredLink(text, position);
+        if (parsed) {
+          const safe = safeHref(parsed.destination);
+          const label = e(parsed.label);
+          const rendered = safe
+            ? `<a href="${e(safe)}"${parsed.title ? ` title="${e(parsed.title)}"` : ''} target="_blank" rel="noopener">${label}</a>`
+            : `${label} <code>${e(parsed.destination)}</code>`;
+          value += protect(rendered); position = parsed.end; continue;
+        }
+      }
+      value += e(text[position]); position += 1;
+    }
+    value = linkKnownReferences(value);
+    value = value
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
       .replace(/_([^_]+)_/g, '<em>$1</em>');
+    return value.replace(/\u0000(\d+)\u0000/g, (_all, index) => protectedParts[Number(index)] ?? '');
   };
   const badge = value => `<span class="badge ${e(value)}">${e(value)}</span>`;
   const statusBadge = (status, label) => `<span class="badge ${e(status)}">${e(label)}</span>`;
@@ -274,13 +355,23 @@
   const code = (language, source) => `<pre><code>${highlight(language, source)}</code></pre>`;
   const markdownBlock = block => {
     const anchor = block.anchorId ? ` id="ac-${id(block.anchorId)}"` : '';
+    const children = block.children || [];
+    const renderChildren = () => children.map(markdownBlock).join('');
+    const legacyItems = (block.items || []).map(item => `<li>${inline(item)}</li>`).join('');
+    const legacyTaskItems = (block.items || []).map(item => { const checked = /^\[x]/i.test(item); return `<li><input type="checkbox" disabled ${checked ? 'checked' : ''}>${inline(item.replace(/^\[[ xX]]\s*/, ''))}</li>`; }).join('');
+    const listItems = children.length ? renderChildren() : block.kind === 'TASK_LIST' ? legacyTaskItems : legacyItems;
     switch (block.kind) {
       case 'HEADING': { const level = Math.min(Math.max((block.headingLevel || 1) + 1, 2), 6); return `<h${level}${anchor}>${inline(block.text)}</h${level}>`; }
       case 'PARAGRAPH': return `<p${anchor}>${inline(block.text)}</p>`;
-      case 'LIST': return `<ul${anchor}>${(block.items || []).map(item => `<li>${inline(item)}</li>`).join('')}</ul>`;
-      case 'ORDERED_LIST': return `<ol${anchor}>${(block.items || []).map(item => `<li>${inline(item)}</li>`).join('')}</ol>`;
-      case 'TASK_LIST': return `<ul class="task-list"${anchor}>${(block.items || []).map(item => { const checked = /^\[x]/i.test(item); return `<li><input type="checkbox" disabled ${checked ? 'checked' : ''}>${inline(item.replace(/^\[[ xX]]\s*/, ''))}</li>`; }).join('')}</ul>`;
-      case 'BLOCK_QUOTE': return `<blockquote${anchor}>${String(block.text || '').split('\n').map(line => `<p>${inline(line)}</p>`).join('')}</blockquote>`;
+      case 'LIST': return `<ul${anchor}>${listItems}</ul>`;
+      case 'ORDERED_LIST': return `<ol${anchor}>${listItems}</ol>`;
+      case 'TASK_LIST': return `<ul class="task-list"${anchor}>${listItems}</ul>`;
+      case 'LIST_ITEM': {
+        const marker = /^\[[ xX]\]$/.test(String(block.text || '')) ? String(block.text).toLowerCase() : '';
+        const checkbox = marker ? `<input type="checkbox" disabled ${marker === '[x]' ? 'checked' : ''}>` : '';
+        return `<li>${checkbox}${children.length ? renderChildren() : inline(block.text || '')}</li>`;
+      }
+      case 'BLOCK_QUOTE': return `<blockquote${anchor}>${children.length ? renderChildren() : inline(block.text || '')}</blockquote>`;
       case 'HORIZONTAL_RULE': return '<hr>';
       case 'TABLE': return `<div class="table-wrap"${anchor}><table><thead><tr>${(block.tableHeaders || []).map(head => `<th>${inline(head)}</th>`).join('')}</tr></thead><tbody>${(block.tableRows || []).map(row => `<tr>${row.map(cell => `<td>${inline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
       case 'IMAGE': {
@@ -291,23 +382,28 @@
       }
       case 'MERMAID': return `<section class="mermaid-panel"${anchor}><div class="mermaid-diagram"><div class="mermaid-source" hidden>${e(block.text)}</div></div><details><summary>${t('mermaid.source')}</summary>${code('mermaid', block.text)}</details></section>`;
       case 'CODE_FENCE': return `<section${anchor}>${code(block.language, block.text)}</section>`;
+      case 'ACCEPTANCE_MARKER': {
+        const condition = (data.acceptanceConditions || []).find(item => item.acId === block.anchorId);
+        return condition ? reviewAc(condition, true) : '';
+      }
       default: return `<section${anchor}><p class="meta">${t('markdown.unrenderable')}</p>${code(block.language || 'markdown', block.text)}</section>`;
     }
   };
   const documentView = document => `<article class="document" id="document-${id(document.path)}"><p class="document-identity"><code>${e(document.path)}</code></p>${(document.blocks || []).map(markdownBlock).join('')}</article>`;
   const visibility = value => value === 'HIDDEN' ? `<span class="badge HIDDEN">${t('visibility.hidden')}</span>` : `<span class="badge PUBLIC">${t('visibility.public')}</span>`;
   const method = item => item?.sourceCode ? `<details><summary>${t('method.source')}</summary><p class="meta">${t('method.description')}</p>${item.methodIdentity ? `<p class="technical-meta"><code>${e(item.methodIdentity)}</code>${item.sourceFile ? `, ${e(item.sourceFile)}:${e(item.sourceLine)}` : ''}</p>` : ''}${code('java', item.sourceCode)}</details>` : `<p class="meta">${t('method.unavailable')}</p>`;
-  const reviewCase = item => `<article class="case-card"><p>${visibility(item.visibility)} <strong>${e(item.caseId)}</strong></p>${scenario(item.scenario?.length ? item.scenario : [], false)}<div class="case-grid"><section><h4>${t('inputs')}</h4>${values(item.inputs)}</section><section><h4>${t('expectedResult')}</h4>${values(item.expected)}</section></div></article>`;
+  const reviewCase = item => `<article class="case-card"><p>${visibility(item.visibility)} <strong>${e(item.caseId)}</strong></p>${scenario(item.scenario?.length ? item.scenario : [], false)}<details class="case-values"><summary>${t('case.valuesSummary')}</summary><div class="case-grid"><section><h4>${t('inputs')}</h4>${values(item.inputs)}</section><section><h4>${t('expectedResult')}</h4>${values(item.expected)}</section></div></details></article>`;
   const reviewProperties = properties => !(properties || []).length ? '' : `<section><h4>${t('property.declarations')}</h4>${properties.map(property => `<article class="case-card"><strong>${e(property.title)}</strong><p class="meta"><code>${e(property.methodIdentity)}</code>. ${t('property.tries', e(property.tries), e(property.maxDiscards), e(property.maxShrinks))}</p><details><summary>${t('property.details')}</summary><p class="technical-meta">${e(property.sourceFile)}:${e(property.sourceLine)}</p>${code('java', property.sourceCode)}</details></article>`).join('')}</section>`;
-  const advisories = () => !(data.contractQualityAdvisories || []).length ? '' : `<section class="report-section" id="contract-quality-advisories"><h2>${t('advisory.heading')}</h2><p>${t('advisory.description')}</p>${data.contractQualityAdvisories.map(advisory => `<div class="advisory"><p><strong>${e(advisory.ruleCode)}</strong> ${t('advisory.for')} <a href="#ac-${id(advisory.acId)}">${e(advisory.acId)}</a></p><p>${e(advisory.expectedPath)}. ${t('advisory.publicRows', e(advisory.publicCount))} ${t('advisory.reviewerRows', e(advisory.hiddenCount))}</p></div>`).join('')}</section>`;
-  const reviewAc = item => `<article class="ac-review" id="review-${id(item.acId)}"><div class="ac-heading"><span class="ac-id">${e(item.acId)}</span><h3>${e(item.title)}</h3></div>${item.location?.documentPath ? `<p class="meta">${t('review.selectedSdd')}: <code>${e(item.location.documentPath)}</code>, ${t('review.documentPosition', e(item.location.documentPosition))}</p>` : `<p class="meta">${t('review.noSpec')}</p>`}<h4>${t('review.material')}</h4>${(item.cases || []).map(reviewCase).join('') || `<p class="meta">${t('review.noRows')}</p>`}${reviewProperties(item.properties)}${method(item.method)}<details><summary>${t('review.techSummary')}</summary><p class="technical-meta">${t('review.techMeta')}</p></details></article>`;
+  const advisories = () => !(data.contractQualityAdvisories || []).length ? '' : `<section class="report-section" id="contract-quality-advisories"><h2>${t('advisory.heading')}</h2><p>${t('advisory.description')}</p>${data.contractQualityAdvisories.map(advisory => `<div class="advisory"><p><strong>${e(advisory.ruleCode)}</strong> ${t('advisory.for')} <a href="#review-${id(advisory.acId)}">${e(advisory.acId)}</a></p><p>${e(advisory.expectedPath)}. ${t('advisory.publicRows', e(advisory.publicCount))} ${t('advisory.reviewerRows', e(advisory.hiddenCount))}</p></div>`).join('')}</section>`;
+  const reviewAc = (item, inlineProjection = false) => `<article class="ac-review topplecat-projection" id="review-${id(item.acId)}"><div class="projection-label"><strong>${t('review.projection')}</strong><span>${t('review.projectionDescription')}</span></div><div class="ac-heading"><span class="ac-id">${e(item.acId)}</span><h3>${e(item.title)}</h3></div>${item.location?.documentPath ? `<p class="meta">${t('review.selectedSdd')}: <code>${e(item.location.documentPath)}</code>, ${t('review.documentPosition', e(item.location.documentPosition))}</p>` : `<p class="meta">${t('review.noSpec')}</p>`}<h4>${t('review.material')}</h4>${(item.cases || []).map(reviewCase).join('') || `<p class="meta">${t('review.noRows')}</p>`}${reviewProperties(item.properties)}${method(item.method)}<details><summary>${t('review.techSummary')}</summary><p class="technical-meta">${t('review.techMeta')}</p></details></article>`;
   const reviewPage = () => {
     document.title = t('review.title'); document.getElementById('title').textContent = t('review.title'); document.getElementById('notice').textContent = t('review.notice');
     const docs = data.selectedSpecDocuments || [];
     const docIntro = docs.length ? t('review.withDocs') : t('review.withoutDocs');
     document.getElementById('summary').innerHTML = `<section class="report-intro"><h2>${t('review.notice')}</h2><p>${docIntro}</p></section>`;
-    document.getElementById('report').innerHTML = `${docs.length ? `<section class="report-section" id="selected-documents"><h2>${t('review.selectedDocuments')}</h2>${docs.map(documentView).join('')}</section>` : ''}<section class="report-section" id="executable-material"><h2>${t('review.material')}</h2>${(data.acceptanceConditions || []).map(reviewAc).join('')}</section>${advisories()}`;
-    document.getElementById('outline').innerHTML = `<h2>${t('review.outline')}</h2>${docs.map(doc => `<a href="#document-${id(doc.path)}">${e(doc.path)}</a>`).join('')}<a href="#executable-material">${t('review.material')}</a>${(data.acceptanceConditions || []).map(ac => `<a href="#review-${id(ac.acId)}">${e(ac.acId)}</a>`).join('')}${(data.contractQualityAdvisories || []).length ? `<a href="#contract-quality-advisories">${t('review.advisories')}</a>` : ''}`;
+    const documentHtml = docs.length ? `<section class="report-section" id="selected-documents"><h2>${t('review.selectedDocuments')}</h2>${docs.map(documentView).join('')}</section>` : `<section class="report-section" id="executable-material"><h2>${t('review.material')}</h2>${(data.acceptanceConditions || []).map(item => reviewAc(item, false)).join('')}</section>`;
+    document.getElementById('report').innerHTML = `${documentHtml}${advisories()}`;
+    document.getElementById('outline').innerHTML = `<h2>${t('review.outline')}</h2>${docs.map(doc => `<a href="#document-${id(doc.path)}">${e(doc.path)}</a>`).join('')}${(data.acceptanceConditions || []).map(ac => `<a href="#review-${id(ac.acId)}">${e(ac.acId)}</a>`).join('')}${(data.contractQualityAdvisories || []).length ? `<a href="#contract-quality-advisories">${t('review.advisories')}</a>` : ''}`;
   };
   const gate = name => (data.gates || []).find(item => item.name === name) || { name, verdict: 'INCOMPLETE', reason: t('gate.evidenceUnavailable') };
   const gateCard = item => `<div class="gate-card ${e(item.verdict)}"><p>${badge(item.verdict)} <strong>${e(item.name)}</strong></p>${item.reason ? `<p>${t('gate.canonicalReason', `<code>${e(item.reason)}</code>`)}</p>` : ''}</div>`;

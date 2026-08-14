@@ -97,7 +97,10 @@ business rule was written down.
 ## Spec Review and Verification Report
 
 **Spec Review** is the private page used before the AI starts, so a person can
-confirm the selected Spec and prepared checks. **Verification Report** is the
+confirm the selected canonical Markdown Spec and prepared checks. Check reads
+and hashes each selected document once and Review consumes its checked
+projection, inserting each bound acceptance card at the exact marker.
+**Verification Report** is the
 private page used after the AI says done; it explains the current verification
 result and the problems that need investigation.
 

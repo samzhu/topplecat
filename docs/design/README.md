@@ -9,7 +9,9 @@ Current product facts belong in the [Product definition](../product.md),
 
 ## Active designs
 
-None.
+There are no active designs. Completed accepted decisions are merged into the
+current Product, Architecture, guides, glossary, skills, and release-facing
+documentation, then removed from this workspace.
 
 ## Decide by content
 

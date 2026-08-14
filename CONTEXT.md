@@ -100,15 +100,21 @@ _Avoid_: a passing gate used as coverage for a different gate
 A reviewer-only, human-readable projection shown before implementation
 verification. It presents each complete Selected Spec Document together with
 the public and reviewer-owned Executable Contract material bound to its
-Acceptance Conditions. It contains no execution result and does not judge
-whether the upstream Spec is complete.
+Acceptance Conditions. Each AC is declared by its visible heading and exact
+standalone `<!-- topplecat:acceptance -->` load marker; the checked projection
+is inserted there exactly once. It contains no execution result and does not
+judge whether the upstream Spec is complete.
 _Avoid_: Contract Review, Public Spec, Living Documentation
 
 **Selected Spec Document／已選規格文件**:
-A repository-relative Markdown document selected by the human or external
-workflow for Spec Review. Its complete contents belong in that Review. Verify
-may also derive a scoped Delivery Scope from every `AC-...` identifier in one
-or more selected documents. ToppleCat does not manage the document's lifecycle.
+A canonical repository-relative Markdown document selected by the human or
+external workflow for Spec Review. It must contain valid AC heading/marker
+pairs; its complete contents belong in that Review. Ordinary AC mentions do
+not select scope. Check reads and hashes the selected bytes once, persists the
+safe checked projection, and Review consumes that projection. The acceptance
+skill carries the exact supplied path or paths into the product tasks; it does
+not maintain a registry or current-document record. ToppleCat does not manage
+the document's lifecycle.
 _Avoid_: partially selected Spec, ToppleCat-managed requirement
 
 **Verification Report／驗證報告**:
@@ -153,6 +159,23 @@ beside its `PASS` conclusion.
 _Avoid_: delivery recommendation, sign-off, proof of correctness
 
 ## People and orchestration
+
+**Adopting Team／採用團隊**:
+The people who use an Adopting Project's SDD workflow and ToppleCat for a
+delivery. It is a team-level term, not a name for one human or AI agent.
+_Avoid_: SDD user, ToppleCat user, consumer
+
+**Adopting Project／採用專案**:
+A Gradle-based Java project in which an Adopting Team uses both its SDD
+workflow and ToppleCat. It contains that delivery's source, Spec, and contract
+material; it is not the ToppleCat framework repository.
+_Avoid_: SDD project, consumer repository, ToppleCat project
+
+**ToppleCat Maintainer／ToppleCat 維護者**:
+A person who develops, validates, or releases the ToppleCat framework. A
+ToppleCat Maintainer is distinct from an Adopting Team even when one person has
+both responsibilities.
+_Avoid_: consumer developer, adopting developer
 
 **Reviewer／審閱者**:
 The human accountable for reading the prepared Executable Contract and the

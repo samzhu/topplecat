@@ -23,4 +23,12 @@ public final class ReportJson {
   public static ReviewView readReview(String source) {
     return JSON.readValue(source, ReviewView.class);
   }
+
+  public static String writeSelectedSpecProjection(SelectedSpecProjection projection) {
+    return JSON.writerWithDefaultPrettyPrinter().writeValueAsString(projection) + "\n";
+  }
+
+  public static SelectedSpecProjection readSelectedSpecProjection(String source) {
+    return JSON.readValue(source, SelectedSpecProjection.class);
+  }
 }

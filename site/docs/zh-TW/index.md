@@ -119,7 +119,7 @@ ToppleCat 適合使用 Java/JUnit、把部分實作交給 AI，並且希望由�
 | 了解完整流程、審閱者專用內容與系統邊界 | [從規則到結果](architecture.md) |
 | 把自己的業務規則接到 Java/JUnit | [把規則寫成可執行檢查](authoring-contracts.md) |
 | 解決安裝或驗證問題 | [排除問題](troubleshooting.md) |
-| 確認目前版本與環境需求 | [0.2.0 版本說明](release-notes.md) |
+| 確認目前版本與環境需求 | [ToppleCat 0.2.1 版本說明](release-notes.md) |
 
 ## 讓 AI 協助閱讀或安裝 {#ai-help}
 

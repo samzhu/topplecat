@@ -1,6 +1,5 @@
 package io.github.samzhu.topplecat.gradle;
 
-import io.github.samzhu.topplecat.core.Hashing;
 import io.github.samzhu.topplecat.core.SelectedSpecDocument;
 import io.github.samzhu.topplecat.core.SelectedSpecScope;
 import io.github.samzhu.topplecat.core.ToppleCatException;
@@ -45,6 +44,9 @@ final class SpecScopeResolver {
         documents.isEmpty()
             ? ExternalSpecDocumentReader.ParsedSpecs.empty()
             : ExternalSpecDocumentReader.read(root, documents);
+    if (!parsed.diagnostics().isEmpty()) {
+      throw new ToppleCatException(parsed.diagnosticMessage());
+    }
     if (commandLineSpecProvided && parsed.acceptanceConditionIds().isEmpty()) {
       throw new ToppleCatException(
           "Selected ToppleCat Spec documents contain no AC-... identifiers. Select a Markdown Spec"
@@ -52,15 +54,13 @@ final class SpecScopeResolver {
     }
     List<SelectedSpecDocument> sealedDocuments = new ArrayList<>();
     for (Path document : documents) {
-      try {
-        sealedDocuments.add(
-            new SelectedSpecDocument(
-                relative(root, document), Hashing.sha256(Files.readAllBytes(document))));
-      } catch (IOException exception) {
+      String relativePath = relative(root, document);
+      String digest = parsed.documentDigests().get(relativePath);
+      if (digest == null) {
         throw new ToppleCatException(
-            "Cannot hash selected ToppleCat Spec " + document + ": " + exception.getMessage(),
-            exception);
+            "Checked Selected Spec projection is missing " + relativePath + ".");
       }
+      sealedDocuments.add(new SelectedSpecDocument(relativePath, digest));
     }
     SelectedSpecScope scope =
         SelectedSpecScope.create(
@@ -98,11 +98,17 @@ final class SpecScopeResolver {
         throw new ToppleCatException(
             "ToppleCat --spec path must be repository-relative: " + rawPath);
       }
-      Path document = root.resolve(candidate).normalize();
+      if (rawPath.replace('\\', '/').matches("(^|/)(\\.|\\.\\.)(/|$)")) {
+        throw new ToppleCatException(
+            "ToppleCat --spec path must not contain . or .. components: " + rawPath);
+      }
+      Path document = root.resolve(candidate);
       if (!document.startsWith(root)) {
         throw new ToppleCatException(
             "ToppleCat --spec path must stay inside the repository root: " + rawPath);
       }
+      rejectSymbolicPathComponent(root, document, rawPath);
+      document = document.normalize();
       if (!Files.isRegularFile(document)) {
         throw new ToppleCatException(
             "ToppleCat --spec must name an existing Markdown file: " + rawPath);
@@ -110,9 +116,35 @@ final class SpecScopeResolver {
       if (!document.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".md")) {
         throw new ToppleCatException("ToppleCat --spec must name a Markdown file: " + rawPath);
       }
+      try {
+        Path realRoot = root.toRealPath();
+        Path realDocument = document.toRealPath();
+        if (!realDocument.startsWith(realRoot)) {
+          throw new ToppleCatException(
+              "ToppleCat --spec path must resolve inside the repository root: " + rawPath);
+        }
+      } catch (IOException exception) {
+        throw new ToppleCatException(
+            "ToppleCat --spec must resolve a regular Markdown file: " + rawPath, exception);
+      }
       documents.add(document);
     }
     return documents.stream().sorted().toList();
+  }
+
+  private static void rejectSymbolicPathComponent(Path root, Path candidate, String suppliedPath) {
+    Path current = root;
+    Path relative = root.relativize(candidate);
+    for (Path component : relative) {
+      current = current.resolve(component);
+      if (Files.isSymbolicLink(current)) {
+        throw new ToppleCatException(
+            "ToppleCat --spec path must not follow a symbolic link component ("
+                + current
+                + "): "
+                + suppliedPath);
+      }
+    }
   }
 
   private static String relative(Path root, Path document) {

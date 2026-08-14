@@ -63,7 +63,7 @@ The `CouponStage` methods perform the real setup, service calls, and assertions.
 
 Want a complete, runnable version of this pattern? The optional
 [JUnit cart-orders learning project](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)
-uses the released 0.2.0 artifacts and lets you choose five synthetic safeguard
+uses the locally published 0.2.1 release-line artifact (Maven Central publication is a separate maintainer action) and lets you choose five synthetic safeguard
 lessons. Each one leaves a local HTML Verification Report for that lesson under
 `build/topplecat/demo-reports/`. You do not need to run it before following
 this guide.
@@ -98,6 +98,24 @@ independently chosen boundaries. They do not add secret requirements.
 The agent receives the public contract. Formal Verify later runs those same
 public bytes; ToppleCat does not swap in a different public specification after
 the handoff.
+
+## Canonical Markdown Spec selection {#canonical-markdown-spec}
+
+The Review command accepts repository-relative `.md` paths. Each selected AC
+must be declared by a visible ATX h1–h6 or Setext h1/h2 heading in the form
+`AC-ID: business title` (full-width `：` is also accepted), followed by the
+exact standalone marker `<!-- topplecat:acceptance -->` after that AC's rules
+and examples. Ordinary references in prose or fenced code do not select scope.
+Missing, duplicate, orphaned, or misplaced declarations and markers produce a
+repairable `TC-SPEC-AC-*` diagnostic. ToppleCat does not read or translate
+Gherkin `.feature` files.
+
+The acceptance skill carries the exact repository-relative Markdown path or
+paths supplied by the human or upstream workflow. It does not maintain a
+registry, stable Spec identity, current selection, approval, status, history,
+or reviewer-owned value. Absolute paths and path guesses are rejected; bind
+directly from the selected canonical Markdown and never read or translate a
+`.feature` file.
 
 ## Make sure expected results are really checked
 

@@ -12,11 +12,14 @@ import io.github.samzhu.topplecat.core.ToppleCaseData;
 import io.github.samzhu.topplecat.core.ToppleCaseReader;
 import io.github.samzhu.topplecat.core.ToppleCaseSource;
 import io.github.samzhu.topplecat.core.ToppleCatException;
+import io.github.samzhu.topplecat.report.ReportJson;
+import io.github.samzhu.topplecat.report.SelectedSpecProjection;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -40,6 +43,9 @@ import org.gradle.api.tasks.TaskAction;
 public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
   @org.gradle.api.tasks.Internal
   public abstract DirectoryProperty getProjectRoot();
+
+  @org.gradle.api.tasks.Internal
+  public abstract DirectoryProperty getPublicTestSourceRoot();
 
   @org.gradle.api.tasks.Internal
   public abstract DirectoryProperty getPublicCaseRoot();
@@ -74,6 +80,9 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
   @OutputFile
   public abstract RegularFileProperty getSelectedSpecScopeFile();
 
+  @OutputFile
+  public abstract RegularFileProperty getSelectedSpecProjectionFile();
+
   @org.gradle.api.tasks.Input
   public abstract ListProperty<String> getSelectedAcceptanceConditionIds();
 
@@ -82,6 +91,7 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
 
   @TaskAction
   public void check() {
+    clearSelectedSpecHandoffs();
     if (!formalVerifyRequested()) {
       deleteReview(getReviewRoot().get().getAsFile().toPath());
       deleteReview(
@@ -143,6 +153,7 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
     validateSelectedBindings(scope, descriptors);
     writeDefinition(definition);
     writeScope(scope);
+    writeSelectedSpecProjection(scope, descriptors, publicProperties);
     if (!formalVerifyRequested()) {
       reviewerAdvisories(definition, scope)
           .forEach(
@@ -165,6 +176,24 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
             definition.digest());
   }
 
+  private void clearSelectedSpecHandoffs() {
+    for (Path output :
+        List.of(
+            getSelectedSpecScopeFile().get().getAsFile().toPath(),
+            getSelectedSpecProjectionFile().get().getAsFile().toPath())) {
+      try {
+        Files.deleteIfExists(output);
+      } catch (IOException exception) {
+        throw new GradleException(
+            "Cannot clear stale selected ToppleCat Spec handoff "
+                + output
+                + ": "
+                + exception.getMessage(),
+            exception);
+      }
+    }
+  }
+
   /** Verify rechecks the current public contract but must not erase the prior reviewer handoff. */
   private boolean formalVerifyRequested() {
     return getProject().getGradle().getTaskGraph().getAllTasks().stream()
@@ -185,6 +214,52 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
     } catch (IOException exception) {
       throw new GradleException(
           "Cannot write selected ToppleCat Spec scope " + output + ": " + exception.getMessage(),
+          exception);
+    }
+  }
+
+  private void writeSelectedSpecProjection(
+      SpecScopeResolver.ResolvedSpecScope scope,
+      List<CompilerScenarioDescriptor> descriptors,
+      List<CompilerPropertyDescriptor> properties) {
+    Path output = getSelectedSpecProjectionFile().get().getAsFile().toPath();
+    SelectedSpecProjection projection =
+        new SelectedSpecProjection(
+            SelectedSpecProjection.SCHEMA_VERSION,
+            scope.parsedSpecs().documents(),
+            scope.parsedSpecs().locations(),
+            descriptors.stream()
+                .collect(
+                    Collectors.toMap(
+                        CompilerScenarioDescriptor::acId,
+                        descriptor ->
+                            JavaSourceSnapshot.read(
+                                getPublicTestSourceRoot().get().getAsFile().toPath(),
+                                descriptor.sourceRef().file(),
+                                descriptor.sourceRef().line()),
+                        (left, right) -> left,
+                        LinkedHashMap::new)),
+            properties.stream()
+                .collect(
+                    Collectors.toMap(
+                        CompilerPropertyDescriptor::methodIdentity,
+                        property ->
+                            JavaSourceSnapshot.read(
+                                getPublicTestSourceRoot().get().getAsFile().toPath(),
+                                property.sourceRef().file(),
+                                property.sourceRef().line()),
+                        (left, right) -> left,
+                        LinkedHashMap::new)));
+    try {
+      Files.createDirectories(output.getParent());
+      Files.writeString(
+          output,
+          ReportJson.writeSelectedSpecProjection(projection),
+          StandardOpenOption.CREATE,
+          StandardOpenOption.TRUNCATE_EXISTING);
+    } catch (IOException exception) {
+      throw new GradleException(
+          "Cannot write checked Selected Spec projection " + output + ": " + exception.getMessage(),
           exception);
     }
   }
@@ -218,7 +293,7 @@ public abstract class ToppleCatCheckTask extends ToppleCatScopedTask {
         .ifPresent(
             acId -> {
               throw new ToppleCatException(
-                  "Selected ToppleCat AC "
+                  "[TC-SPEC-AC-BINDING-MISSING] Selected ToppleCat AC "
                       + acId
                       + " has no @ToppleAcceptanceTest binding. Add"
                       + " @ToppleAcceptanceTest(\""

@@ -55,8 +55,8 @@ only changes the surrounding ToppleCat presentation and its Given/When/Then
 labels, never the Step sentence, placeholder, underlying phase, or Step order.
 
 The [JUnit cart-orders learning project](../../samples/junit-cart-orders/) is
-an optional, runnable copy of this SDK pattern. It consumes the released 0.2.0
-artifacts from Maven Central and provides five clearly labelled synthetic
+an optional, runnable copy of this SDK pattern. It consumes the locally published
+0.2.1 release-line artifact (Maven Central publication is a separate maintainer action) and provides five clearly labelled synthetic
 lessons. Each route leaves its local HTML Verification Report under
 `build/topplecat/demo-reports/` for inspection; readers do not need to run it
 to author their own contract.
@@ -161,8 +161,37 @@ complete contract, but a Reviewer may ask for quick scoped evidence with either
 Markdown is reading context, not another authoring language or source of
 executable truth.
 
-Run `./gradlew toppleCatCheck` before handoff. An authorized reviewer then runs
-`./gradlew toppleCatReview`; its output contains reviewer material and must not
+### Canonical Markdown Spec format
+
+Selected Spec Review requires at least one canonical repository-relative `.md`
+path. The complete document is rendered once. Declare each AC with a visible
+ATX h1–h6 or Setext h1/h2 heading whose plain text is
+`AC-ID: business title` or `AC-ID：business title`, then place the exact
+standalone marker `<!-- topplecat:acceptance -->` after that AC's authored rules
+and examples. Heading level follows the document hierarchy; the marker alone
+defines the insertion point. Paragraph, list, table, task-list, link,
+inline-code, fenced-code, and other HTML-comment references remain ordinary
+prose and do not select scope. A legacy bare AC reference receives a repairable
+`TC-SPEC-AC-DECLARATION-MISSING` diagnostic.
+
+The active SDD workflow or human owns the exact repository-relative path handoff.
+ToppleCat does not maintain a registry, stable Spec identity, current-document
+pointer, or lifecycle record, and its Java runtime receives only the explicit
+`--spec` paths. Bind directly from canonical Markdown to Java/JUnit and typed
+rows; do not read or translate `.feature` files. An absolute path, missing path,
+ambiguous selection, missing file, invalid structure, insufficient business
+detail, or thin wrapper must be returned to that owner before a selected
+handoff is formed.
+
+When an upstream SDD writer hands a canonical `docs/specs/.../spec.md` to this
+skill, its exit step must leave visible AC headings, complete business rules,
+and exact markers in that Markdown. BDD `.feature` files and API design
+documents stay upstream; they are not ToppleCat inputs and are never translated
+into Java acceptance work.
+
+Run `./gradlew toppleCatCheck --spec specs/023-checkout/spec.md` before handoff.
+An authorized reviewer then runs
+`./gradlew toppleCatReview --spec specs/023-checkout/spec.md`; its output contains reviewer material and must not
 be given to an implementation agent.
 
 Check can emit a reviewer-only Contract Quality Advisory when a hidden row has

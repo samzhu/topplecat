@@ -12,7 +12,7 @@ public record ReviewView(
     List<ReviewAcceptanceCondition> acceptanceConditions,
     DeliveryScope deliveryScope,
     List<ContractQualityAdvisory> contractQualityAdvisories) {
-  public static final String SCHEMA_VERSION = "topplecat.review-view.v7";
+  public static final String SCHEMA_VERSION = "topplecat.review-view.v8";
 
   public ReviewView {
     if (!SCHEMA_VERSION.equals(schemaVersion)) {

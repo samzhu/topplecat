@@ -45,9 +45,11 @@ coding agents while a human remains accountable for acceptance.
 
 ## Two core use moments
 
-1. **Before implementation handoff:** Spec Review lets the human read the
-   complete selected Spec and the executable material that will be checked. It
-   contains no execution verdict.
+1. **Before implementation handoff:** the human or External Workflow supplies
+   the canonical Markdown Spec selection. Spec Review renders each complete
+   selected document once and inserts the bound executable material at each
+   AC's declared marker, so the business rule and checked examples share one
+   reading path. It contains no execution verdict.
 2. **After the agent's done claim:** formal Verify produces Current-run Evidence
    and Verification Report so the human can judge the delivery before accepting
    it or submitting a PR.
@@ -61,7 +63,10 @@ complete executable contract and policy.
 
 Both HTML reports are human, reviewer-only reading surfaces. Java/JUnit
 Acceptance Methods and Typed Case Rows remain the Executable Contract;
-generated JSON and HTML are projections.
+generated JSON and HTML are projections. The human or upstream workflow chooses
+the exact repository-relative canonical Markdown path or paths, and
+`topplecat-acceptance` carries that explicit selection into the product tasks.
+ToppleCat does not maintain a Spec registry or lifecycle record.
 
 ## Java adoption boundary
 

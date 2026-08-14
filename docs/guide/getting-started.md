@@ -9,9 +9,14 @@ and [Traditional Chinese documentation](https://topplecat.samzhu.dev/docs/zh-TW/
 
 ## Install ToppleCat
 
-ToppleCat 0.2.0 is available from
-[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat).
-Consumer projects do not need to clone or build the ToppleCat repository.
+ToppleCat 0.2.1 is the current tagged release line, but it has not yet been
+published to Maven Central. The selected-Spec Review behavior described here is
+not present in released 0.2.0. Use the repository's local Maven artifact for
+0.2.1 until a maintainer publishes it. The released 0.2.0 artifacts remain available from
+[Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat),
+but do not provide the selected-Spec behavior below.
+Using 0.2.1 therefore requires cloning this repository and running
+`./gradlew publishToMavenLocal` first.
 
 In `settings.gradle.kts`, make the plugin marker and libraries available from
 Maven Central:
@@ -19,13 +24,17 @@ Maven Central:
 ```kotlin
 pluginManagement {
     repositories {
+        mavenLocal()
         gradlePluginPortal()
         mavenCentral()
     }
 }
 
 dependencyResolutionManagement {
-    repositories { mavenCentral() }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 }
 ```
 
@@ -34,11 +43,11 @@ Then configure `build.gradle.kts`:
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.2.0"
+    id("io.github.samzhu.topplecat") version "0.2.1"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.0")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.1")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -157,6 +166,12 @@ Java-derived Given/When/Then Scenario, public rows, and reviewer material. It
 has no execution verdict: the Reviewer uses it to confirm what the Java code
 will check. Run `toppleCatCheck` directly only when fast feedback on bindings or
 case data is useful without opening the Review page.
+
+The `--spec` path must be a repository-relative Markdown file. Each AC needs a
+visible ATX or Setext heading such as `AC-CHECKOUT: Checkout succeeds`, followed
+by the exact standalone `<!-- topplecat:acceptance -->` marker. Ordinary prose
+references do not select scope, and ToppleCat does not read or translate
+`.feature` files.
 
 After that reading, seal the complete contract before handing work to the
 implementation agent:

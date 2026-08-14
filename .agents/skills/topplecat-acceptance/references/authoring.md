@@ -79,6 +79,17 @@ A reviewer row reuses an existing public AC and exercises a different value,
 boundary, or rule combination. It never creates a rule absent from the public
 Spec.
 
+## Canonical Markdown selection
+
+The external workflow supplies one or more exact repository-relative `.md` paths
+for selected work. The complete selected document is read; its AC inventory
+comes only from the product CommonMark heading/marker parser. Do not search for
+a current Spec, follow a wrapper, normalize an absolute path, or use a `.feature`
+file as a substitute. Carry the same paths through Check, Review, and scoped
+Verify. Missing, ambiguous, absolute, missing-file, structurally invalid,
+insufficient, and thin-wrapper selections return to the human or upstream Spec
+owner before a selected handoff is formed.
+
 ## Property declarations
 
 Put optional Properties under `src/test` and tie each one to an existing AC:

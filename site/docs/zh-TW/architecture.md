@@ -41,6 +41,11 @@ copied_label: Copied
 （Mechanical Seal），再執行公開驗收和每一道已啟用的獨立檢查。最後寫出本次證據、
 私人報告與一個整體結果。
 
+Spec Review 的 Gradle Check 只讀取並雜湊每份選定的 canonical Markdown 文件一次，保存安全的
+選定文件 projection 與 AC marker 位置；Review 使用這份 checked projection，不會重新讀取
+來源。文件必須有可見的 AC 標題與精確的獨立 acceptance marker；一般文字引用與 `.feature`
+檔案不在這個邊界內。
+
 ## 哪些內容決定「做對了」 {#contract-authority}
 
 公開的 Java/JUnit 驗收方法，以及 JSON 或 YAML 案例資料，就是可執行契約。它們是

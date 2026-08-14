@@ -1,0 +1,5 @@
+{
+  "reviewerRows": ["checkout-independent-boundary", "payment-independent-boundary", "old-independent-boundary"],
+  "reviewerOnlyValue": "reviewer-secret-example",
+  "source": "src/hiddenTest/java/example/CheckoutHiddenTest.java"
+}
