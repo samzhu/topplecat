@@ -60,7 +60,7 @@ fi
 "$gradle" clean check
 "$gradle" publishToMavenLocal
 bash "$root/scripts/verify-artifacts.sh"
-published_junit_jar="$root/topplecat-junit/build/libs/topplecat-junit-0.2.1.jar"
+published_junit_jar="$root/topplecat-junit/build/libs/topplecat-junit-0.2.2.jar"
 if [[ ! -f "$published_junit_jar" ]]; then
   echo "Release gate failed: expected JUnit artifact was not built: $published_junit_jar" >&2
   exit 1
@@ -119,9 +119,9 @@ path.write_text(text.replace(wrong, correct, 1))
 PY
 run_sample "$junit_sample" "$junit_state_root" toppleCatSeal toppleCatVerify
 
-assert_artifact_version "$junit_sample/build.gradle.kts" "0.2.1"
-assert_artifact_version "$spring_sample/build.gradle.kts" "0.2.1"
-assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.2.1"
+assert_artifact_version "$junit_sample/build.gradle.kts" "0.2.2"
+assert_artifact_version "$spring_sample/build.gradle.kts" "0.2.2"
+assert_artifact_version "$root/integration-tests/mutation-gate/build.gradle.kts" "0.2.2"
 
 JUNIT_SAMPLE="$junit_sample" SPRING_SAMPLE="$spring_sample" python3 - <<'PY'
 import json

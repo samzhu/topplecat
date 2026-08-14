@@ -8,8 +8,8 @@
 <!-- topplecat:acceptance -->
 </section>
 
-# AC-AFTER: Real heading
+# Real heading after raw HTML
 
 The authored rule is here.
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-AFTER -->

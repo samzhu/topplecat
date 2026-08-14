@@ -99,9 +99,9 @@ disclosures remain readable without opening help.
 
 ## Quick start
 
-ToppleCat 0.2.1 is the current tagged release line, but this release has not
+ToppleCat 0.2.2 is the current tagged release line, but this release has not
 been published to Maven Central yet. The selected-Spec Review behavior in this
-checkout is not present in released 0.2.0. To use 0.2.1 now, clone this
+checkout is not present in released 0.2.0. To use 0.2.2 now, clone this
 repository and run `./gradlew publishToMavenLocal`, then add `mavenLocal()`
 before `mavenCentral()` in the consumer's plugin and dependency repositories.
 The released 0.2.0 artifacts remain available from
@@ -134,11 +134,11 @@ dependencyResolutionManagement {
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.2.1"
+    id("io.github.samzhu.topplecat") version "0.2.2"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.1")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.2")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -169,11 +169,13 @@ the two forms:
 ```
 
 For `toppleCatCheck` and `toppleCatReview`, each `--spec` must name a
-repository-relative Markdown file. The file declares an AC with a visible
-heading such as `AC-CHECKOUT: Checkout succeeds` and places the exact standalone
-marker `<!-- topplecat:acceptance -->` after that AC's authored rules. Ordinary
+repository-relative Markdown file. The complete selected documents use exact
+standalone ID-bearing markers such as
+`<!-- topplecat:acceptance:AC-CHECKOUT-001 -->` as the sole AC identity and
+Review insertion point. Headings may use any level or wording; ordinary
 references in prose, lists, tables, links, inline code, or fenced code do not
-select an AC; `.feature` files are not read or translated.
+select an AC. Duplicate, malformed, legacy, or container-nested directives
+fail with repairable diagnostics; `.feature` files are not read or translated.
 
 A scoped Verification Report repeats that its `PASS` covers only the listed ACs
 and does not mean the complete executable contract passed. CI should use
@@ -288,7 +290,7 @@ before proposing a new ToppleCat responsibility.
 - [Architecture](docs/architecture.md)
 - [Context glossary](CONTEXT.md)
 - [Documentation index](docs/README.md)
-- [0.2.1 release notes](docs/releases/0.2.1.md)
+- [0.2.2 release notes](docs/releases/0.2.2.md)
 - [0.2.0 release notes](docs/releases/0.2.0.md)
 - [JUnit sample](samples/junit-cart-orders)
 - [Spring Boot sample](samples/spring-boot-cart-orders)

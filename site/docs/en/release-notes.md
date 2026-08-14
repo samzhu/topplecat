@@ -1,5 +1,5 @@
 ---
-title: What's in ToppleCat 0.2.1
+title: What's in ToppleCat 0.2.2
 description: Check the Java requirements, supported verification workflow, reports, and limits in the current ToppleCat release.
 page_id: release-notes
 language_code: en
@@ -15,91 +15,54 @@ copy_label: Copy Markdown
 copied_label: Copied
 ---
 
-# What's in ToppleCat 0.2.1
+# What's in ToppleCat 0.2.2
 
 If ToppleCat is new to you, start with [What is ToppleCat?](index.md#documentation-home).
 This page is for people preparing an adoption or upgrade: it lists the current
 capabilities, environment requirements, and limits.
 
 For the full historical record, use the repository's
-[0.2.0 release notes](https://github.com/samzhu/topplecat/blob/main/docs/releases/0.2.0.md).
+[0.2.1 release notes](https://github.com/samzhu/topplecat/blob/main/docs/releases/0.2.1.md).
 
 ## Current release line {#current-release}
 
-The 0.2.1 release line is tagged in this repository but has not been published
-to Maven Central. Build and consume it from the local Maven repository until a
-maintainer performs that separate publication. Released 0.2.0 remains the Maven
-Central baseline, and does not contain the selected-Spec Review, CommonMark
-parsing, or review projection changes described below.
+## Put each acceptance projection exactly where the business Spec says
 
-This is a breaking handoff change for projects using the former locator JSON:
-stop maintaining that registry and pass the exact repository-relative Markdown
-path or paths repeatedly as `--spec` to selected Check, Review, and scoped Verify
-commands. Multiple selected Specs are supported. Review requires `--spec`;
-whole-contract Check, Seal, and Verify remain available without selection, but
-whole-contract maintenance never claims Review readiness. `.feature` files stay
-upstream and are neither read nor translated.
+Previously, a selected Markdown document coupled a visible heading to a generic
+marker. Now one exact standalone marker, for example
+`<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`, is both the AC identity and
+the Spec Review insertion point. A heading may use any wording or level, and
+ordinary AC mentions stay prose. This removes accidental scope changes when a
+team edits its business-document structure.
 
-In this release a team can:
+Each selected AC marker must be unique across the supplied repository-relative
+`--spec` paths. Check reports every duplicate or malformed selected directive,
+and Review inserts one complete checked projection per valid marker in source
+order. Markers may be consecutive or appear before or after related prose.
 
-    - bind selected rules to public Java/JUnit Acceptance Methods and typed JSON or
-  YAML case rows;
-- review canonical repository-relative Markdown Specs with exact AC headings and
-  acceptance markers; ordinary prose references and `.feature` files are not
-  selection inputs;
-- review and mechanically seal the complete executable contract before an AI
-  implementation handoff;
-- run fresh Public Acceptance, reviewer-controlled examples, expected-value
-  checking, Property-Based Testing, and managed Mutation Testing; and
-- read an AC-first private Verification Report plus machine-readable evidence
-  and safe implementation-agent feedback.
+## Upgrade {#upgrade-notes}
 
-The normal CI command is `./gradlew toppleCatVerify` without a Spec or AC
-selection. It verifies the complete contract and records `PASS` only when every
-required Gate passes in that run.
+Projects using the 0.2.1 selected-Spec contract must replace every generic
+`<!-- topplecat:acceptance -->` marker with an exact ID-bearing marker. Do not
+depend on headings, marker proximity, ordinary references, or `.feature` files
+to select scope. Pass the same exact relative `--spec` paths to Check, Review,
+and scoped Verify.
 
-## Reports and languages
+## Requirements and limits
 
-ToppleCat creates two private reports inside your project. Spec Review lets a
-person confirm what will be checked. Verification Report explains the result
-of the current run after the AI finishes. Both are HTML pages that work
-offline; their content is not sent to this public website or an external
-service.
+ToppleCat runs on JDK 21 or 25; consumer source may target Java 17, 21, or 25
+when Gradle runs on a supported execution JDK. This release line is not yet in
+Maven Central, so build it locally with `./gradlew publishToMavenLocal` and put
+`mavenLocal()` before `mavenCentral()` until a maintainer completes that
+separate publication.
 
-Headings, buttons, and ToppleCat explanations are in English by default. Add
-`--language zh-TW` to the Review or Verify command to show that interface text
-in Traditional Chinese. Your business rules, case IDs, inputs, expected values,
-and outcomes recorded by external test tools are never translated or rewritten.
-
-For a faster check of a just-finished feature, select one or more Spec files or
-list one or more AC IDs; do not combine the two forms. The report shows exactly
-which rules ran. A scoped `PASS` means only those listed rules passed, not the
-whole project. CI should use the complete verification command without a scope.
+Spec Review and Verification Report remain reviewer-only HTML surfaces. A
+scoped `PASS` covers only its selected ACs; it does not prove the business Spec
+is complete or grant organizational approval.
 
 ## Documentation surface {#documentation-surface}
 
-The public documentation is available in English and human-authored Traditional
-Chinese. Learning pages lead with the delivery problem and a guided adoption
-path; reference pages retain exact commands, terms, and boundaries.
+The English and Traditional-Chinese documentation, samples, and acceptance
+skill describe the same marker contract and local-Maven adoption boundary.
 
-Every page has **Copy Markdown** so you can give that page to an AI for an
-explanation or public setup help. The site does not translate pages at runtime
-or make private reports available to an AI.
-
-## Limits and upgrade notes {#upgrade-notes}
-
-- ToppleCat 0.2.0 is current-only. Reviewer custody and its Mechanical Seal are
-  not migrated from another schema version; restore, Check, Review, and Reseal
-  the contract for the current release.
-- Formal Mutation Testing uses ToppleCat's fixed managed PIT profile. A
-  project's custom PIT task remains separate.
-- Scoped verification accepts Spec files or AC IDs, never both together.
-  Sealing always covers the complete contract.
-- Reviewer material is kept in local plaintext storage. This is not encryption
-  or process isolation.
-- `PASS` is evidence for the checked scope. It does not prove that every
-  business rule was specified or grant organizational approval.
-
-To adopt the current release line, [build 0.2.1 locally and add `mavenLocal()`](getting-started.md#ai-assisted-authoring).
-To understand a result, read
-[How ToppleCat verifies a delivery](verification-and-evidence.md#gates-and-verdicts).
+To adopt the current release line, [build 0.2.2 locally and add `mavenLocal()`](getting-started.md#ai-assisted-authoring).

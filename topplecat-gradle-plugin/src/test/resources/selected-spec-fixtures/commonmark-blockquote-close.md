@@ -1,8 +1,8 @@
 > quoted paragraph
 lazy continuation remains in the quote
-# AC-AFTER-LAZY-QUOTE: Heading
-<!-- topplecat:acceptance -->
+# Heading after lazy quote
+<!-- topplecat:acceptance:AC-AFTER-LAZY-QUOTE -->
 
 > another quote
-# AC-AFTER-QUOTE: Another heading
-<!-- topplecat:acceptance -->
+# Another heading after quote
+<!-- topplecat:acceptance:AC-AFTER-QUOTE -->

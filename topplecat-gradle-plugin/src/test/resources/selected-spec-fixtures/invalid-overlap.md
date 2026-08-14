@@ -1,5 +1,3 @@
-# AC-OVERLAP-A: First declaration
+# Malformed marker fixture
 
-# AC-OVERLAP-B: Second declaration
-
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance: AC-OVERLAP-B -->

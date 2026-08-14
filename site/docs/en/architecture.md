@@ -48,9 +48,9 @@ returns one aggregate result.
 For Spec Review, the Gradle Check reads and hashes each selected canonical
 Markdown document once. It persists the safe selected-document projection and
 AC marker locations; Review consumes that checked projection without rereading
-the source. A visible AC heading and the exact standalone acceptance marker are
-required, while ordinary prose references and `.feature` files are outside this
-boundary.
+the source. An exact standalone ID-bearing acceptance marker is required;
+headings are readability only. Ordinary prose references and `.feature` files
+are outside this boundary.
 
 ## What is authoritative {#contract-authority}
 

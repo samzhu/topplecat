@@ -738,10 +738,10 @@ public final class ReportViews {
       Instant generatedAt,
       DeliveryScope deliveryScope) {
     Map<String, List<ToppleCaseData>> byAc = group(cases);
-    java.util.TreeSet<String> acIds = new java.util.TreeSet<>();
+    java.util.LinkedHashSet<String> acIds = new java.util.LinkedHashSet<>();
+    acIds.addAll(locations.keySet());
     acIds.addAll(titles.keySet());
     acIds.addAll(byAc.keySet());
-    acIds.addAll(locations.keySet());
     acIds.addAll(methods.keySet());
     List<ReviewAcceptanceCondition> acceptanceConditions = new ArrayList<>();
     for (String acId : acIds) {

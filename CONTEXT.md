@@ -100,17 +100,19 @@ _Avoid_: a passing gate used as coverage for a different gate
 A reviewer-only, human-readable projection shown before implementation
 verification. It presents each complete Selected Spec Document together with
 the public and reviewer-owned Executable Contract material bound to its
-Acceptance Conditions. Each AC is declared by its visible heading and exact
-standalone `<!-- topplecat:acceptance -->` load marker; the checked projection
-is inserted there exactly once. It contains no execution result and does not
+Acceptance Conditions. Each AC is loaded by an exact standalone ID-bearing
+marker such as `<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`; the checked
+projection is inserted there exactly once. Headings and ordinary AC mentions
+are prose only. It contains no execution result and does not
 judge whether the upstream Spec is complete.
 _Avoid_: Contract Review, Public Spec, Living Documentation
 
 **Selected Spec Document／已選規格文件**:
 A canonical repository-relative Markdown document selected by the human or
-external workflow for Spec Review. It must contain valid AC heading/marker
-pairs; its complete contents belong in that Review. Ordinary AC mentions do
-not select scope. Check reads and hashes the selected bytes once, persists the
+external workflow for Spec Review. It must contain exact standalone ID-bearing
+markers; its complete contents belong in that Review. Ordinary AC mentions and
+headings do not select scope, and each marker is unique across the selected
+document set. Check reads and hashes the selected bytes once, persists the
 safe checked projection, and Review consumes that projection. The acceptance
 skill carries the exact supplied path or paths into the product tasks; it does
 not maintain a registry or current-document record. ToppleCat does not manage

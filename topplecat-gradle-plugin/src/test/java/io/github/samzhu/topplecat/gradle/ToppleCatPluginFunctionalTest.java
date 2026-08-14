@@ -164,6 +164,9 @@ class ToppleCatPluginFunctionalTest {
     assertEquals("specs/checkout.md", review.selectedSpecDocuments().getFirst().path());
     assertEquals(2, review.acceptanceConditions().size());
     assertEquals(
+        List.of("AC-B", "AC-A"),
+        review.acceptanceConditions().stream().map(condition -> condition.acId()).toList());
+    assertEquals(
         2,
         review.selectedSpecDocuments().getFirst().blocks().stream()
             .filter(
@@ -260,6 +263,51 @@ class ToppleCatPluginFunctionalTest {
     assertFalse(Files.exists(selectedScope));
     assertFalse(Files.exists(selectedProjection));
     assertFalse(Files.exists(project.resolve("build/topplecat/reports/review")));
+  }
+
+  @Test
+  void selectedReviewPreservesMarkerOrderAcrossMultipleSelectedDocuments() throws Exception {
+    writeProject("");
+    writeTwoAcceptanceConditionsWithPropertyOnlyOnB();
+    writePublicCasesForAAndB();
+    writeHiddenCasesForAAndB();
+    writeCanonicalSpec("specs/a.md", "AC-B", "A document rule");
+    writeCanonicalSpec("specs/b.md", "AC-A", "B document rule");
+
+    runner("toppleCatReview", "--spec", "specs/b.md", "--spec", "specs/a.md").build();
+
+    ReviewView review =
+        ReportJson.readReview(
+            Files.readString(project.resolve("build/topplecat/reports/review/data.json")));
+    assertEquals(
+        List.of("specs/a.md", "specs/b.md"),
+        review.selectedSpecDocuments().stream().map(document -> document.path()).toList());
+    assertEquals(
+        List.of("AC-B", "AC-A"),
+        review.acceptanceConditions().stream().map(condition -> condition.acId()).toList());
+    try (WebClient client = new WebClient(BrowserVersion.CHROME)) {
+      HtmlPage page =
+          client.getPage(
+              project.resolve("build/topplecat/reports/review/index.html").toUri().toURL());
+      assertEquals(2, page.querySelectorAll("article.document").getLength());
+      assertEquals(1, page.querySelectorAll("#review-AC-B").getLength());
+      assertEquals(1, page.querySelectorAll("#review-AC-A").getLength());
+      assertFalse(page.asNormalizedText().contains("topplecat:acceptance:"));
+    }
+  }
+
+  @Test
+  void selectedIdBearingMarkerWithoutPublicBindingStopsBeforeReview() throws Exception {
+    writeProject("");
+    writeScenarioAcceptance();
+    writePublicCase("coupon-public", "AC-COUPON", 100);
+    writeCanonicalSpec("specs/unbound.md", "AC-NOT-BOUND", "Unbound rule");
+
+    var failed = runner("toppleCatReview", "--spec", "specs/unbound.md").buildAndFail();
+
+    assertTrue(failed.getOutput().contains("TC-SPEC-AC-BINDING-MISSING"), failed.getOutput());
+    assertFalse(Files.exists(project.resolve("build/topplecat/reports/review")));
+    assertFalse(Files.exists(project.resolve("build/topplecat/selected-spec-projection.json")));
   }
 
   @Test
@@ -1104,7 +1152,7 @@ class ToppleCatPluginFunctionalTest {
     Path spec = project.resolve("specs/coupon.md");
     Files.createDirectories(spec.getParent());
     Files.writeString(
-        spec, "# AC-COUPON: Coupon\n\nThe coupon rule.\n\n<!-- topplecat:acceptance -->\n");
+        spec, "# Coupon\n\nThe coupon rule.\n\n<!-- topplecat:acceptance:AC-COUPON -->\n");
 
     runner("toppleCatSeal").build();
     var verify = runner("toppleCatVerify", "--spec", "specs/coupon.md").build();
@@ -1167,7 +1215,7 @@ class ToppleCatPluginFunctionalTest {
     writePublicCasesForAAndB();
     Path spec = project.resolve("specs/a.md");
     Files.createDirectories(spec.getParent());
-    Files.writeString(spec, "# AC-A: A\n\nThe A rule.\n\n<!-- topplecat:acceptance -->\n");
+    Files.writeString(spec, "# A\n\nThe A rule.\n\n<!-- topplecat:acceptance:AC-A -->\n");
     runner("toppleCatSeal").build();
 
     runner("toppleCatVerify", "--ac", "AC-A", "--ac", "AC-B").buildAndFail();
@@ -1270,7 +1318,7 @@ class ToppleCatPluginFunctionalTest {
     writePublicCasesForAAndB();
     Path spec = project.resolve("specs/a.md");
     Files.createDirectories(spec.getParent());
-    Files.writeString(spec, "# AC-A: A\n\nThe A rule.\n\n<!-- topplecat:acceptance -->\n");
+    Files.writeString(spec, "# A\n\nThe A rule.\n\n<!-- topplecat:acceptance:AC-A -->\n");
 
     runner("toppleCatSeal").build();
     runner("toppleCatVerify", "--spec", "specs/a.md").build();
@@ -1332,7 +1380,7 @@ class ToppleCatPluginFunctionalTest {
     writeProductionClass();
     Path spec = project.resolve("specs/a.md");
     Files.createDirectories(spec.getParent());
-    Files.writeString(spec, "# AC-A: A\n\nThe A rule.\n\n<!-- topplecat:acceptance -->\n");
+    Files.writeString(spec, "# A\n\nThe A rule.\n\n<!-- topplecat:acceptance:AC-A -->\n");
 
     runner("toppleCatSeal").build();
     var failure = runner("toppleCatVerify", "--spec", "specs/a.md").buildAndFail();
@@ -2043,8 +2091,8 @@ class ToppleCatPluginFunctionalTest {
     Files.createDirectories(spec.getParent());
     Files.writeString(
         spec,
-        "# %s: %s\n\nThe canonical business rule.\n\n%s\n"
-            .formatted(acId, title, "<!-- topplecat:acceptance -->"));
+        "# %s\n\nThe canonical business rule.\n\n%s\n"
+            .formatted(title, "<!-- topplecat:acceptance:" + acId + " -->"));
   }
 
   private void writeSelectedReviewFixture() throws Exception {
@@ -2057,7 +2105,7 @@ class ToppleCatPluginFunctionalTest {
 
         Background AC-A explains the shared checkout rule.
 
-        ## AC-A: Apply coupon
+        ## Apply coupon
 
         The cart accepts an eligible coupon and reduces the total.
 
@@ -2066,13 +2114,13 @@ class ToppleCatPluginFunctionalTest {
         - When the customer applies SAVE10
         - Then the total is reduced
 
-        <!-- topplecat:acceptance -->
-
-        ### AC-B: Reject missing items
+        ### Reject missing items
 
         A checkout without a purchasable item is rejected.
 
-        <!-- topplecat:acceptance -->
+        ### Shared acceptance projections
+        <!-- topplecat:acceptance:AC-B -->
+        <!-- topplecat:acceptance:AC-A -->
         """);
     Path old = project.resolve("src/test/java/example/OldAcceptance.java");
     Files.createDirectories(old.getParent());

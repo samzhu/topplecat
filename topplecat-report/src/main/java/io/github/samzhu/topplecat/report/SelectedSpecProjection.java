@@ -27,7 +27,7 @@ public record SelectedSpecProjection(
     }
     selectedSpecDocuments =
         List.copyOf(selectedSpecDocuments == null ? List.of() : selectedSpecDocuments);
-    Map<String, ReviewAcLocation> sorted = new java.util.TreeMap<>();
+    Map<String, ReviewAcLocation> sorted = new LinkedHashMap<>();
     if (acceptanceLocations != null) {
       sorted.putAll(acceptanceLocations);
     }
@@ -37,7 +37,7 @@ public record SelectedSpecProjection(
   }
 
   public List<String> acceptanceConditionIds() {
-    return acceptanceLocations.keySet().stream().sorted().toList();
+    return List.copyOf(acceptanceLocations.keySet());
   }
 
   private static Map<String, String> sortedSources(Map<String, String> values) {

@@ -1,4 +1,4 @@
 10. item
-  # AC-AFTER-TEN: Rule
+  # Rule after ordered item
 
-  <!-- topplecat:acceptance -->
+  <!-- topplecat:acceptance:AC-AFTER-TEN -->

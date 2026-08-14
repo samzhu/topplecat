@@ -12,7 +12,7 @@ from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parent.parent
 PREVIOUS_RELEASE_VERSION = "0.2.0"
-CURRENT_RELEASE_VERSION = "0.2.1"
+CURRENT_RELEASE_VERSION = "0.2.2"
 MAVEN_CENTRAL_VERSION = "0.2.0"
 PRIVATE_SECTIONS = {"grimo", "history", "decisions", "deepwiki", "maintainers"}
 SECRET_TOKENS = ("coupon-hidden-800", "customer-2", "ReviewerBoundary")
@@ -85,8 +85,8 @@ REQUIRED_DOC_INDEX_LINKS = (
     "../CONTEXT.md",
     "releases/0.2.0.md",
     "releases/0.2.0.zh-TW.md",
-    "releases/0.2.1.md",
-    "releases/0.2.1.zh-TW.md",
+    "releases/0.2.2.md",
+    "releases/0.2.2.zh-TW.md",
     "validation/README.md",
 )
 REQUIRED_DESIGN_SECTIONS = (
@@ -98,12 +98,14 @@ REQUIRED_DESIGN_SECTIONS = (
     "## Acceptance evidence",
     "## Consequences and alternatives",
 )
-CURRENT_RELEASE_FILES = {"0.2.1.md", "0.2.1.zh-TW.md"}
+CURRENT_RELEASE_FILES = {"0.2.2.md", "0.2.2.zh-TW.md"}
 EXPECTED_RELEASE_FILES = {
     "0.2.0.md",
     "0.2.0.zh-TW.md",
     "0.2.1.md",
     "0.2.1.zh-TW.md",
+    "0.2.2.md",
+    "0.2.2.zh-TW.md",
 }
 RELEASE_NOTE = re.compile(r"^(\d+\.\d+\.\d+)(\.zh-TW)?\.md$")
 SEMVER_TAG = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
@@ -145,6 +147,20 @@ SDK_REFERENCE_DOCUMENTS = (
     "docs/guide/authoring.md",
     "site/docs/en/authoring-contracts.md",
     "site/docs/zh-TW/authoring-contracts.md",
+)
+MARKER_GUIDE_DOCUMENTS = (
+    "README.md",
+    "README.zh-TW.md",
+    "docs/guide/authoring.md",
+    "docs/guide/getting-started.md",
+    "docs/guide/troubleshooting.md",
+    "docs/guide/verification-and-evidence.md",
+    "site/docs/en/authoring-contracts.md",
+    "site/docs/en/getting-started.md",
+    "site/docs/en/verification-and-evidence.md",
+    "site/docs/zh-TW/authoring-contracts.md",
+    "site/docs/zh-TW/getting-started.md",
+    "site/docs/zh-TW/verification-and-evidence.md",
 )
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
 HTML_LINK = re.compile(r"(?:href|src)=[\"']([^\"']+)[\"']", re.IGNORECASE)
@@ -247,7 +263,7 @@ def has_balanced_fences(text: str) -> bool:
 
 
 def current_maven_central_claim_is_safe(text: str) -> bool:
-    """Reject a sentence that presents 0.2.1 as a Maven Central artifact."""
+    """Reject a sentence that presents 0.2.2 as a Maven Central artifact."""
     sentences = re.split(r"(?<=[.!?。！？])\s+", text)
     positive = re.compile(
         r"(?:available|published|released)\s+(?:from|on|to)\s+Maven\s+Central"
@@ -304,6 +320,13 @@ def main() -> int:
     site_release_zh = (ROOT / "site/docs/zh-TW/release-notes.md").read_text(encoding="utf-8")
     if "Maven Central" not in site_release or "Maven Central" not in site_release_zh:
         failures.append("site current release notes must state the Maven Central publication boundary")
+    for relative in MARKER_GUIDE_DOCUMENTS:
+        marker_doc = ROOT / relative
+        marker_text = marker_doc.read_text(encoding="utf-8")
+        if "<!-- topplecat:acceptance -->" in marker_text:
+            failures.append(f"{relative}: current guidance must not teach the generic acceptance marker")
+        if "<!-- topplecat:acceptance:AC-ID -->" not in marker_text and "<!-- topplecat:acceptance:AC-" not in marker_text:
+            failures.append(f"{relative}: current guidance must show an ID-bearing acceptance marker")
     for readme, required_unreleased in (
         (ROOT / "README.md", "not been published to Maven Central"),
         (ROOT / "README.zh-TW.md", "尚未發布到 Maven Central"),
@@ -320,7 +343,7 @@ def main() -> int:
         "has not\nbeen published to Maven Central yet", "has been published to Maven Central"
     )
     if current_maven_central_claim_is_safe(false_claim):
-        failures.append("README guard self-test did not reject a 0.2.1 Maven Central claim")
+        failures.append("README guard self-test did not reject a 0.2.2 Maven Central claim")
     public_documents = [path for path in source_markdown() if is_public_document(path)]
     root_markdown_files = {path.name for path in ROOT.glob("*.md")}
     if root_markdown_files != EXPECTED_ROOT_MARKDOWN_FILES:
@@ -404,7 +427,7 @@ def main() -> int:
             release_versions.setdefault(match.group(1), set()).add(language)
         if release_files != EXPECTED_RELEASE_FILES:
             failures.append(
-                "docs/releases: expected the 0.2.0 history pair and current 0.2.1 English/Traditional-Chinese notes"
+                "docs/releases: expected historical notes and current 0.2.2 English/Traditional-Chinese notes"
             )
         for version, languages in sorted(release_versions.items()):
             if languages != {"en", "zh-TW"}:

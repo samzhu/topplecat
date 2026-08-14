@@ -19,12 +19,11 @@ assertions, local variables, helper calls, and control flow into Stage methods.
 ./gradlew toppleCatReview --spec specs/checkout/spec.md
 ```
 
-The selected document must declare each AC with a visible ATX or Setext heading
-such as `AC-CHECKOUT: Checkout succeeds`, followed later by the exact standalone
-marker `<!-- topplecat:acceptance -->`. A paragraph or list that merely mentions
-an AC ID does not declare or select it. Check reports repairable
-`TC-SPEC-AC-*` diagnostics for missing, duplicate, orphaned, or misplaced
-headings and markers; fix the Markdown and rerun Check before Review.
+The selected document must contain an exact standalone ID-bearing marker such as
+`<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`. Headings and ordinary AC
+mentions do not declare or select an AC. Check reports repairable
+`TC-SPEC-AC-*` diagnostics for missing, duplicate, malformed, legacy, or
+container-nested directives; fix the Markdown and rerun Check before Review.
 
 Review uses the checked projection written by Check. If the selected path or
 document bytes changed after Check, rerun Check; Review will not reread or

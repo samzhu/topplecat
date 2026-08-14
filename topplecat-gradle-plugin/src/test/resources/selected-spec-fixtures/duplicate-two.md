@@ -1,3 +1,3 @@
-# AC-CROSS-DOCUMENT: Second owner
+# Second selected document
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-CROSS-DOCUMENT -->

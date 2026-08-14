@@ -2,7 +2,6 @@ package io.github.samzhu.topplecat.gradle;
 
 import io.github.samzhu.topplecat.report.SpecMarkdownBlock;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -41,7 +40,13 @@ import org.commonmark.parser.Parser;
  * never reinterpreted as ordinary inline text by the report renderer.
  */
 final class CanonicalMarkdownStructure {
-  private static final String ACCEPTANCE_MARKER = "<!-- topplecat:acceptance -->";
+  private static final java.util.regex.Pattern ACCEPTANCE_MARKER =
+      java.util.regex.Pattern.compile(
+          "^<!-- topplecat:acceptance:(AC-[A-Za-z0-9][A-Za-z0-9-]*) -->$");
+  private static final java.util.regex.Pattern ACCEPTANCE_DIRECTIVE =
+      java.util.regex.Pattern.compile("^<!--\\s*topplecat:acceptance(?:[: ].*)?-->$");
+  private static final java.util.regex.Pattern AC_ID_PREFIX =
+      java.util.regex.Pattern.compile("AC-[A-Za-z0-9][A-Za-z0-9-]*");
   private static final Parser PARSER =
       Parser.builder()
           .extensions(List.of(TablesExtension.create()))
@@ -58,7 +63,7 @@ final class CanonicalMarkdownStructure {
   static Parsed parse(String source, Function<String, ResolvedImage> imageResolver) {
     Document document = (Document) PARSER.parse(source);
     List<Event> events = new ArrayList<>();
-    Set<Integer> documentLevelMarkerLines = new HashSet<>();
+    Set<Integer> documentLevelMarkerLines = new java.util.LinkedHashSet<>();
     for (Node node = document.getFirstChild(); node != null; node = node.getNext()) {
       if (node instanceof Heading heading) {
         SourceSpan span = firstSpan(heading);
@@ -67,17 +72,32 @@ final class CanonicalMarkdownStructure {
               new Event(
                   EventKind.HEADING,
                   headingText(heading),
+                  "",
                   span.getLineIndex() + 1,
                   span.getColumnIndex() + 1));
         }
-      } else if (node instanceof HtmlBlock htmlBlock && isExactMarker(htmlBlock.getLiteral())) {
+      } else if (node instanceof HtmlBlock htmlBlock) {
         SourceSpan span = firstSpan(htmlBlock);
-        if (span != null) {
+        if (span == null) {
+          continue;
+        }
+        String literal = htmlBlock.getLiteral();
+        String markerId = acceptanceMarkerId(literal);
+        if (markerId != null) {
           documentLevelMarkerLines.add(span.getLineIndex());
           events.add(
               new Event(
                   EventKind.MARKER,
-                  ACCEPTANCE_MARKER,
+                  literal.strip(),
+                  markerId,
+                  span.getLineIndex() + 1,
+                  span.getColumnIndex() + 1));
+        } else if (isAcceptanceDirective(literal)) {
+          events.add(
+              new Event(
+                  EventKind.INVALID_MARKER,
+                  literal.strip(),
+                  candidateAcId(literal),
                   span.getLineIndex() + 1,
                   span.getColumnIndex() + 1));
         }
@@ -117,9 +137,21 @@ final class CanonicalMarkdownStructure {
               List.of()));
     }
     if (node instanceof HtmlBlock htmlBlock) {
-      if (documentLevel && isExactMarker(htmlBlock.getLiteral())) {
+      String markerId = acceptanceMarkerId(htmlBlock.getLiteral());
+      if (documentLevel && markerId != null) {
         return List.of(
-            block(SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER, 0, "", List.of(), "", List.of()));
+            new SpecMarkdownBlock(
+                SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER,
+                0,
+                "",
+                List.of(),
+                "",
+                "",
+                "",
+                List.of(),
+                List.of(),
+                markerId,
+                List.of()));
       }
       return List.of(
           block(
@@ -402,8 +434,24 @@ final class CanonicalMarkdownStructure {
     }
   }
 
-  private static boolean isExactMarker(String literal) {
-    return literal != null && literal.strip().equals(ACCEPTANCE_MARKER);
+  static String acceptanceMarkerId(String literal) {
+    if (literal == null) {
+      return null;
+    }
+    var matcher = ACCEPTANCE_MARKER.matcher(literal.strip());
+    return matcher.matches() ? matcher.group(1) : null;
+  }
+
+  private static boolean isAcceptanceDirective(String literal) {
+    return literal != null && ACCEPTANCE_DIRECTIVE.matcher(literal.strip()).matches();
+  }
+
+  private static String candidateAcId(String literal) {
+    if (literal == null) {
+      return "";
+    }
+    var matcher = AC_ID_PREFIX.matcher(literal);
+    return matcher.find() ? matcher.group() : "";
   }
 
   record ResolvedImage(String destination, String message) {
@@ -422,10 +470,16 @@ final class CanonicalMarkdownStructure {
     }
   }
 
-  record Event(EventKind kind, String text, int line, int column) {}
+  record Event(EventKind kind, String text, String acId, int line, int column) {
+    Event {
+      text = text == null ? "" : text;
+      acId = acId == null ? "" : acId;
+    }
+  }
 
   enum EventKind {
     HEADING,
-    MARKER
+    MARKER,
+    INVALID_MARKER
   }
 }

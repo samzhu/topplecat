@@ -1,55 +1,55 @@
 <!-- comment starts
 # AC-IN-COMMENT: not a declaration
 -->
-# AC-AFTER-COMMENT: Comment
-<!-- topplecat:acceptance -->
+# Comment
+<!-- topplecat:acceptance:AC-AFTER-COMMENT -->
 
 <?processing
 # AC-IN-PROCESSING: not a declaration
 ?>
-# AC-AFTER-PROCESSING: Processing
-<!-- topplecat:acceptance -->
+# Processing
+<!-- topplecat:acceptance:AC-AFTER-PROCESSING -->
 
 <!DECLARATION
 # AC-IN-DECLARATION: not a declaration
 >
-# AC-AFTER-DECLARATION: Declaration
-<!-- topplecat:acceptance -->
+# Declaration
+<!-- topplecat:acceptance:AC-AFTER-DECLARATION -->
 
 <![CDATA[
 # AC-IN-CDATA: not a declaration
 ]]>
-# AC-AFTER-CDATA: Cdata
-<!-- topplecat:acceptance -->
+# Cdata
+<!-- topplecat:acceptance:AC-AFTER-CDATA -->
 
 <script>
 # AC-IN-SCRIPT: not a declaration
 </script>
-# AC-AFTER-SCRIPT: Script
-<!-- topplecat:acceptance -->
+# Script
+<!-- topplecat:acceptance:AC-AFTER-SCRIPT -->
 
 <pre>
 # AC-IN-PRE: not a declaration
 </pre>
-# AC-AFTER-PRE: Pre
-<!-- topplecat:acceptance -->
+# Pre
+<!-- topplecat:acceptance:AC-AFTER-PRE -->
 
 <style>
 # AC-IN-STYLE: not a declaration
 </style>
-# AC-AFTER-STYLE: Style
-<!-- topplecat:acceptance -->
+# Style
+<!-- topplecat:acceptance:AC-AFTER-STYLE -->
 
 <custom-tag>
 # AC-IN-CUSTOM: not a declaration
 </custom-tag>
 
-# AC-AFTER-CUSTOM: Custom
-<!-- topplecat:acceptance -->
+# Custom
+<!-- topplecat:acceptance:AC-AFTER-CUSTOM -->
 
 <div>
 # AC-IN-DIV: not a declaration
 </div>
 
-# AC-AFTER-DIV: Div
-<!-- topplecat:acceptance -->
+# Div
+<!-- topplecat:acceptance:AC-AFTER-DIV -->

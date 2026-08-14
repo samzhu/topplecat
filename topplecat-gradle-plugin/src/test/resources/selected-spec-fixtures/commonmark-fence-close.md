@@ -3,11 +3,11 @@
 ```
 # AC-IN-FENCE: not a declaration
   ````
-# AC-AFTER-FENCE: Real heading
-<!-- topplecat:acceptance -->
+# Real heading after fence
+<!-- topplecat:acceptance:AC-AFTER-FENCE -->
 
 ~~~markdown
 # AC-TILDE-FENCE: not a declaration
 ~~~~
-# AC-AFTER-TILDE: Another heading
-<!-- topplecat:acceptance -->
+# Another heading after tilde fence
+<!-- topplecat:acceptance:AC-AFTER-TILDE -->

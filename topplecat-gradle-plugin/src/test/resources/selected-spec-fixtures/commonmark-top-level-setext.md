@@ -1,15 +1,15 @@
-AC-TOP-LEVEL: Rule
+Top-level rule
 -------------------
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-TOP-LEVEL -->
 
 > quoted prose
 
-AC-AFTER-BLANK-QUOTE: Rule
+Rule after quoted prose
 --------------------------
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-AFTER-BLANK-QUOTE -->
 
 1. list prose
 
-AC-AFTER-BLANK-LIST: Rule
+Rule after list prose
 -------------------------
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-AFTER-BLANK-LIST -->

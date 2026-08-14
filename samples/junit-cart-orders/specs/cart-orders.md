@@ -1,13 +1,13 @@
 # Cart order acceptance rules
 
-## AC-CART-COUPON: SAVE100 reduces the order subtotal
+## SAVE100 reduces the order subtotal
 
 An order with the SAVE100 coupon receives the stated discount.
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-CART-COUPON -->
 
-## AC-CART-NO-COUPON: Orders without a coupon keep their subtotal
+## Orders without a coupon keep their subtotal
 
 An order without a coupon keeps its original subtotal.
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-CART-NO-COUPON -->

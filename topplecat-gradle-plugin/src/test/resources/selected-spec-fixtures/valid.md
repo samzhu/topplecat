@@ -12,18 +12,18 @@ Background refers to AC-CHECKOUT-001 and [AC-CHECKOUT-002](https://example.test/
 <!-- topplecat:acceptance -->
 </div>
 
-## AC-CHECKOUT-001: **Checkout** succeeds
+## **Checkout** succeeds
 
 The checkout rule is authored here.
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-CHECKOUT-001 -->
 
-AC-CHECKOUT-002： `Refund` *is* available
------------------------------------------
+`Refund` *is* available
+-----------------------
 
 The Setext rule is authored here.
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-CHECKOUT-002 -->
 
 ```markdown
 # AC-CODE: not a declaration

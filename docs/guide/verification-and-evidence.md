@@ -56,10 +56,9 @@ final decision.
 ```
 
 `toppleCatReview` requires at least one canonical repository-relative Markdown
-`--spec` path. The selected document is read, hashed, and structurally checked
-once by `toppleCatCheck`: each AC must have a visible `AC-ID: business title`
-heading (full-width `：` is also accepted) and one standalone
-`<!-- topplecat:acceptance -->` marker. Check persists a safe checked
+`--spec` path. The selected documents are read, hashed, and structurally checked
+once by `toppleCatCheck`: each selected AC is loaded by one exact standalone
+ID-bearing marker such as `<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`. Check persists a safe checked
 projection; Review consumes that projection and does not reread the Markdown.
 Ordinary AC references in prose, lists, tables, links, inline code, or fences do
 not select scope. Missing selection is rejected before the dependent Check

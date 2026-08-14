@@ -215,7 +215,7 @@ class ReportBundleScaleTest {
               "a".repeat(64),
               List.of(
                   new SpecMarkdownBlock(
-                      SpecMarkdownBlock.Kind.HEADING, 2, acId + ": Rule", List.of()),
+                      SpecMarkdownBlock.Kind.HEADING, 2, "Rule " + index, List.of()),
                   new SpecMarkdownBlock(
                       SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER,
                       0,
@@ -242,7 +242,7 @@ class ReportBundleScaleTest {
           new ReviewAcceptanceCondition(
               acId,
               "A long selected review title " + acId,
-              new ReviewAcLocation(path, 2, "acceptance-" + index),
+              new ReviewAcLocation(path, 2, path + "#review-" + acId),
               cases,
               new ReviewMethod(List.of(), "")));
     }

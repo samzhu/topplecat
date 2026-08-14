@@ -19,11 +19,11 @@
 <!-- topplecat:acceptance -->
 </div>
 
-# AC-CONTAINERS: Container-safe marker
+# Container-safe marker
 
 The authored rule is here.
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-CONTAINERS -->
 
     # AC-INDENTED: not a heading
     <!-- topplecat:acceptance -->

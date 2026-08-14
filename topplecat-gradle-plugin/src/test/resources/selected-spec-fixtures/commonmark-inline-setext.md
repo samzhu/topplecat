@@ -1,12 +1,12 @@
-# AC-INLINE: **Styled** [rule](https://example.test)
+# **Styled** [rule](https://example.test)
 
 The authored rule is here.
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-INLINE -->
 
-AC-SETEXT： `Refund` *is* available
+`Refund` *is* available
 -----------------------------------
 
 The Setext rule is here.
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-SETEXT -->

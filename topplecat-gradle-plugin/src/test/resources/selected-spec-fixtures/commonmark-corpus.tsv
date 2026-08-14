@@ -1,15 +1,15 @@
 # source|events (kind,line,column,normalized text separated by ';')|diagnostic substring
-commonmark-inline-setext.md|HEADING,1,1,AC-INLINE: Styled rule;MARKER,5,1,<!-- topplecat:acceptance -->;HEADING,7,1,AC-SETEXT： Refund is available;MARKER,12,1,<!-- topplecat:acceptance -->|
-commonmark-containers.md|HEADING,22,1,AC-CONTAINERS: Container-safe marker;MARKER,26,1,<!-- topplecat:acceptance -->|
-commonmark-fence-raw.md|HEADING,11,1,AC-AFTER: Real heading;MARKER,15,1,<!-- topplecat:acceptance -->|
-commonmark-indented-setext.md|MARKER,3,1,<!-- topplecat:acceptance -->|TC-SPEC-AC-MARKER-ORPHAN
+commonmark-inline-setext.md|HEADING,1,1,Styled rule;MARKER,5,1,<!-- topplecat:acceptance:AC-INLINE -->;HEADING,7,1,Refund is available;MARKER,12,1,<!-- topplecat:acceptance:AC-SETEXT -->|
+commonmark-containers.md|HEADING,22,1,Container-safe marker;MARKER,26,1,<!-- topplecat:acceptance:AC-CONTAINERS -->|
+commonmark-fence-raw.md|HEADING,11,1,Real heading after raw HTML;MARKER,15,1,<!-- topplecat:acceptance:AC-AFTER -->|
+commonmark-indented-setext.md|INVALID_MARKER,3,1,<!-- topplecat:acceptance -->|TC-SPEC-AC-MARKER-LEGACY
 commonmark-lazy.md||
-commonmark-raw-blank.md|HEADING,4,1,AC-AFTER-BLANK: Rule;MARKER,6,1,<!-- topplecat:acceptance -->|
-commonmark-list-width.md|HEADING,2,1,AC-AFTER-TEN: Rule;MARKER,4,1,<!-- topplecat:acceptance -->|
-commonmark-list-pairs.md|HEADING,6,1,AC-OUT-ONE: Rule;MARKER,7,1,<!-- topplecat:acceptance -->;HEADING,14,1,AC-OUT-TWO: Rule;MARKER,15,1,<!-- topplecat:acceptance -->;HEADING,22,1,AC-OUT-THREE: Rule;MARKER,23,1,<!-- topplecat:acceptance -->;HEADING,30,1,AC-OUT-TEN: Rule;MARKER,31,1,<!-- topplecat:acceptance -->|
-commonmark-raw-types.md|HEADING,4,1,AC-AFTER-COMMENT: Comment;MARKER,5,1,<!-- topplecat:acceptance -->;HEADING,10,1,AC-AFTER-PROCESSING: Processing;MARKER,11,1,<!-- topplecat:acceptance -->;HEADING,16,1,AC-AFTER-DECLARATION: Declaration;MARKER,17,1,<!-- topplecat:acceptance -->;HEADING,22,1,AC-AFTER-CDATA: Cdata;MARKER,23,1,<!-- topplecat:acceptance -->;HEADING,28,1,AC-AFTER-SCRIPT: Script;MARKER,29,1,<!-- topplecat:acceptance -->;HEADING,34,1,AC-AFTER-PRE: Pre;MARKER,35,1,<!-- topplecat:acceptance -->;HEADING,40,1,AC-AFTER-STYLE: Style;MARKER,41,1,<!-- topplecat:acceptance -->;HEADING,47,1,AC-AFTER-CUSTOM: Custom;MARKER,48,1,<!-- topplecat:acceptance -->;HEADING,54,1,AC-AFTER-DIV: Div;MARKER,55,1,<!-- topplecat:acceptance -->|
-commonmark-fence-close.md|HEADING,6,1,AC-AFTER-FENCE: Real heading;MARKER,7,1,<!-- topplecat:acceptance -->;HEADING,12,1,AC-AFTER-TILDE: Another heading;MARKER,13,1,<!-- topplecat:acceptance -->|
-commonmark-blockquote-close.md|HEADING,3,1,AC-AFTER-LAZY-QUOTE: Heading;MARKER,4,1,<!-- topplecat:acceptance -->;HEADING,7,1,AC-AFTER-QUOTE: Another heading;MARKER,8,1,<!-- topplecat:acceptance -->|
-commonmark-lazy-setext.md|MARKER,4,1,<!-- topplecat:acceptance -->|TC-SPEC-AC-MARKER-ORPHAN
-commonmark-lazy-list-setext.md|MARKER,4,1,<!-- topplecat:acceptance -->|TC-SPEC-AC-MARKER-ORPHAN
-commonmark-top-level-setext.md|HEADING,1,1,AC-TOP-LEVEL: Rule;MARKER,3,1,<!-- topplecat:acceptance -->;HEADING,7,1,AC-AFTER-BLANK-QUOTE: Rule;MARKER,9,1,<!-- topplecat:acceptance -->;HEADING,13,1,AC-AFTER-BLANK-LIST: Rule;MARKER,15,1,<!-- topplecat:acceptance -->|
+commonmark-raw-blank.md|HEADING,4,1,Rule after raw HTML blank line;MARKER,6,1,<!-- topplecat:acceptance:AC-AFTER-BLANK -->|
+commonmark-list-width.md|HEADING,2,1,Rule after ordered item;MARKER,4,1,<!-- topplecat:acceptance:AC-AFTER-TEN -->|
+commonmark-list-pairs.md|HEADING,6,1,Rule outside one;MARKER,7,1,<!-- topplecat:acceptance:AC-OUT-ONE -->;HEADING,14,1,Rule outside two;MARKER,15,1,<!-- topplecat:acceptance:AC-OUT-TWO -->;HEADING,22,1,Rule outside three;MARKER,23,1,<!-- topplecat:acceptance:AC-OUT-THREE -->;HEADING,30,1,Rule outside ten;MARKER,31,1,<!-- topplecat:acceptance:AC-OUT-TEN -->|
+commonmark-raw-types.md|HEADING,4,1,Comment;MARKER,5,1,<!-- topplecat:acceptance:AC-AFTER-COMMENT -->;HEADING,10,1,Processing;MARKER,11,1,<!-- topplecat:acceptance:AC-AFTER-PROCESSING -->;HEADING,16,1,Declaration;MARKER,17,1,<!-- topplecat:acceptance:AC-AFTER-DECLARATION -->;HEADING,22,1,Cdata;MARKER,23,1,<!-- topplecat:acceptance:AC-AFTER-CDATA -->;HEADING,28,1,Script;MARKER,29,1,<!-- topplecat:acceptance:AC-AFTER-SCRIPT -->;HEADING,34,1,Pre;MARKER,35,1,<!-- topplecat:acceptance:AC-AFTER-PRE -->;HEADING,40,1,Style;MARKER,41,1,<!-- topplecat:acceptance:AC-AFTER-STYLE -->;HEADING,47,1,Custom;MARKER,48,1,<!-- topplecat:acceptance:AC-AFTER-CUSTOM -->;HEADING,54,1,Div;MARKER,55,1,<!-- topplecat:acceptance:AC-AFTER-DIV -->|
+commonmark-fence-close.md|HEADING,6,1,Real heading after fence;MARKER,7,1,<!-- topplecat:acceptance:AC-AFTER-FENCE -->;HEADING,12,1,Another heading after tilde fence;MARKER,13,1,<!-- topplecat:acceptance:AC-AFTER-TILDE -->|
+commonmark-blockquote-close.md|HEADING,3,1,Heading after lazy quote;MARKER,4,1,<!-- topplecat:acceptance:AC-AFTER-LAZY-QUOTE -->;HEADING,7,1,Another heading after quote;MARKER,8,1,<!-- topplecat:acceptance:AC-AFTER-QUOTE -->|
+commonmark-lazy-setext.md|INVALID_MARKER,4,1,<!-- topplecat:acceptance -->|TC-SPEC-AC-MARKER-LEGACY
+commonmark-lazy-list-setext.md|INVALID_MARKER,4,1,<!-- topplecat:acceptance -->|TC-SPEC-AC-MARKER-LEGACY
+commonmark-top-level-setext.md|HEADING,1,1,Top-level rule;MARKER,3,1,<!-- topplecat:acceptance:AC-TOP-LEVEL -->;HEADING,7,1,Rule after quoted prose;MARKER,9,1,<!-- topplecat:acceptance:AC-AFTER-BLANK-QUOTE -->;HEADING,13,1,Rule after list prose;MARKER,15,1,<!-- topplecat:acceptance:AC-AFTER-BLANK-LIST -->|

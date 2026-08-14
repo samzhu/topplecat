@@ -48,7 +48,7 @@ coding agents while a human remains accountable for acceptance.
 1. **Before implementation handoff:** the human or External Workflow supplies
    the canonical Markdown Spec selection. Spec Review renders each complete
    selected document once and inserts the bound executable material at each
-   AC's declared marker, so the business rule and checked examples share one
+   exact ID-bearing marker, so the business rule and checked examples share one
    reading path. It contains no execution verdict.
 2. **After the agent's done claim:** formal Verify produces Current-run Evidence
    and Verification Report so the human can judge the delivery before accepting

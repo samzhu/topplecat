@@ -164,7 +164,7 @@ These reviewer-only coordinates and details do not enter safe feedback.
 
 Check and Review accept repeatable `--spec` paths. Review requires at least
 one exact path and rejects a missing selection before its dependent Check
-starts. Check maps the external Spec's valid heading/marker ACs to executable
+starts. Check maps the external Spec's exact ID-bearing markers to executable
 acceptance methods, reads each selected document once, hashes those bytes, and
 writes a safe checked projection. Structural Markdown errors are reported by
 Check after the selection gate while it reads and parses the selected bytes;

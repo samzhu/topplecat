@@ -1,6 +1,6 @@
 # Samples
 
-Both samples show the current 0.2.1 release boundary: public acceptance methods, public rows,
+Both samples show the current 0.2.2 release boundary: public acceptance methods, public rows,
 and Properties stay under `src/test`; reviewer-owned hidden rows stay under
 `src/hiddenTest` until Seal.
 
@@ -16,7 +16,7 @@ bash samples/junit-cart-orders/demo.sh all
 bash samples/spring-boot-cart-orders/demo.sh
 ```
 
-The JUnit project uses its own Gradle Wrapper and the locally published 0.2.1
+The JUnit project uses its own Gradle Wrapper and the locally published 0.2.2
 artifact (Maven Central publication is a separate maintainer action). Its `demo.sh --help` lists five synthetic lessons. Each route runs
 the appropriate formal verification, then keeps that route's synthetic local
 Verification Report at `build/topplecat/demo-reports/<lesson>/index.html` for

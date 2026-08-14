@@ -43,7 +43,7 @@ copied_label: Copied
 
 Spec Review 的 Gradle Check 只讀取並雜湊每份選定的 canonical Markdown 文件一次，保存安全的
 選定文件 projection 與 AC marker 位置；Review 使用這份 checked projection，不會重新讀取
-來源。文件必須有可見的 AC 標題與精確的獨立 acceptance marker；一般文字引用與 `.feature`
+來源。文件必須有精確的獨立帶 ID marker；標題只負責可讀性。一般文字引用與 `.feature`
 檔案不在這個邊界內。
 
 ## 哪些內容決定「做對了」 {#contract-authority}

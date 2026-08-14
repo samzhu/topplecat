@@ -19,7 +19,7 @@ class SelectedSpecScopeTest {
     assertEquals(
         List.of("specs/a.md", "specs/b.md"),
         scope.specDocuments().stream().map(SelectedSpecDocument::path).toList());
-    assertEquals(List.of("AC-A", "AC-B"), scope.acceptanceConditionIds());
+    assertEquals(List.of("AC-B", "AC-A"), scope.acceptanceConditionIds());
     assertEquals(
         scope,
         VerificationScopeJson.read(

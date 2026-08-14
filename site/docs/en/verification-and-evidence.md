@@ -66,14 +66,15 @@ contract:
 ./gradlew toppleCatSeal
 ```
 
-Check requires each selected Markdown Spec to use a visible AC heading with a
-business title and one exact standalone `<!-- topplecat:acceptance -->` marker.
+Check requires each selected Markdown Spec to use one exact standalone
+ID-bearing marker such as `<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`.
+Headings are readability only.
 Missing selection is rejected before the dependent Check starts. Structural
-heading/marker errors are reported by Check after a path is selected, and a
+marker errors are reported by Check after a path is selected, and a
 failed Check produces no Review report.
 It reads, hashes, and validates the document once, then writes the checked
 projection consumed by Review. Missing, duplicate, orphaned, or misplaced
-declarations and markers fail during that Check read/parse with a repairable
+markers fail during that Check read/parse with a repairable
 `TC-SPEC-AC-*` diagnostic; Review is not produced. Prose references do not
 select an AC, and `.feature` files are not read or translated.
 

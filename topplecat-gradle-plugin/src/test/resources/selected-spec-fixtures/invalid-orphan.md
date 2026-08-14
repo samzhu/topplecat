@@ -1,5 +1,5 @@
 <!-- topplecat:acceptance -->
 
-# AC-ORPHAN: Declaration after marker
+# Legacy marker fixture
 
-<!-- topplecat:acceptance -->
+AC-ORPHAN is ordinary prose.

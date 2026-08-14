@@ -19,7 +19,7 @@ public record SelectedSpecScope(
         List.copyOf(acceptanceConditionIds == null ? List.of() : acceptanceConditionIds);
     if (!SCHEMA_VERSION.equals(schemaVersion)
         || !sortedDocuments(specDocuments)
-        || !sortedAcceptanceConditions(acceptanceConditionIds)
+        || !orderedAcceptanceConditions(acceptanceConditionIds)
         || acceptanceConditionSetDigest == null
         || !acceptanceConditionSetDigest.matches("[0-9a-f]{64}")
         || !acceptanceConditionSetDigest.equals(digest(specDocuments, acceptanceConditionIds))) {
@@ -34,7 +34,6 @@ public record SelectedSpecScope(
     documents.sort(SelectedSpecDocument::compareTo);
     List<String> acIds =
         new ArrayList<>(acceptanceConditionIds == null ? List.of() : acceptanceConditionIds);
-    acIds.sort(String::compareTo);
     return new SelectedSpecScope(SCHEMA_VERSION, documents, acIds, digest(documents, acIds));
   }
 
@@ -63,15 +62,12 @@ public record SelectedSpecScope(
     return true;
   }
 
-  private static boolean sortedAcceptanceConditions(List<String> acIds) {
-    String previous = null;
+  private static boolean orderedAcceptanceConditions(List<String> acIds) {
+    java.util.Set<String> seen = new java.util.HashSet<>();
     for (String acId : acIds) {
-      if (acId == null
-          || !acId.matches("AC-[A-Za-z0-9][A-Za-z0-9-]*")
-          || previous != null && previous.compareTo(acId) >= 0) {
+      if (acId == null || !acId.matches("AC-[A-Za-z0-9][A-Za-z0-9-]*") || !seen.add(acId)) {
         return false;
       }
-      previous = acId;
     }
     return true;
   }

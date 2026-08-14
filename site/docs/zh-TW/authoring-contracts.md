@@ -59,7 +59,7 @@ void appliesCoupon(ToppleCase c, ToppleScenario scenario, CouponStage coupon) {
 
 想看能實際執行的完整寫法，可以選擇閱讀
 [JUnit cart-orders 學習專案](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)。
-它使用本機發布的 0.2.1 release-line artifact（Maven Central 發布是另外的維護者工作），並提供五項完全合成的保障課程；每一項完成後都會留下該課程的本機
+它使用本機發布的 0.2.2 release-line artifact（Maven Central 發布是另外的維護者工作），並提供五項完全合成的保障課程；每一項完成後都會留下該課程的本機
 HTML 驗證報告於 `build/topplecat/demo-reports/`。不需要先執行範例才能照著本頁撰寫。
 
 方法格式有明確限制：`ToppleCase` 必須放第一個，後面是一個 `ToppleScenario`，再
@@ -92,11 +92,11 @@ AI 收到的是公開契約。正式驗證之後執行的也是同一份公開�
 
 ## Canonical Markdown Spec 選取 {#canonical-markdown-spec}
 
-Review 接受 repository-relative 的 `.md` 路徑。每條選定的 AC 都必須用可見的 ATX h1–h6
-或 Setext h1/h2 標題宣告，格式為 `AC-ID: business title`（也接受全形 `：`），再在
-該條規則與案例之後放置唯一、獨立一行的 `<!-- topplecat:acceptance -->` marker。一般
-文字或 fenced code 中的引用不會選取範圍。宣告或 marker 缺少、重複、孤立或位置不對時，
-會產生可修復的 `TC-SPEC-AC-*` 診斷。ToppleCat 不會讀取或翻譯 Gherkin `.feature` 檔案。
+Review 接受 repository-relative 的 `.md` 路徑。每條選定的 AC 都必須有精確、獨立一行的
+帶 ID marker，例如 `<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`。marker 是唯一的
+機器 identity 與插入點；標題層級與文字只負責可讀性。一般文字或 fenced code 中的引用不會
+選取範圍。重複、格式錯誤、舊 generic 或容器內 directive 會產生可修復的
+`TC-SPEC-AC-*` 診斷。ToppleCat 不會讀取或翻譯 Gherkin `.feature` 檔案。
 
 acceptance skill 只攜帶人類或 upstream workflow 提供的 exact repository-relative
 Markdown path 或 paths，不維護 registry、stable Spec identity、目前選取、簽核、

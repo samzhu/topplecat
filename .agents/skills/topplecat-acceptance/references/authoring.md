@@ -4,8 +4,11 @@
 
 Put public acceptance source under `src/test/java`. Bind each AC in the
 human-selected delivery scope to exactly one literal method. When External
-Workflow supplies Selected Spec Document paths, include every AC anchored in
-each complete document. With no `--spec` selection, every bound AC is in scope.
+Workflow supplies Selected Spec Document paths, include every AC loaded by an
+exact standalone ID-bearing marker in each complete document. With no
+`--spec` selection, every bound AC is in scope. The marker—not a heading,
+nearby prose, or ordinary AC reference—is the machine identity and Review
+insertion point.
 
 ```java
 @ToppleAcceptanceTest("AC-CHECKOUT-001")
@@ -83,11 +86,12 @@ Spec.
 
 The external workflow supplies one or more exact repository-relative `.md` paths
 for selected work. The complete selected document is read; its AC inventory
-comes only from the product CommonMark heading/marker parser. Do not search for
+comes only from the product CommonMark parser's exact standalone ID-bearing
+markers (`<!-- topplecat:acceptance:AC-ID -->`). Do not search for
 a current Spec, follow a wrapper, normalize an absolute path, or use a `.feature`
 file as a substitute. Carry the same paths through Check, Review, and scoped
 Verify. Missing, ambiguous, absolute, missing-file, structurally invalid,
-insufficient, and thin-wrapper selections return to the human or upstream Spec
+duplicate/malformed/legacy marker, structurally invalid, insufficient, and thin-wrapper selections return to the human or upstream Spec
 owner before a selected handoff is formed.
 
 ## Property declarations

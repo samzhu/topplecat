@@ -20,8 +20,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = ROOT / ".agents/skills/topplecat-acceptance"
 FIXTURE = ROOT / "scripts/fixtures/topplecat-acceptance-skill/project"
-VERSION = "0.2.1"
-MARKER = "<!-- topplecat:acceptance -->"
+VERSION = "0.2.2"
+MARKER_PATTERN = re.compile(r"^<!-- topplecat:acceptance:AC-[A-Za-z0-9][A-Za-z0-9-]* -->$")
 SELECTED_DOCUMENTS = ["specs/checkout.md", "specs/payment.md"]
 MISSING_FILE_PATH = "specs/missing-from-fixture.md"
 
@@ -99,6 +99,8 @@ def inspect_package() -> str:
         "exact repository-relative canonical",
         "same exact relative path set to Check, Review, and scoped Verify",
         "product CommonMark parser",
+        "exact standalone `<!-- topplecat:acceptance:AC-ID -->` marker",
+        "heading is not an AC declaration",
         "absolute, absent, ambiguous, missing, missing-file, structurally invalid, insufficient",
         "Never fall back to whole-contract material",
         "no `--spec` selection",
@@ -245,21 +247,25 @@ def inspect_fixture(
     second = (fixture_root / "specs/payment.md").read_text(encoding="utf-8")
     if (fixture_root / MISSING_FILE_PATH).exists():
         raise SkillContractError("missing-file fixture path must not exist")
-    if canonical.count(MARKER) != 2:
-        raise SkillContractError("synthetic canonical Markdown must contain two exact markers")
+    markers = [line.strip() for line in canonical.splitlines() if line.strip().startswith("<!-- topplecat:acceptance")]
+    if len(markers) != 2 or not all(MARKER_PATTERN.fullmatch(marker) for marker in markers):
+        raise SkillContractError("synthetic canonical Markdown must contain two exact ID-bearing markers")
     assert_contains(
         canonical,
-        "## AC-CHECKOUT-001: Apply the checkout discount",
-        "### AC-CHECKOUT-002： Keep the receipt complete",
+        "## Apply the checkout discount",
+        "### Keep the receipt complete",
+        "<!-- topplecat:acceptance:AC-CHECKOUT-001 -->",
+        "<!-- topplecat:acceptance:AC-CHECKOUT-002 -->",
         "And the cart has an active discount",
         "But the cart has no eligible promotion",
     )
     assert_contains(
         second,
-        "## AC-CHECKOUT-003: Keep payment confirmation consistent",
-        MARKER,
+        "## Keep payment confirmation consistent",
+        "<!-- topplecat:acceptance:AC-CHECKOUT-003 -->",
     )
-    if (fixture_root / "specs/old-spec.md").read_text(encoding="utf-8").find(MARKER) < 0:
+    old = (fixture_root / "specs/old-spec.md").read_text(encoding="utf-8")
+    if "<!-- topplecat:acceptance:AC-OLD -->" not in old:
         raise SkillContractError("fixture must retain an unselected old Spec")
     if ".feature" not in " ".join(path.name for path in all_files):
         raise SkillContractError("fixture must include an upstream .feature artifact")
@@ -419,7 +425,7 @@ def assert_failure(kind: str, result: dict[str, object]) -> None:
         "absolute-path": ("relative", "path"),
         "ambiguous-path": ("exact", "path"),
         "missing-path": ("provide", "path"),
-        "invalid-structure": ("heading", "marker"),
+        "invalid-structure": ("marker",),
         "insufficient-detail": ("business", "detail"),
         "thin-wrapper": ("complete", "canonical"),
     }
@@ -527,7 +533,7 @@ def main() -> int:
             "ambiguous-path": "choose one exact path or explicitly list the selected paths",
             "missing-path": "provide an exact repository-relative path",
             "missing-file": "restore the canonical Markdown file or provide a correct existing relative path",
-            "invalid-structure": "repair the canonical heading and marker structure",
+            "invalid-structure": "repair the canonical ID-bearing marker structure",
             "insufficient-detail": "add complete business detail, rules, and examples",
             "thin-wrapper": "provide the complete canonical Markdown document",
         }.items():

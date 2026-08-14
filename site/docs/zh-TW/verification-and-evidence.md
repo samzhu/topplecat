@@ -59,8 +59,8 @@ AI 開始實作前，審閱者先確認真正會執行的內容，再封存完�
 ./gradlew toppleCatSeal
 ```
 
-Check 要求選定的 Markdown Spec 使用帶有業務標題的可見 AC 標題，以及唯一、獨立一行的
-`<!-- topplecat:acceptance -->` marker。它只讀取、雜湊與驗證文件一次，再寫出由 Review
+Check 要求選定的 Markdown Spec 使用精確、獨立一行的帶 ID marker，例如
+`<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`。標題只負責可讀性。它只讀取、雜湊與驗證文件一次，再寫出由 Review
 使用的 checked projection。缺少選擇會在依賴的 Check 開始前拒絕；選定路徑後，宣告或
 marker 缺少、重複、孤立或位置不對，會由 Check 讀取與解析選定 bytes 時以可修復的
 `TC-SPEC-AC-*` 診斷失敗，Review 不會產生報告。一般文字引用不會選取 AC，`.feature`

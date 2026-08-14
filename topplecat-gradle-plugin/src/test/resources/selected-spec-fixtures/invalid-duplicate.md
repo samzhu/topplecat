@@ -1,7 +1,5 @@
-# AC-DUPLICATE: First declaration
+# Duplicate marker fixture
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-DUPLICATE -->
 
-# AC-DUPLICATE: Second declaration
-
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-DUPLICATE -->

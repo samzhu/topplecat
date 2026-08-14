@@ -1,6 +1,6 @@
 <div>
 raw prose
 
-# AC-AFTER-BLANK: Rule
+# Rule after raw HTML blank line
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-AFTER-BLANK -->

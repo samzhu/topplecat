@@ -1,3 +1,3 @@
-# AC-CROSS-DOCUMENT: First owner
+# First selected document
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-CROSS-DOCUMENT -->

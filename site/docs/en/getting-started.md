@@ -17,10 +17,10 @@ copied_label: Copied
 
 # Add ToppleCat to a Java project
 
-ToppleCat 0.2.1 is the current tagged release line, but it has not yet been
+ToppleCat 0.2.2 is the current tagged release line, but it has not yet been
 published to Maven Central. Maven Central currently provides 0.2.0, which does
 not contain the selected-Spec Review behavior described here. Clone this
-repository and run `./gradlew publishToMavenLocal` before using 0.2.1.
+repository and run `./gradlew publishToMavenLocal` before using 0.2.2.
 
 ToppleCat runtime and Gradle/plugin execution require JDK 21 or 25. The
 published artifacts target Java 21 and the maintainer release build uses JDK
@@ -71,7 +71,7 @@ To use ToppleCat with an implementation agent, install two things:
   chosen into Java/JUnit acceptance code and case data.
 
 The 0.2.0 artifacts are available from [Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat).
-For the 0.2.1 tagged release line, put the local Maven repository first in
+For the 0.2.2 tagged release line, put the local Maven repository first in
 `settings.gradle.kts`:
 
 ```kotlin
@@ -96,11 +96,11 @@ Then add the plugin and JUnit dependencies in `build.gradle.kts`:
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.2.1"
+    id("io.github.samzhu.topplecat") version "0.2.2"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.1")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.2")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -190,10 +190,11 @@ test result. It is where the Reviewer checks that the Java code says what the
 rule says.
 
 The `--spec` path must be a repository-relative Markdown file. Declare each AC
-with a visible ATX or Setext heading such as `AC-CHECKOUT: Checkout succeeds`,
-then place the exact standalone marker `<!-- topplecat:acceptance -->` after its
-authored rules. Ordinary AC references in prose, lists, tables, links, inline
-code, or fenced code do not select scope. ToppleCat reads and hashes the
+with an exact standalone ID-bearing marker such as
+`<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`; it is the machine identity and
+Review insertion point. Headings are readability only. Ordinary AC references
+in prose, lists, tables, links, inline code, or fenced code do not select scope.
+ToppleCat reads and hashes the
 selected document once during Check, persists a checked projection, and Review
 renders that projection at the marker. It does not read or translate `.feature`
 files.

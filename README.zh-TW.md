@@ -81,9 +81,9 @@ agent feedback。報告也會在 Mutation Testing 與容易陌生的卡片術語
 
 ## 快速開始
 
-ToppleCat 0.2.1 是目前的 tagged release line，但這次 release 尚未發布到 Maven Central。
+ToppleCat 0.2.2 是目前的 tagged release line，但這次 release 尚未發布到 Maven Central。
 本 checkout 的 selected-Spec Review 行為不在已發布的 0.2.0 中。若要現在使用
-0.2.1，請先 clone 本 repository 並執行 `./gradlew publishToMavenLocal`，
+0.2.2，請先 clone 本 repository 並執行 `./gradlew publishToMavenLocal`，
 再在使用端的 plugin 與 dependency repository 中把 `mavenLocal()` 放在
 `mavenCentral()` 前面。已發布的 0.2.0 artifact 仍可從
 [Maven Central](https://central.sonatype.com/namespace/io.github.samzhu.topplecat)
@@ -114,11 +114,11 @@ dependencyResolutionManagement {
 ```kotlin
 plugins {
     java
-    id("io.github.samzhu.topplecat") version "0.2.1"
+    id("io.github.samzhu.topplecat") version "0.2.2"
 }
 
 dependencies {
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.1")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.2")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
@@ -146,9 +146,11 @@ tasks.test { useJUnitPlatform() }
 ```
 
 `toppleCatCheck` 與 `toppleCatReview` 的每個 `--spec` 都必須是 repository-relative 的
-Markdown 檔案。文件要用可見標題宣告 AC，例如 `AC-CHECKOUT: Checkout succeeds`，並在
-該條規則後放置唯一、獨立一行的 `<!-- topplecat:acceptance -->` marker。一般文字、清單、
-表格、連結、inline code 或 fenced code 中的引用不會選取 AC；`.feature` 檔案不會被讀取或翻譯。
+Markdown 檔案。完整選定文件使用精確、獨立一行的帶 ID marker，例如
+`<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`，它是唯一的 AC identity 與 Review 插入點。
+標題可以是任意層級與文字；一般文字、清單、表格、連結、inline code 或 fenced code 中的
+引用不會選取 AC。重複、格式錯誤、舊 generic 或容器內 directive 會以可修復診斷失敗；
+`.feature` 檔案不會被讀取或翻譯。
 
 範圍驗證報告會明說這種 `PASS` 只代表列出的 AC 通過，不代表完整可執行契約通過。CI
 應使用不帶選項的 `toppleCatVerify`。
@@ -243,7 +245,7 @@ ToppleCat 從可執行驗收邊界開始：
 - [架構](docs/architecture.md)
 - [共同語言](CONTEXT.md)
 - [文件索引](docs/README.md)
-- [0.2.1 release notes](docs/releases/0.2.1.zh-TW.md)
+- [0.2.2 release notes](docs/releases/0.2.2.zh-TW.md)
 - [0.2.0 release notes](docs/releases/0.2.0.zh-TW.md)
 - [JUnit 範例](samples/junit-cart-orders)
 - [Spring Boot 範例](samples/spring-boot-cart-orders)

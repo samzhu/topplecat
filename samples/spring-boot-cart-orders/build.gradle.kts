@@ -8,7 +8,7 @@ val consumerRelease = providers.gradleProperty("topplecat.consumerRelease").map(
 plugins {
     java
     id("org.springframework.boot") version "4.1.0"
-    id("io.github.samzhu.topplecat") version "0.2.1"
+    id("io.github.samzhu.topplecat") version "0.2.2"
 }
 
 java {
@@ -31,7 +31,7 @@ configurations.configureEach {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter:4.1.0")
-    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.1")
+    testImplementation("io.github.samzhu.topplecat:topplecat-junit:0.2.2")
     testImplementation("org.springframework.boot:spring-boot-starter-test:4.1.0")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")

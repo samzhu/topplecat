@@ -12,6 +12,13 @@ step text exactly; do not paraphrase it. Successful selected and whole-contract
 handoffs leave `failureRouting.owner` and `failureRouting.action` empty; only
 failed selected routing uses those fields.
 
+Selected AC scope is the ordered set of unique exact ID-bearing markers in the
+selected repository-relative Markdown documents. Headings and ordinary AC
+references do not declare scope, and proximity is only readability guidance.
+The exact marker is also the sole Spec Review insertion point; one marker loads
+the complete zero/one/many Scenario and all Given/When/Then/And/But material
+bound to that AC.
+
 Selected command shape:
 
 ```text

@@ -36,7 +36,7 @@ class ReportViewsTest {
                 new SpecMarkdownBlock(
                     SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER,
                     2,
-                    "<!-- topplecat:acceptance -->",
+                    "<!-- topplecat:acceptance:AC-CHECKOUT -->",
                     List.of(),
                     "",
                     "",
@@ -49,7 +49,10 @@ class ReportViewsTest {
         new SelectedSpecProjection(
             SelectedSpecProjection.SCHEMA_VERSION,
             List.of(document),
-            Map.of("AC-CHECKOUT", new ReviewAcLocation("specs/checkout.md", 2, "AC-CHECKOUT")));
+            Map.of(
+                "AC-CHECKOUT",
+                new ReviewAcLocation(
+                    "specs/checkout.md", 2, "specs/checkout.md#review-AC-CHECKOUT")));
 
     String json = ReportJson.writeSelectedSpecProjection(projection);
 

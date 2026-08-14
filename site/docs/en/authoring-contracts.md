@@ -63,7 +63,7 @@ The `CouponStage` methods perform the real setup, service calls, and assertions.
 
 Want a complete, runnable version of this pattern? The optional
 [JUnit cart-orders learning project](https://github.com/samzhu/topplecat/tree/main/samples/junit-cart-orders)
-uses the locally published 0.2.1 release-line artifact (Maven Central publication is a separate maintainer action) and lets you choose five synthetic safeguard
+uses the locally published 0.2.2 release-line artifact (Maven Central publication is a separate maintainer action) and lets you choose five synthetic safeguard
 lessons. Each one leaves a local HTML Verification Report for that lesson under
 `build/topplecat/demo-reports/`. You do not need to run it before following
 this guide.
@@ -102,13 +102,13 @@ the handoff.
 ## Canonical Markdown Spec selection {#canonical-markdown-spec}
 
 The Review command accepts repository-relative `.md` paths. Each selected AC
-must be declared by a visible ATX h1–h6 or Setext h1/h2 heading in the form
-`AC-ID: business title` (full-width `：` is also accepted), followed by the
-exact standalone marker `<!-- topplecat:acceptance -->` after that AC's rules
-and examples. Ordinary references in prose or fenced code do not select scope.
-Missing, duplicate, orphaned, or misplaced declarations and markers produce a
-repairable `TC-SPEC-AC-*` diagnostic. ToppleCat does not read or translate
-Gherkin `.feature` files.
+must have one exact standalone ID-bearing marker such as
+`<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`. The marker is the sole machine
+identity and insertion point; heading level and wording are readability only.
+Ordinary references in prose or fenced code do not select scope. Duplicate,
+malformed, legacy, or container-nested directives produce a repairable
+`TC-SPEC-AC-*` diagnostic. ToppleCat does not read or translate Gherkin
+`.feature` files.
 
 The acceptance skill carries the exact repository-relative Markdown path or
 paths supplied by the human or upstream workflow. It does not maintain a

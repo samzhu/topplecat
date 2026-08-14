@@ -56,7 +56,7 @@ labels, never the Step sentence, placeholder, underlying phase, or Step order.
 
 The [JUnit cart-orders learning project](../../samples/junit-cart-orders/) is
 an optional, runnable copy of this SDK pattern. It consumes the locally published
-0.2.1 release-line artifact (Maven Central publication is a separate maintainer action) and provides five clearly labelled synthetic
+0.2.2 release-line artifact (Maven Central publication is a separate maintainer action) and provides five clearly labelled synthetic
 lessons. Each route leaves its local HTML Verification Report under
 `build/topplecat/demo-reports/` for inspection; readers do not need to run it
 to author their own contract.
@@ -153,7 +153,7 @@ shape—not merely a changed visible literal. Passing hidden rows does not prove
 all shortcuts are impossible; it is evidence for Hidden Tests only.
 
 An external workflow supplies optional Markdown context with repeated `--spec`
-paths. Each selected `AC-...` needs an executable public binding. Check and
+paths. Each selected marker-loaded `AC-...` needs an executable public binding. Check and
 Review use those paths to validate and read the complete Markdown Spec. Seal
 always approves the complete executable contract. Verify normally runs that
 complete contract, but a Reviewer may ask for quick scoped evidence with either
@@ -164,15 +164,15 @@ executable truth.
 ### Canonical Markdown Spec format
 
 Selected Spec Review requires at least one canonical repository-relative `.md`
-path. The complete document is rendered once. Declare each AC with a visible
-ATX h1–h6 or Setext h1/h2 heading whose plain text is
-`AC-ID: business title` or `AC-ID：business title`, then place the exact
-standalone marker `<!-- topplecat:acceptance -->` after that AC's authored rules
-and examples. Heading level follows the document hierarchy; the marker alone
-defines the insertion point. Paragraph, list, table, task-list, link,
-inline-code, fenced-code, and other HTML-comment references remain ordinary
-prose and do not select scope. A legacy bare AC reference receives a repairable
-`TC-SPEC-AC-DECLARATION-MISSING` diagnostic.
+path. The complete document is rendered once. Place one exact standalone
+ID-bearing marker such as
+`<!-- topplecat:acceptance:AC-CHECKOUT-001 -->` for each selected AC. The marker
+is the sole machine identity and Review insertion point. Heading level and
+wording follow the document hierarchy and are readability only; ordinary AC
+references in paragraphs, lists, tables, links, inline code, fences, or raw HTML
+do not select scope. The same marker may appear only once across selected
+documents; duplicate, malformed, legacy, and container-nested directives receive
+repairable `TC-SPEC-AC-*` diagnostics and never fall back to heading pairing.
 
 The active SDD workflow or human owns the exact repository-relative path handoff.
 ToppleCat does not maintain a registry, stable Spec identity, current-document
@@ -184,8 +184,8 @@ detail, or thin wrapper must be returned to that owner before a selected
 handoff is formed.
 
 When an upstream SDD writer hands a canonical `docs/specs/.../spec.md` to this
-skill, its exit step must leave visible AC headings, complete business rules,
-and exact markers in that Markdown. BDD `.feature` files and API design
+skill, its exit step must leave exact ID-bearing markers, complete business
+rules, and readable headings in that Markdown. BDD `.feature` files and API design
 documents stay upstream; they are not ToppleCat inputs and are never translated
 into Java acceptance work.
 

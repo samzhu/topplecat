@@ -3,29 +3,29 @@
    <!-- topplecat:acceptance -->
 
 1. outside one
-  # AC-OUT-ONE: Rule
-  <!-- topplecat:acceptance -->
+  # Rule outside one
+  <!-- topplecat:acceptance:AC-OUT-ONE -->
 
 2. inside two
    # AC-IN-TWO: Rule
    <!-- topplecat:acceptance -->
 
 2. outside two
-  # AC-OUT-TWO: Rule
-  <!-- topplecat:acceptance -->
+  # Rule outside two
+  <!-- topplecat:acceptance:AC-OUT-TWO -->
 
 3. inside three
    # AC-IN-THREE: Rule
    <!-- topplecat:acceptance -->
 
 3. outside three
-  # AC-OUT-THREE: Rule
-  <!-- topplecat:acceptance -->
+  # Rule outside three
+  <!-- topplecat:acceptance:AC-OUT-THREE -->
 
 10. inside ten
     # AC-IN-TEN: Rule
     <!-- topplecat:acceptance -->
 
 10. outside ten
-   # AC-OUT-TEN: Rule
-   <!-- topplecat:acceptance -->
+   # Rule outside ten
+   <!-- topplecat:acceptance:AC-OUT-TEN -->

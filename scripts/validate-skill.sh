@@ -79,6 +79,9 @@ for required in \
   'External Workflow' \
   'Current-run Evidence' \
   'canonical Markdown' \
+  'exact standalone ID-bearing marker' \
+  'heading is not an AC declaration' \
+  'marker order' \
   'whole-contract branch' \
   'Never read or translate .feature' \
   'The Reviewer' \

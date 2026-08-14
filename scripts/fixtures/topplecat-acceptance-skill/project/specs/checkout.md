@@ -3,7 +3,7 @@
 The background mentions AC-CHECKOUT-001 and AC-CHECKOUT-002 without declaring
 either one.
 
-## AC-CHECKOUT-001: Apply the checkout discount
+## Apply the checkout discount
 
 Given a cart qualifies for checkout
 And the cart has an active discount
@@ -15,12 +15,12 @@ But the cart has no eligible promotion
 When the customer submits the cart
 Then the checkout total remains unchanged
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-CHECKOUT-001 -->
 
-### AC-CHECKOUT-002： Keep the receipt complete
+### Keep the receipt complete
 
 Given a completed checkout
 When the receipt is generated
 Then the receipt contains the order identity
 
-<!-- topplecat:acceptance -->
+<!-- topplecat:acceptance:AC-CHECKOUT-002 -->

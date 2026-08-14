@@ -2,7 +2,7 @@
 name: topplecat-acceptance
 description: Bind selected Spec Acceptance Conditions to ToppleCat Java/JUnit executable contracts. Use when authoring Acceptance Methods, public or reviewer-owned Typed Case Rows, or optional Property-Based Testing declarations for a Java delivery.
 metadata:
-  topplecat-version: "0.2.1"
+  topplecat-version: "0.2.2"
 ---
 
 # ToppleCat acceptance
@@ -16,7 +16,11 @@ Human or upstream SDD supplies one or more exact repository-relative canonical M
 paths. Never guess, search, follow links, select implicitly, normalize
 an absolute path, or choose a current document from repository state. A selected
 path names the complete document; the product CommonMark parser derives its AC
-inventory only from valid visible heading/marker pairs, not ordinary mentions.
+inventory only from the exact standalone `<!-- topplecat:acceptance:AC-ID -->` marker,
+the selected Spec's exact standalone ID-bearing marker. Examples include
+`<!-- topplecat:acceptance:AC-CHECKOUT-001 -->`. A visible heading is not an AC declaration:
+headings, ordinary mentions, and marker proximity are authored Markdown
+readability only.
 
 Pass the same exact relative path set to Check, Review, and scoped Verify. An
 absolute, absent, ambiguous, missing, missing-file, structurally invalid, insufficient, or
@@ -26,7 +30,12 @@ smallest repair. Never fall back to whole-contract material and never expose a
 machine-specific path or wrapper destination.
 
 Read every Selected Spec Document in full. A path selects the whole document;
-its AC inventory is valid heading/marker pairs, not the first `AC-...` mention.
+its AC inventory is the ordered set of valid ID-bearing markers, not the first
+`AC-...` mention. Each marker ID occurs exactly once across the selected
+documents. The marker order is preserved; different IDs may be before/after prose or
+consecutive. Duplicate, malformed, legacy generic, or container-nested
+directives produce repairable product diagnostics and never fall back to heading
+pairing.
 With no selected paths (no `--spec` selection), inventory every bound AC and
 prepare whole-contract Check/Verify/Seal only; do not claim that a Spec Review
 is ready.
@@ -40,6 +49,8 @@ Use upstream rules and human clarifications as authoritative; production and
 tests only locate integration seams.
 
 Return missing AC identity or ambiguous rules for authoritative correction.
+Place a marker near its related business prose when that improves readability,
+but never treat proximity or heading shape as validity.
 For each AC establish a stable identity, state/action/result, success/rejection/
 boundary/combination behavior, public examples, and independent reviewer rows.
 Ask one to three concrete questions when rules allow different implementations.

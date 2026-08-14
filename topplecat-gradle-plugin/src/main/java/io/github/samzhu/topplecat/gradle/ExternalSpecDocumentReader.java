@@ -20,17 +20,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /** Reads and validates complete selected Markdown documents into one checked projection. */
 final class ExternalSpecDocumentReader {
-  static final String ACCEPTANCE_MARKER = "<!-- topplecat:acceptance -->";
-  private static final Pattern AC_ID =
-      Pattern.compile("(?<![A-Za-z0-9_-])(AC-[A-Za-z0-9][A-Za-z0-9-]*)(?![A-Za-z0-9_-])");
-  private static final Pattern AC_DECLARATION =
-      Pattern.compile("^(AC-[A-Za-z0-9][A-Za-z0-9-]*)[：:][ \\t]+(\\S(?:.*\\S)?)$");
+  static final String ACCEPTANCE_MARKER = "<!-- topplecat:acceptance:AC-ID -->";
 
   private ExternalSpecDocumentReader() {}
 
@@ -42,8 +36,7 @@ final class ExternalSpecDocumentReader {
     List<ReviewDocument> documents = new ArrayList<>();
     Map<String, ReviewAcLocation> locations = new LinkedHashMap<>();
     Map<String, String> digests = new LinkedHashMap<>();
-    Map<String, List<Declaration>> declarations = new LinkedHashMap<>();
-    List<Reference> references = new ArrayList<>();
+    Map<String, List<Marker>> markersById = new LinkedHashMap<>();
     List<SelectedSpecDiagnostic> diagnostics = new ArrayList<>();
     for (Path document : markdownDocuments(configuredEntries)) {
       rejectSymbolicPathComponent(root, document, displayPath(root, document));
@@ -51,58 +44,43 @@ final class ExternalSpecDocumentReader {
       documents.add(parsed.document());
       digests.put(parsed.document().path(), parsed.document().sha256());
       diagnostics.addAll(parsed.diagnostics());
-      references.addAll(parsed.references());
       parsed
-          .declarations()
+          .markers()
           .forEach(
-              declaration ->
-                  declarations
-                      .computeIfAbsent(declaration.acId(), ignored -> new ArrayList<>())
-                      .add(declaration));
+              marker ->
+                  markersById
+                      .computeIfAbsent(marker.acId(), ignored -> new ArrayList<>())
+                      .add(marker));
       parsed.locations().forEach(locations::putIfAbsent);
     }
-    declarations.forEach(
+    markersById.forEach(
         (acId, entries) -> {
           if (entries.size() > 1) {
             String allLocations =
                 entries.stream()
-                    .map(Declaration::location)
+                    .map(Marker::location)
                     .sorted()
                     .reduce((left, right) -> left + ", " + right)
                     .orElse("");
-            for (Declaration entry : entries) {
+            for (Marker entry : entries) {
               diagnostics.add(
                   diagnostic(
-                      "TC-SPEC-AC-DUPLICATE",
+                      "TC-SPEC-AC-MARKER-DUPLICATE",
                       entry.path(),
                       entry.line(),
                       entry.column(),
                       acId,
-                      "The AC is declared more than once at " + allLocations + ".",
-                      "Keep exactly one canonical heading and acceptance marker for this AC.",
-                      "Remove the duplicate declaration from the owning canonical Spec."));
+                      "The ID-bearing acceptance marker for "
+                          + acId
+                          + " appears more than once at "
+                          + allLocations
+                          + ".",
+                      "Keep exactly one exact standalone marker for this AC across the selected"
+                          + " documents.",
+                      "Remove every duplicate marker except the one that should load the AC"
+                          + " projection."));
             }
             locations.remove(acId);
-          }
-        });
-    Map<String, List<Declaration>> validDeclarations = declarations;
-    references.forEach(
-        reference -> {
-          List<Declaration> entries = validDeclarations.getOrDefault(reference.acId(), List.of());
-          if (entries.isEmpty()) {
-            diagnostics.add(
-                diagnostic(
-                    "TC-SPEC-AC-DECLARATION-MISSING",
-                    reference.path(),
-                    reference.line(),
-                    reference.column(),
-                    reference.acId(),
-                    "The selected Spec contains an ordinary reference to "
-                        + reference.acId()
-                        + " but no valid declaration selects it across the selected documents.",
-                    "Declare the AC in one visible heading and place one exact standalone"
-                        + " acceptance marker after its rules.",
-                    "Repair the canonical Spec rather than relying on a bare AC reference."));
           }
         });
     return new ParsedSpecs(documents, locations, digests, diagnostics, true);
@@ -166,52 +144,53 @@ final class ExternalSpecDocumentReader {
               return new CanonicalMarkdownStructure.ResolvedImage(
                   resolution.destination(), resolution.message());
             });
-    Structure structure = structure(displayPath, lines(source), markdown.events());
     List<SpecMarkdownBlock> rawBlocks = markdown.blocks();
-    List<SpecMarkdownBlock> projectedBlocks = new ArrayList<>(rawBlocks);
+    List<CanonicalMarkdownStructure.Event> markers =
+        markdown.events().stream()
+            .filter(event -> event.kind() == CanonicalMarkdownStructure.EventKind.MARKER)
+            .toList();
     List<Integer> markerBlocks = new ArrayList<>();
     for (int index = 0; index < rawBlocks.size(); index++) {
       if (rawBlocks.get(index).kind() == SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER) {
         markerBlocks.add(index);
       }
     }
-    for (int index = 0;
-        index < structure.pairedIds().size() && index < markerBlocks.size();
-        index++) {
-      int blockIndex = markerBlocks.get(index);
-      SpecMarkdownBlock marker = projectedBlocks.get(blockIndex);
-      projectedBlocks.set(
-          blockIndex,
-          new SpecMarkdownBlock(
-              marker.kind(),
-              marker.headingLevel(),
-              marker.text(),
-              marker.items(),
-              marker.language(),
-              marker.destination(),
-              marker.title(),
-              marker.tableHeaders(),
-              marker.tableRows(),
-              structure.pairedIds().get(index),
-              marker.children()));
-    }
     Map<String, ReviewAcLocation> locations = new LinkedHashMap<>();
-    for (int index = 0;
-        index < structure.pairedIds().size() && index < markerBlocks.size();
-        index++) {
-      String acId = structure.pairedIds().get(index);
+    List<Marker> parsedMarkers = new ArrayList<>();
+    for (int index = 0; index < markers.size() && index < markerBlocks.size(); index++) {
+      CanonicalMarkdownStructure.Event marker = markers.get(index);
+      String acId = marker.acId();
       int blockIndex = markerBlocks.get(index);
+      parsedMarkers.add(new Marker(acId, displayPath, marker.line(), marker.column()));
       locations.putIfAbsent(
-          acId,
-          new ReviewAcLocation(
-              displayPath, blockIndex + 1, displayPath + "#acceptance-" + blockIndex));
+          acId, new ReviewAcLocation(displayPath, blockIndex + 1, displayPath + "#review-" + acId));
+    }
+    List<SelectedSpecDiagnostic> diagnostics = new ArrayList<>();
+    for (CanonicalMarkdownStructure.Event event : markdown.events()) {
+      if (event.kind() != CanonicalMarkdownStructure.EventKind.INVALID_MARKER) {
+        continue;
+      }
+      boolean legacy = event.text().equals("<!-- topplecat:acceptance -->");
+      diagnostics.add(
+          diagnostic(
+              legacy ? "TC-SPEC-AC-MARKER-LEGACY" : "TC-SPEC-AC-MARKER-MALFORMED",
+              displayPath,
+              event.line(),
+              event.column(),
+              event.acId(),
+              legacy
+                  ? "The released generic acceptance marker has no AC identity and cannot select"
+                      + " executable material."
+                  : "This acceptance directive is not the exact standalone ID-bearing marker.",
+              "Use exactly <!-- topplecat:acceptance:AC-ID --> with one canonical AC ID.",
+              "Replace or remove the directive; headings and ordinary AC references do not declare"
+                  + " scope."));
     }
     return new ParsedDocument(
-        new ReviewDocument(displayPath, Hashing.sha256(bytes), projectedBlocks, assets.assets()),
+        new ReviewDocument(displayPath, Hashing.sha256(bytes), rawBlocks, assets.assets()),
         locations,
-        structure.declarations(),
-        structure.references(),
-        structure.diagnostics());
+        parsedMarkers,
+        diagnostics);
   }
 
   private static void rejectSymbolicPathComponent(Path root, Path candidate, String suppliedPath) {
@@ -235,199 +214,6 @@ final class ExternalSpecDocumentReader {
     }
   }
 
-  private static List<String> lines(String source) {
-    String normalized = source.replace("\r\n", "\n").replace('\r', '\n');
-    String[] split = normalized.split("\\n", -1);
-    if (split.length > 1 && split[split.length - 1].isEmpty()) {
-      return List.of(split).subList(0, split.length - 1);
-    }
-    return List.of(split);
-  }
-
-  private static Structure structure(
-      String path, List<String> lines, List<CanonicalMarkdownStructure.Event> events) {
-    List<SelectedSpecDiagnostic> diagnostics = new ArrayList<>();
-    List<Declaration> declarations = new ArrayList<>();
-    List<String> pairedIds = new ArrayList<>();
-    Declaration open = null;
-    Map<String, MarkerLocation> completed = new LinkedHashMap<>();
-    for (CanonicalMarkdownStructure.Event event : events) {
-      if (event.kind() == CanonicalMarkdownStructure.EventKind.HEADING) {
-        List<String> ids = ids(event.text());
-        if (ids.isEmpty()) {
-          continue;
-        }
-        Matcher declaration = AC_DECLARATION.matcher(plainMarkdown(event.text()));
-        if (!declaration.matches() || ids.size() != 1) {
-          if (open != null) {
-            String boundaryId = ids.isEmpty() ? "" : ids.getFirst();
-            diagnostics.add(
-                diagnostic(
-                    "TC-SPEC-AC-DECLARATION-OVERLAP",
-                    path,
-                    event.line(),
-                    event.column(),
-                    boundaryId,
-                    "This AC-bearing heading starts before "
-                        + open.acId()
-                        + " receives its marker.",
-                    "Close the earlier AC with its exact standalone acceptance marker before this"
-                        + " heading.",
-                    "Repair this heading and place the marker owned by "
-                        + open.acId()
-                        + " before it."));
-            diagnostics.add(
-                diagnostic(
-                    "TC-SPEC-AC-MARKER-MISSING",
-                    path,
-                    open.line(),
-                    open.column(),
-                    open.acId(),
-                    "The declaration reaches the next AC-bearing heading without its acceptance"
-                        + " marker.",
-                    "Place " + ACCEPTANCE_MARKER + " after this AC's authored rules and examples.",
-                    "Add the exact standalone marker before the next AC-bearing heading."));
-            open = null;
-          }
-          for (String acId : ids) {
-            diagnostics.add(
-                diagnostic(
-                    "TC-SPEC-AC-HEADING-INVALID",
-                    path,
-                    event.line(),
-                    event.column(),
-                    acId,
-                    "The heading mentions " + acId + " but does not declare a business title.",
-                    "Use a visible Markdown heading whose plain text is "
-                        + acId
-                        + ": business title (a full-width colon is also valid).",
-                    "Add the title and keep the exact acceptance marker after the authored"
-                        + " rules."));
-          }
-          continue;
-        }
-        String acId = declaration.group(1);
-        if (open != null) {
-          diagnostics.add(
-              diagnostic(
-                  "TC-SPEC-AC-DECLARATION-OVERLAP",
-                  path,
-                  event.line(),
-                  event.column(),
-                  acId,
-                  "This AC declaration starts before " + open.acId() + " receives its marker.",
-                  "Close the earlier AC with its exact standalone acceptance marker before"
-                      + " declaring another AC.",
-                  "Move or add the marker owned by " + open.acId() + " before this heading."));
-          diagnostics.add(
-              diagnostic(
-                  "TC-SPEC-AC-MARKER-MISSING",
-                  path,
-                  open.line(),
-                  open.column(),
-                  open.acId(),
-                  "The declaration reaches another AC heading without its acceptance marker.",
-                  "Place " + ACCEPTANCE_MARKER + " after this AC's authored rules and examples.",
-                  "Add the exact standalone marker before the next AC heading."));
-        }
-        open = new Declaration(acId, path, event.line(), event.column(), 0, 0);
-      } else if (event.kind() == CanonicalMarkdownStructure.EventKind.MARKER) {
-        if (open == null) {
-          String code =
-              completed.isEmpty() ? "TC-SPEC-AC-MARKER-ORPHAN" : "TC-SPEC-AC-MARKER-DUPLICATE";
-          diagnostics.add(
-              diagnostic(
-                  code,
-                  path,
-                  event.line(),
-                  event.column(),
-                  "",
-                  code.endsWith("DUPLICATE")
-                      ? "The acceptance marker is extra; the first marker at "
-                          + completed.values().stream()
-                              .reduce((first, last) -> last)
-                              .map(MarkerLocation::location)
-                              .orElse("the completed AC")
-                          + " and this extra marker at "
-                          + path
-                          + ":"
-                          + event.line()
-                          + ":"
-                          + event.column()
-                          + " are both reported."
-                      : "The acceptance marker does not follow a valid AC declaration.",
-                  "Place one exact standalone marker after the authored rules of its declared AC.",
-                  "Remove the marker or add the matching visible AC heading before it."));
-        } else {
-          Declaration paired =
-              new Declaration(
-                  open.acId(), path, open.line(), open.column(), event.line(), event.column());
-          declarations.add(paired);
-          pairedIds.add(open.acId());
-          completed.put(open.acId(), new MarkerLocation(path, event.line(), event.column()));
-          open = null;
-        }
-      }
-    }
-    if (open != null) {
-      diagnostics.add(
-          diagnostic(
-              "TC-SPEC-AC-MARKER-MISSING",
-              path,
-              open.line(),
-              open.column(),
-              open.acId(),
-              "The AC declaration reaches the end of the document without its acceptance marker.",
-              "Place " + ACCEPTANCE_MARKER + " after this AC's authored rules and examples.",
-              "Add the exact standalone marker before the document ends."));
-    }
-    return new Structure(declarations, pairedIds, references(path, lines), diagnostics);
-  }
-
-  private static List<Reference> references(String path, List<String> lines) {
-    List<Reference> references = new ArrayList<>();
-    Fence fence = null;
-    for (int lineNumber = 0; lineNumber < lines.size(); lineNumber++) {
-      String line = lines.get(lineNumber);
-      if (fence != null) {
-        if (isClosingFence(line, fence)) {
-          fence = null;
-        }
-        continue;
-      }
-      Fence opened = openingFence(line);
-      if (opened != null) {
-        fence = opened;
-        continue;
-      }
-      Matcher matcher = AC_ID.matcher(line);
-      while (matcher.find()) {
-        references.add(new Reference(matcher.group(1), path, lineNumber + 1, matcher.start() + 1));
-      }
-    }
-    return references;
-  }
-
-  private static List<String> ids(String value) {
-    List<String> ids = new ArrayList<>();
-    Matcher matcher = AC_ID.matcher(value == null ? "" : value);
-    while (matcher.find()) {
-      ids.add(matcher.group(1));
-    }
-    return ids;
-  }
-
-  private static String plainMarkdown(String value) {
-    String plain = value == null ? "" : value;
-    plain = plain.replaceAll("!\\[([^]]*)]\\([^)]*\\)", "$1");
-    plain = plain.replaceAll("\\[([^]]*)]\\([^)]*\\)", "$1");
-    plain = plain.replaceAll("`([^`]*)`", "$1");
-    plain = plain.replaceAll("<[^>]*>", "");
-    plain = plain.replaceAll("[*_~]", "");
-    plain = plain.replace("\\\\", "");
-    return plain.replaceAll("\\s+", " ").trim();
-  }
-
   private static SelectedSpecDiagnostic diagnostic(
       String code,
       String path,
@@ -438,41 +224,6 @@ final class ExternalSpecDocumentReader {
       String required,
       String fix) {
     return new SelectedSpecDiagnostic(code, path, line, column, acId, problem, required, fix);
-  }
-
-  private static Fence openingFence(String line) {
-    String stripped = line.stripLeading();
-    if (line.length() - stripped.length() > 3 || stripped.length() < 3) {
-      return null;
-    }
-    char delimiter = stripped.charAt(0);
-    if (delimiter != '`' && delimiter != '~') {
-      return null;
-    }
-    int count = 0;
-    while (count < stripped.length() && stripped.charAt(count) == delimiter) {
-      count++;
-    }
-    if (count < 3) {
-      return null;
-    }
-    String info = stripped.substring(count).trim();
-    if (delimiter == '`' && info.contains("`")) {
-      return null;
-    }
-    return new Fence(delimiter, count, info);
-  }
-
-  private static boolean isClosingFence(String line, Fence fence) {
-    String stripped = line.stripLeading();
-    if (line.length() - stripped.length() > 3 || stripped.length() < fence.length()) {
-      return false;
-    }
-    int count = 0;
-    while (count < stripped.length() && stripped.charAt(count) == fence.delimiter()) {
-      count++;
-    }
-    return count >= fence.length() && stripped.substring(count).trim().isEmpty();
   }
 
   private static boolean isMarkdown(Path path) {
@@ -509,7 +260,7 @@ final class ExternalSpecDocumentReader {
     }
 
     List<String> acceptanceConditionIds() {
-      return locations.keySet().stream().sorted().toList();
+      return List.copyOf(locations.keySet());
     }
 
     String diagnosticMessage() {
@@ -553,32 +304,14 @@ final class ExternalSpecDocumentReader {
   private record ParsedDocument(
       ReviewDocument document,
       Map<String, ReviewAcLocation> locations,
-      List<Declaration> declarations,
-      List<Reference> references,
+      List<Marker> markers,
       List<SelectedSpecDiagnostic> diagnostics) {}
 
-  private record Structure(
-      List<Declaration> declarations,
-      List<String> pairedIds,
-      List<Reference> references,
-      List<SelectedSpecDiagnostic> diagnostics) {}
-
-  private record Declaration(
-      String acId, String path, int line, int column, int markerLine, int markerColumn) {
+  private record Marker(String acId, String path, int line, int column) {
     String location() {
       return path + ":" + line + ":" + column;
     }
   }
-
-  private record MarkerLocation(String path, int line, int column) {
-    String location() {
-      return path + ":" + line + ":" + column;
-    }
-  }
-
-  private record Reference(String acId, String path, int line, int column) {}
-
-  private record Fence(char delimiter, int length, String info) {}
 
   private record AssetResolution(String destination, String message) {}
 

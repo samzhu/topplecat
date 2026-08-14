@@ -27,11 +27,11 @@ class ExternalSpecDocumentReaderTest {
     Files.writeString(
         document,
         """
-        # AC-CHECKOUT: Checkout
+        # Checkout
 
         Authored checkout rule.
 
-        <!-- topplecat:acceptance -->
+        <!-- topplecat:acceptance:AC-CHECKOUT -->
 
         A [safe link](https://example.test/spec) with `inline` code and **emphasis**.
 
@@ -112,7 +112,7 @@ class ExternalSpecDocumentReaderTest {
   }
 
   @Test
-  void pairsAtxAndSetextHeadingsAtExactMarkersAndIgnoresOrdinaryReferences() throws Exception {
+  void idBearingMarkersIgnoreHeadingsAndOrdinaryReferences() throws Exception {
     Path document = root.resolve("checkout.md");
     Files.writeString(
         document,
@@ -125,18 +125,18 @@ class ExternalSpecDocumentReaderTest {
         `AC-CHECKOUT-002` remains ordinary text.
         <!-- AC-CHECKOUT-001 is ordinary text -->
 
-        #### AC-CHECKOUT-001： First rule
+        #### First rule
 
         First authored rule.
 
-        <!-- topplecat:acceptance -->
+        <!-- topplecat:acceptance:AC-CHECKOUT-001 -->
 
-        AC-CHECKOUT-002: Second rule
-        -----------------------------
+        Second rule
+        ------------
 
         Second authored rule.
 
-        <!-- topplecat:acceptance -->
+        <!-- topplecat:acceptance:AC-CHECKOUT-002 -->
 
         ```markdown
         # AC-CODE: not a declaration
@@ -156,7 +156,6 @@ class ExternalSpecDocumentReaderTest {
             .filter(block -> block.kind() == SpecMarkdownBlock.Kind.ACCEPTANCE_MARKER)
             .count());
     assertFalse(parsed.acceptanceConditionIds().contains("AC-CODE"));
-    assertFalse(parsed.acceptanceConditionIds().contains("AC-CODE"));
   }
 
   @Test
@@ -166,32 +165,32 @@ class ExternalSpecDocumentReaderTest {
     Files.writeString(
         first,
         """
-        # AC-DUP: First
+        # First
 
-        <!-- topplecat:acceptance -->
+        <!-- topplecat:acceptance:AC-DUP -->
 
-        # AC-BROKEN
+        # Broken marker
 
-        <!-- topplecat:acceptance -->
-        <!-- topplecat:acceptance -->
+        <!-- topplecat:acceptance:AC-DUP -->
+        <!-- topplecat:acceptance:AC-BROKEN -->
         """);
     Files.writeString(
         second,
         """
         AC-DUP: a legacy reference
 
-        # AC-DUP: Second
+        # Second
 
-        <!-- topplecat:acceptance -->
+        <!-- topplecat:acceptance:AC-DUP -->
         """);
 
     ExternalSpecDocumentReader.ParsedSpecs parsed =
         ExternalSpecDocumentReader.read(root, List.of(second, first));
     String diagnostics = parsed.diagnosticMessage();
-    assertTrue(diagnostics.contains("TC-SPEC-AC-DUPLICATE"), diagnostics);
-    assertTrue(diagnostics.contains("a.md:1:1"), diagnostics);
-    assertTrue(diagnostics.contains("b.md:3:1"), diagnostics);
-    assertTrue(diagnostics.contains("TC-SPEC-AC-HEADING-INVALID"), diagnostics);
+    assertTrue(diagnostics.contains("TC-SPEC-AC-MARKER-DUPLICATE"), diagnostics);
+    assertTrue(diagnostics.contains("a.md:3:1"), diagnostics);
+    assertTrue(diagnostics.contains("b.md:5:1"), diagnostics);
+    assertFalse(diagnostics.contains("TC-SPEC-AC-MARKER-LEGACY"), diagnostics);
     assertTrue(diagnostics.contains("TC-SPEC-AC-MARKER-DUPLICATE"), diagnostics);
   }
 
@@ -202,9 +201,9 @@ class ExternalSpecDocumentReaderTest {
     Files.writeString(first, "See AC-CROSS for the shared checkout rule.\n");
     Files.writeString(
         second,
-        "# AC-CROSS: Shared checkout rule\n\n"
+        "# Shared checkout rule\n\n"
             + "The canonical rule is authored here.\n\n"
-            + "<!-- topplecat:acceptance -->\n");
+            + "<!-- topplecat:acceptance:AC-CROSS -->\n");
 
     ExternalSpecDocumentReader.ParsedSpecs parsed =
         ExternalSpecDocumentReader.read(root, List.of(first, second));
@@ -215,8 +214,7 @@ class ExternalSpecDocumentReaderTest {
   }
 
   @Test
-  void ordinaryReferencesReportMissingOnlyAfterAllSelectedDocumentsHaveBeenConsidered()
-      throws Exception {
+  void ordinaryReferencesNeverDeclareOrRequireAnAcMarker() throws Exception {
     Path first = root.resolve("a.md");
     Path second = root.resolve("b.md");
     Files.writeString(first, "See AC-MISSING for the first rule.\n");
@@ -225,14 +223,8 @@ class ExternalSpecDocumentReaderTest {
     ExternalSpecDocumentReader.ParsedSpecs parsed =
         ExternalSpecDocumentReader.read(root, List.of(first, second));
 
-    List<ExternalSpecDocumentReader.SelectedSpecDiagnostic> missing =
-        parsed.diagnostics().stream()
-            .filter(item -> item.ruleCode().equals("TC-SPEC-AC-DECLARATION-MISSING"))
-            .toList();
-    assertEquals(2, missing.size(), parsed.diagnosticMessage());
-    assertEquals("a.md", missing.getFirst().path());
-    assertEquals(1, missing.getFirst().line());
-    assertEquals("b.md", missing.getLast().path());
+    assertTrue(parsed.diagnostics().isEmpty(), parsed.diagnosticMessage());
+    assertTrue(parsed.acceptanceConditionIds().isEmpty());
   }
 
   @Test
@@ -259,16 +251,11 @@ class ExternalSpecDocumentReaderTest {
   void sharedInvalidFixturesRetainDistinctStructuralDiagnostics() throws Exception {
     Map<String, String> expectedCodes =
         Map.of(
-            "invalid-duplicate.md", "TC-SPEC-AC-DUPLICATE",
-            "invalid-missing.md", "TC-SPEC-AC-MARKER-MISSING",
-            "invalid-overlap.md", "TC-SPEC-AC-DECLARATION-OVERLAP",
-            "invalid-orphan.md", "TC-SPEC-AC-MARKER-ORPHAN");
+            "invalid-duplicate.md", "TC-SPEC-AC-MARKER-DUPLICATE",
+            "invalid-overlap.md", "TC-SPEC-AC-MARKER-MALFORMED",
+            "invalid-orphan.md", "TC-SPEC-AC-MARKER-LEGACY");
     for (String fixture :
-        List.of(
-            "invalid-duplicate.md",
-            "invalid-missing.md",
-            "invalid-overlap.md",
-            "invalid-orphan.md")) {
+        List.of("invalid-duplicate.md", "invalid-overlap.md", "invalid-orphan.md")) {
       Path document = root.resolve(fixture);
       try (var source = getClass().getResourceAsStream("/selected-spec-fixtures/" + fixture)) {
         assertTrue(source != null);
@@ -288,8 +275,8 @@ class ExternalSpecDocumentReaderTest {
     Files.writeString(
         document,
         "# AC-DUP-MARKER: Rule\n\n"
-            + "<!-- topplecat:acceptance -->\n\n"
-            + "<!-- topplecat:acceptance -->\n");
+            + "<!-- topplecat:acceptance:AC-DUP-MARKER -->\n\n"
+            + "<!-- topplecat:acceptance:AC-DUP-MARKER -->\n");
 
     ExternalSpecDocumentReader.ParsedSpecs parsed =
         ExternalSpecDocumentReader.read(root, List.of(document));

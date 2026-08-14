@@ -1,4 +1,4 @@
 interface:
   display_name: "ToppleCat Acceptance"
   short_description: "Bind selected ACs to executable Java contracts"
-  default_prompt: "Use $topplecat-acceptance with the explicitly supplied repository-relative canonical Markdown path or paths, then bind parser-derived selected Spec ACs directly to Acceptance Methods, Typed Case Rows, and optional Property declarations. Carry the same --spec paths through Check, Review, and scoped Verify; for whole-contract work do not claim Spec Review readiness. Never discover a path, follow a wrapper, or read or translate .feature files."
+  default_prompt: "Use $topplecat-acceptance with the explicitly supplied repository-relative canonical Markdown path or paths. The product parser derives selected Spec ACs only from exact standalone ID-bearing markers; headings and ordinary references do not declare scope. Bind those ACs directly to Acceptance Methods, Typed Case Rows, and optional Property declarations. Carry the same --spec paths through Check, Review, and scoped Verify; for whole-contract work do not claim Spec Review readiness. Never discover a path, follow a wrapper, or read or translate .feature files."

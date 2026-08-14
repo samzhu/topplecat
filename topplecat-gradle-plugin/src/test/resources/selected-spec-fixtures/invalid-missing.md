@@ -1,3 +1,3 @@
-# AC-MISSING: Missing marker
+# Heading without a load marker
 
-The declaration reaches the end of the document.
+The ordinary text AC-MISSING does not select an executable condition.
